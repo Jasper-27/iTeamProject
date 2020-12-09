@@ -1,0 +1,17 @@
+[
+  {
+    "timeStamp": "09/12/2020, 16:01:19",
+    "senderID": "Jasper27",
+    "content": "Hello"
+  },
+  {
+    "timeStamp": "09/12/2020, 16:01:19",
+    "senderID": "SomeoneElse",
+    "content": "Hello Jasper"
+  },
+  {
+    "timeStamp": "09/12/2020, 16:04:40",
+    "senderID": "Abbie",
+    "content": "This message should be added to the bottom"
+  }
+]
