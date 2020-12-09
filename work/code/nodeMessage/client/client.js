@@ -13,7 +13,10 @@ socket.on("welcome", (data) => {
 
 
 
-function sendMessage(){
-    console.log("Me: " + "msg")
-    socket.emit("send-message", "msg")
+function sendMessage(msg){
+    console.log("Me: " + msg)
+    socket.emit("send-message", msg)
 }; 
+
+
+sendMessage("This is a message")
