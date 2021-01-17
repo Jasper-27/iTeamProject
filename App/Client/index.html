@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>WinkiMessage</title> 
+        <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+         <script defer src="http://localhost:3000/socket.io/socket.io.js"></script> -->
+        <script defer src="script.js"></script>
+        <link href="style.css" rel="stylesheet" type="text/css" /> 
+
+
+        <link rel="manifest" href="manifest.json">
+
+    </head>
+    <body>
+
+        <h1>Welcome to WinkiMessage</h1>
+
+        <div id="mainContent">
+            <div id="message-container"></div>
+
+            <form id="send-container">
+                <input type="text" id="message-input">
+                <button type="submit" id="send-button">Send</button>
+            </form>
+        
+        </div>
+        
+
+
+
+        <script>
+            if ('serviceWorker' in navigator){
+                navigator.serviceWorker.register('/service-worker.js')
+            }
+        </script>
+
+    </body>
+</html>

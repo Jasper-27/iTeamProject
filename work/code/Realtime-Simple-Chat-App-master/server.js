@@ -2,6 +2,10 @@ const io = require('socket.io')(3000)
 
 const users = {}
 
+
+console.log("Server starting")
+
+
 io.on('connection', socket => {
   socket.on('new-user', name => {
     users[socket.id] = name
