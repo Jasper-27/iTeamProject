@@ -1,3 +1,4 @@
+const sendAllPreviousMessages = true;  // When a user connects, send them all previous messages
 const Message = require("./Message");
 const dataAccess = require("./dataAccess");
 const io = require('socket.io')(3000, {
@@ -9,11 +10,13 @@ const io = require('socket.io')(3000, {
 
 const users = {}
 var messagesFile = new dataAccess.MessagesAccess();
+messagesFile.getData();  // Load all previous messages
 
 io.on('connection', socket => {
   socket.on('new-user', name => {
     users[socket.id] = name;
     socket.broadcast.emit('user-connected', name);
+    sendPreviousMessages(socket);
   })
   socket.on('send-chat-message', message => {
     // Write the new message to file
@@ -25,3 +28,13 @@ io.on('connection', socket => {
     delete users[socket.id];
   })
 })
+
+function sendPreviousMessages(socket){
+  // Send all previous messages to the newly connected user
+  if (sendAllPreviousMessages){
+    for (let i = 0; i < messagesFile.messagesBuffer.length; i++){
+      let msg = messagesFile.messagesBuffer[i];
+      socket.emit("chat-message", {message: msg.content, name: msg.senderId});
+    }
+  }
+}
