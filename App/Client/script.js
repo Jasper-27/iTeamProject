@@ -5,7 +5,7 @@ const messageInput = document.getElementById('message-input')
 
 var  socket = io('http://localhost:3000')
 
-const name = prompt('What is your name?')
+var name = prompt('What is your name?')
 appendMessage('You joined')
 socket.emit('new-user', name)
 
