@@ -28,6 +28,16 @@ messageForm.addEventListener('submit', e => {
 
 function appendMessage(message) {
   const messageElement = document.createElement('div')
+  messageElement.className = "box sb1";
   messageElement.innerText = message
+  messageContainer.scrollTop = messageContainer.scrollHeight;
+  messageContainer.append(messageElement)
+}
+
+function appendJoin(message) {
+  const messageElement = document.createElement('div')
+  messageElement.className = "box sb2";
+  messageElement.innerText = message
+  messageContainer.scrollTop = messageContainer.scrollHeight;
   messageContainer.append(messageElement)
 }

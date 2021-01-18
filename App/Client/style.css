@@ -11,15 +11,6 @@ body {
   max-width: 1200px;
 }
 
-#message-container div {
-  background-color: #CCC;
-  padding: 5px;
-}
-
-#message-container div:nth-child(2n) {
-  background-color: #FFF;
-}
-
 #send-container {
   position: fixed;
   padding-bottom: 30px;

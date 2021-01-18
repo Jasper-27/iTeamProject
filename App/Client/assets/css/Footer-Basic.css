@@ -57,12 +57,3 @@
   color: #aaa;
   margin-bottom: 0;
 }
-
-#message-container div {
-  background-color: #ccc;
-}
-
-#message-container div:nth-child(2n) {
-  background-color: #fff;
-}
-
