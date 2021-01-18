@@ -40,14 +40,22 @@
         <div class="container">
             <div class="row" style="height: 80%;min-height: 80%;">
                 <div class="col" id="left">
+
                     <div id="LeftItems">
                         <h1>Message Area</h1>
+                        
                         <div class="flex-grow-1 justify-content-xl-start" id="message-container" style="height: 70vh;overflow-y: scroll;"></div>
-                        <form id="send-container"><input class="form-control d-xl-flex align-items-end align-items-xl-end" type="text" id="message-input"><button class="btn btn-primary" id="send-button" type="submit">Send Message</button></form>
+                        
+                        <form id="send-container">
+                            <input class="form-control d-xl-flex align-items-end align-items-xl-end" type="text" id="message-input">
+                            <button class="btn btn-primary" id="send-button" type="submit">Send Message</button>
+                        </form>
                     </div>
+
                 </div>
                 <div class="col d-none d-lg-inline d-xl-inline" id="right">
-                    <div id="rightItems"><input class="form-control-plaintext" type="text" value="Extra Item Desktop Area" readonly=""></div>
+                    <div id="rightItems">
+                        <input class="form-control-plaintext" type="text" value="Extra Item Desktop Area" readonly=""></div>
                 </div>
             </div>
         </div>
