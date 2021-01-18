@@ -28,7 +28,8 @@ io.on('connection', socket => {
     // Write the new message to file
     let filteredMessage = profanityFilter.filter(message);
     let name = users[socket.id];
-    messagesFile.appendData(new Message(users[socket.id], filteredMessage));
+    if (name == null || name == undefined || name == "") name = "unknown";
+    messagesFile.appendData(new Message(name, filteredMessage));
     socket.broadcast.emit('chat-message', { message: filteredMessage, name: users[socket.id] });
     // Must also send message to user that sent it
     console.log(message)
