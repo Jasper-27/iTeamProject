@@ -2,6 +2,7 @@ body {
     padding: 0;
     margin: 0;
     /* display: flex; */
+
     justify-content: center;
   }
 
@@ -25,6 +26,7 @@ body {
     bottom: 0;
     background-color: white;
     max-width: 90%;
+
     width: 80%;
     display: flex;
   }
@@ -37,3 +39,4 @@ body {
   float: center;
   
 }
+
