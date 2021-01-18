@@ -1,66 +1,62 @@
 <!DOCTYPE html>
-<html style="height: 100%;min-height: 100%;">
+<html lang="en">
 
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
-    <title>App (Backup 1610912893824)</title>
+    <title>Chat App</title>
     <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css">
     <link rel="stylesheet" href="assets/fonts/ionicons.min.css">
     <link rel="stylesheet" href="assets/css/Footer-Basic.css">
+    <link rel="stylesheet" href="assets/css/Footer-Clean.css">
+    <link rel="stylesheet" href="assets/css/Navigation-Clean.css">
     <link rel="stylesheet" href="assets/css/Navigation-with-Button.css">
     <link rel="stylesheet" href="assets/css/styles.css">
-<<<<<<< Updated upstream
     <link rel="stylesheet" href="assets/css/Team-Boxed.css">
-	
-	<script defer src="http://localhost:3000/socket.io/socket.io.js"></script>
-=======
-	<link rel="stylesheet" href="assets/css/messageBubble.css">
-	
-	
+
     <script defer src="http://localhost:3000/socket.io/socket.io.js"></script>
->>>>>>> Stashed changes
     <script defer src="script.js"></script>
+    <link href="style.css" rel="stylesheet" type="text/css" /> 
 	
+
+		
 </head>
 
-<<<<<<< Updated upstream
-
-=======
->>>>>>> Stashed changes
-<body style="height: 100%;min-height: 100%;">
+<body>
     <nav class="navbar navbar-light navbar-expand-md">
+<<<<<<< Updated upstream
+        <div class="container-fluid"><a class="navbar-brand" href="#">WinkiMessenger</a><button data-toggle="collapse" class="navbar-toggler" data-target="#navcol-1"><span class="sr-only">Toggle navigation</span><span class="navbar-toggler-icon"></span></button>
+=======
         <div class="container-fluid"><a class="navbar-brand" href="index.html">WinkiMessenger</a><button data-toggle="collapse" class="navbar-toggler" data-target="#navcol-1"><span class="sr-only">Toggle navigation</span><span class="navbar-toggler-icon"></span></button>
+>>>>>>> Stashed changes
             <div class="collapse navbar-collapse" id="navcol-1">
                 <ul class="nav navbar-nav">
-<<<<<<< Updated upstream
-                    <li class="nav-item"><a class="nav-link active" href="#">Messages</a></li>
-=======
-                    <li class="nav-item"><a class="nav-link active" href="app.html">Messages</a></li>
->>>>>>> Stashed changes
-                    <li class="nav-item"></li>
-                    <li class="nav-item"></li>
+                    <li class="nav-item"><a class="nav-link" href="index.html">home</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="app.html">App</a></li>
                 </ul>
             </div>
         </div>
     </nav>
     <div></div>
-    <div id="allItems" style="min-height: 100%;">
+    <div id="allItems">
         <div class="container">
-            <div class="row" style="height: 80%;min-height: 80%;">
+            <div class="row">
                 <div class="col" id="left">
                     <div id="LeftItems">
                         <h1>Message Area</h1>
-<<<<<<< Updated upstream
-                        <div class="flex-grow-1 justify-content-xl-start" id="message-container" style="min-height: 80%;height: 80%;"></div>
-=======
-                        <div class="flex-grow-1 justify-content-xl-start" id="message-container" style="max-height: 80vh; overflow-y: scroll;"></div>
->>>>>>> Stashed changes
-                        <form id="send-container"><input class="form-control d-xl-flex align-items-end align-items-xl-end" type="text" id="message-input"><button class="btn btn-primary" id="send-button" type="submit">Send Message</button></form>
+
+                        <!-- Message container  -->
+                        <div class="justify-content-xl-start" id="message-container"></div>
+
+
+                        <form id="send-container">
+                            <input class="form-control" type="text" id="message-input">
+                            <button type="submit" class="btn btn-primary" id="send-button">Send Message</button>
+                        </form>
                     </div>
                 </div>
                 <div class="col d-none d-lg-inline d-xl-inline" id="right">
-                    <div id="rightItems"><input class="form-control-plaintext" type="text" value="Extra Item Desktop Area" readonly=""></div>
+                    <div id="rightItems"><input class="form-control-plaintext" type="text" value="Server Explorer:" readonly=""><textarea></textarea></div>
                 </div>
             </div>
         </div>
