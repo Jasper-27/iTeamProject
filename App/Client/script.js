@@ -32,6 +32,12 @@ socket.on('get-users', data => {
 messageForm.addEventListener('submit', e => {
   e.preventDefault()
   const message = messageInput.value
+
+  //stops you from spamming blank
+  if (message == ""){
+    return
+  }
+
   socket.emit('send-chat-message', message)
   messageInput.value = ''
 })

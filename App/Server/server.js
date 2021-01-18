@@ -29,6 +29,13 @@ io.on('connection', socket => {
     messagesFile.appendData(new Message(users[socket.id], filteredMessage));
     socket.broadcast.emit('chat-message', { message: filteredMessage, name: users[socket.id] });
     // Must also send message to user that sent it
+    console.log(message)
+
+    //If message is blank. don't spam people 
+    //This is done client side as well for redundency
+    if (message == ""){
+      return
+    }
     socket.emit('chat-message', {message: filteredMessage, name: "You"});
   })
 
