@@ -1,7 +1,19 @@
-.box {
+.boxSend {
   width: 300px;
   margin: 10px auto;
-  background: #DCDCDC;
+  background: #3dc3fd;
+  padding: 5px;
+  text-align: center;
+  font-weight: 900;
+  color: #fff;
+  font-family: arial;
+  position:relative;
+}
+
+.boxRecieve {
+  width: 300px;
+  margin: 10px auto;
+  background: #cbcbcb;
   padding: 5px;
   text-align: center;
   font-weight: 900;
@@ -15,9 +27,9 @@
   width: 0px;
   height: 0px;
   position: absolute;
-  border-left: 10px solid #DCDCDC;
+  border-left: 10px solid #3dc3fd;
   border-right: 10px solid transparent;
-  border-top: 10px solid #DCDCDC;
+  border-top: 10px solid #3dc3fd;
   border-bottom: 10px solid transparent;
   right: -20px;
   top: 6px;
@@ -25,20 +37,14 @@
 
 .sb2:before {
   content: "";
-  color: #FF0000;
   width: 0px;
   height: 0px;
   position: absolute;
-  border-left: 10px solid #00bfb6;
-  border-right: 10px solid transparent;
-  border-top: 10px solid #00bfb6;
+  border-left: 10px solid transparent;
+  border-right: 10px solid #cbcbcb;
+  border-top: 10px solid #cbcbcb;
   border-bottom: 10px solid transparent;
-  right: -20px;
+  left: -19px;
   top: 6px;
-}
-
-
-#message-container div:nth-child(2n) {
-  background-color: #49bdf0;
 }
 
