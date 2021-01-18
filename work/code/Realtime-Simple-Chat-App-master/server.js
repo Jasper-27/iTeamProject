@@ -1,6 +1,7 @@
-const sendAllPreviousMessages = true;  // When a user connects, send them all previous messages
+const sendAllPreviousMessages = false;  // When a user connects, send them all previous messages
 const Message = require("./Message");
 const dataAccess = require("./dataAccess");
+const profanity = require("./ProfanityFilter");
 const io = require('socket.io')(3000, {
   cors: {
     // Must allow cross origin resource sharing (otherwise server won't accept traffic from localhost)
@@ -11,6 +12,7 @@ const io = require('socket.io')(3000, {
 const users = {}
 var messagesFile = new dataAccess.MessagesAccess();
 messagesFile.getData();  // Load all previous messages
+var profanityFilter = new profanity("*", true);
 
 io.on('connection', socket => {
   socket.on('new-user', name => {
@@ -20,8 +22,11 @@ io.on('connection', socket => {
   })
   socket.on('send-chat-message', message => {
     // Write the new message to file
-    messagesFile.appendData(new Message(users[socket.id], message));
-    socket.broadcast.emit('chat-message', { message: message, name: users[socket.id] });
+    let filteredMessage = profanityFilter.filter(message);
+    messagesFile.appendData(new Message(users[socket.id], filteredMessage));
+    socket.broadcast.emit('chat-message', { message: filteredMessage, name: users[socket.id] });
+    // Must also send message to user that sent it
+    socket.emit('chat-message', {message: filteredMessage, name: "You"});
   })
   socket.on('disconnect', () => {
     socket.broadcast.emit('user-disconnected', users[socket.id]);
