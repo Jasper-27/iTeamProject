@@ -14,6 +14,10 @@ var messagesFile = new dataAccess.MessagesAccess();
 messagesFile.getData();  // Load all previous messages
 var profanityFilter = new profanity("*", true);
 
+
+console.log("Server starting")
+
+
 io.on('connection', socket => {
   socket.on('new-user', name => {
     users[socket.id] = name;
