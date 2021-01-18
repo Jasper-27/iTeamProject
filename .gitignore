@@ -3,3 +3,4 @@ work/code/nodeMessage/server/node_modules/**
 work/code/CommunicationTests/node_modules/**
 work/code/Realtime-Simple-Chat-App-master/data
 node_modules/**
+App/Server/data/messages.json

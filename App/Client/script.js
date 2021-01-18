@@ -13,11 +13,20 @@ socket.on('chat-message', data => {
 
 socket.on('user-connected', name => {
   appendMessage(`${name} connected`)
+
+  getUsers(); 
 })
 
 socket.on('user-disconnected', name => {
   appendMessage(`${name} disconnected`)
 })
+
+socket.on('get-users', data => {
+  data.forEach(user => {
+    console.log(user.name)
+  });
+})
+
 
 messageForm.addEventListener('submit', e => {
   e.preventDefault()
@@ -30,4 +39,8 @@ function appendMessage(message) {
   const messageElement = document.createElement('div')
   messageElement.innerText = message
   messageContainer.append(messageElement)
+}
+
+function getUsers(){
+  socket.emit('get-users')
 }

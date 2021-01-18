@@ -15,11 +15,14 @@ messagesFile.getData();  // Load all previous messages
 var profanityFilter = new profanity("*", true);
 
 io.on('connection', socket => {
+
   socket.on('new-user', name => {
     users[socket.id] = name;
     socket.broadcast.emit('user-connected', name);
+    console.log("User " + name + " Connected"); 
     sendPreviousMessages(socket);
   })
+
   socket.on('send-chat-message', message => {
     // Write the new message to file
     let filteredMessage = profanityFilter.filter(message);
@@ -28,9 +31,14 @@ io.on('connection', socket => {
     // Must also send message to user that sent it
     socket.emit('chat-message', {message: filteredMessage, name: "You"});
   })
+
   socket.on('disconnect', () => {
     socket.broadcast.emit('user-disconnected', users[socket.id]);
     delete users[socket.id];
+  })
+
+  socket.on('get-users', () => {
+    socket.broadcast.emit(users); 
   })
 })
 
@@ -43,3 +51,4 @@ function sendPreviousMessages(socket){
     }
   }
 }
+
