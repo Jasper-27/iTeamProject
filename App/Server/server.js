@@ -16,6 +16,7 @@ var profanityFilter = new profanity("*", true);
 
 io.on('connection', socket => {
 
+  //when new usre is added to the server
   socket.on('new-user', name => {
     users[socket.id] = name;
     socket.broadcast.emit('user-connected', name);
@@ -44,6 +45,7 @@ io.on('connection', socket => {
     delete users[socket.id];
   })
 
+  // functionality not added yet
   socket.on('get-users', () => {
     socket.broadcast.emit(users); 
   })
