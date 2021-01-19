@@ -63,23 +63,23 @@ function addMessage(inName, inMessage) {
 
 //Adds a message you sent to that chat
 function appendMessage(message) {
-  const messageElement = document.createElement('div')
+  const messageElement = document.createElement('div');
   messageElement.className = "boxSend sb1";
-  messageElement.innerText = message
+  messageElement.innerText = message;
+  messageContainer.append(messageElement);
   messageContainer.scrollTop = messageContainer.scrollHeight;
-  messageContainer.append(messageElement)
 }
 
 //Adds a message someone else sent to the chat 
 function appendMessageRecieve(message) {
   const messageElement = document.createElement('div')
   messageElement.className = "boxRecieve sb2";
-  messageElement.innerText = message
+  messageElement.innerText = message;
+  messageContainer.append(messageElement);
   messageContainer.scrollTop = messageContainer.scrollHeight;
-  messageContainer.append(messageElement)
 }
 
 
 function getUsers(){
-  socket.emit('get-users')
+  socket.emit('get-users');
 }
