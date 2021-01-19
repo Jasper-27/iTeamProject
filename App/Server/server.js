@@ -18,6 +18,7 @@ io.on('connection', socket => {
 
   //when new usre is added to the server
   socket.on('new-user', name => {
+    if (name == null || name == undefined || name == "") name = "unknown";
     users[socket.id] = name;
     socket.broadcast.emit('user-connected', name);
     console.log("User " + name + " Connected"); 
@@ -27,7 +28,9 @@ io.on('connection', socket => {
   socket.on('send-chat-message', message => {
     // Write the new message to file
     let filteredMessage = profanityFilter.filter(message);
-    messagesFile.appendData(new Message(users[socket.id], filteredMessage));
+    let name = users[socket.id];
+    if (name == null || name == undefined || name == "") name = "unknown";
+    messagesFile.appendData(new Message(name, filteredMessage));
     socket.broadcast.emit('chat-message', { message: filteredMessage, name: users[socket.id] });
     // Must also send message to user that sent it
     console.log(message)
