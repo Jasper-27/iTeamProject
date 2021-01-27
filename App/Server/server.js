@@ -18,31 +18,72 @@ var profanityFilter = new profanity("*", true);
 
 io.on('connection', socket => {
 
-  //when new usre is added to the server
+  //when new user is added to the server
   socket.on('new-user', name => {
     if (name == null || name == undefined || name == "") name = "unknown";
     users[socket.id] = name;
     socket.broadcast.emit('user-connected', name);
-    console.log("User " + name + " Connected"); 
+    console.log("User " + name + " Connected");
     sendPreviousMessages(socket);
   })
 
-  socket.on('send-chat-message', message => {
-    // Write the new message to file
-    let filteredMessage = profanityFilter.filter(message);
-    let name = users[socket.id];
-    if (name == null || name == undefined || name == "") name = "unknown";
-    messagesFile.appendData(new Message(name, filteredMessage));
-    socket.broadcast.emit('chat-message', { message: filteredMessage, name: users[socket.id] });
-    // Must also send message to user that sent it
-    console.log(message)
-
-    //If message is blank. don't spam people 
-    //This is done client side as well for redundency
-    if (message == ""){
-      return
+  // When user tries to login
+  socket.on('login', credentials => {
+    // Check if credentials are valid
+    let userId = accountsFile.checkCredentials(credentials.username, credentials.password);
+    if (userId != -1){
+      // The details are correct, store the userId in users dictionary
+      users[socket.id] = userId;
+      // Tell client that login was successful
+      socket.emit('login-success');
     }
-    socket.emit('chat-message', {message: filteredMessage, name: "You"});
+    else{
+      // Tell client that login failed
+      socket.emit('login-fail');
+    }
+  })
+
+  // When user tries to create account
+  socket.on('create-account', details => {
+    // Make sure given values are valid
+    if (typeof details.userName != "string"){
+      socket.emit('register-fail', 'Invalid username');
+    }
+    else if (typeof details.firstName != "string"){
+      socket.emit('register-fail', 'Invalid first name');
+    }
+    else if (typeof details.lastName != "string"){
+      socket.emit('register-fail', 'Invalid last name');
+    }
+    else if (typeof details.password != "string"){
+      socket.emit('register-fail', 'Invalid password');
+    }
+    else{
+      // Details are valid
+      accountsFile.createAccount(details.userName, details.firstName, details.lastName, details.password);
+      socket.emit('register-success');
+    }
+  })
+
+  socket.on('send-chat-message', message => {
+    // Check that the client is logged in, and discard their messages otherwise
+    if (typeof users[socket.id] == "number"){
+      let name = accountsFile.getAccount(users[socket.id]).userName;
+      // Write the new message to file
+      let filteredMessage = profanityFilter.filter(message);
+      if (name == null || name == undefined || name == "") name = "unknown";
+      messagesFile.appendData(new Message(name, filteredMessage));
+      socket.broadcast.emit('chat-message', { message: filteredMessage, name: name });
+      console.log(message)
+
+      //If message is blank. don't spam people 
+      //This is done client side as well for redundency
+      if (message == ""){
+        return
+      }
+      // Must also send message to user that sent it
+      socket.emit('chat-message', {message: filteredMessage, name: "You"});
+    }
   })
 
   socket.on('disconnect', () => {
