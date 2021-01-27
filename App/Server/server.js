@@ -34,8 +34,16 @@ io.on('connection', socket => {
     if (userId != -1){
       // The details are correct, store the userId in users dictionary
       users[socket.id] = userId;
+      let name = accountsFile.getAccount(userId).userName;
       // Tell client that login was successful
       socket.emit('login-success');
+      // Add socket to the "authorised" room so they can receive messages
+      socket.join('authorised');
+      // Announce that the user has connected
+      socket.to('authorised').emit('user-connected', name);
+      // Send all previous messages (if that setting is enabled)
+      console.log("User " + name + " connected");
+      sendPreviousMessages(socket);
     }
     else{
       // Tell client that login failed
@@ -46,7 +54,7 @@ io.on('connection', socket => {
   // When user tries to create account
   socket.on('create-account', details => {
     // Make sure given values are valid
-    if (typeof details.userName != "string"){
+    if (typeof details.username != "string"){
       socket.emit('register-fail', 'Invalid username');
     }
     else if (typeof details.firstName != "string"){
@@ -73,7 +81,7 @@ io.on('connection', socket => {
       let filteredMessage = profanityFilter.filter(message);
       if (name == null || name == undefined || name == "") name = "unknown";
       messagesFile.appendData(new Message(name, filteredMessage));
-      socket.broadcast.emit('chat-message', { message: filteredMessage, name: name });
+      socket.to('authorised').emit('chat-message', { message: filteredMessage, name: name });
       console.log(message)
 
       //If message is blank. don't spam people 
@@ -87,13 +95,13 @@ io.on('connection', socket => {
   })
 
   socket.on('disconnect', () => {
-    socket.broadcast.emit('user-disconnected', users[socket.id]);
+    socket.to('authorised').emit('user-disconnected', users[socket.id]);
     delete users[socket.id];
   })
 
   // functionality not added yet
   socket.on('get-users', () => {
-    socket.broadcast.emit(users); 
+    socket.to('authorised').emit(users); 
   })
 })
 
