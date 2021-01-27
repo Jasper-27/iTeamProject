@@ -11,8 +11,10 @@ const io = require('socket.io')(3000, {
 
 const users = {}
 var messagesFile = new dataAccess.MessagesAccess();
+var accountsFile = new dataAccess.AccountsAccess();
 messagesFile.getData();  // Load all previous messages
 var profanityFilter = new profanity("*", true);
+
 
 io.on('connection', socket => {
 
