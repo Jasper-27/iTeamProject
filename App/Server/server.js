@@ -68,7 +68,7 @@ io.on('connection', socket => {
     }
     else{
       // Details are valid
-      accountsFile.createAccount(details.userName, details.firstName, details.lastName, details.password);
+      accountsFile.createAccount(details.username, details.firstName, details.lastName, details.password);
       socket.emit('register-success');
     }
   })
