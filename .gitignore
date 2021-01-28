@@ -7,3 +7,4 @@ App/Server/data/messages.json
 App/Server/data/accounts.json
 *.DS_Store
 
+App/Server/data/Log.json
