@@ -68,7 +68,10 @@ class MessagesAccess extends DataAccess{
 }
 
 class AccountsAccess extends DataAccess{
+    static USERNAMETAKEN = 0;
     accountsBuffer = [];
+    // Dictionary linking usernames to userIds to allow faster access
+    userNames = {};
     constructor(){
         super(accountsFilePath);
     }
@@ -82,6 +85,7 @@ class AccountsAccess extends DataAccess{
        for (let i = 0; i < data.length; i++){
            let user = data[i];
            this.accountsBuffer.push(new Account(user["userId"], user["userName"], user["firstName"], user["lastName"], user["password"]));
+           this.userNames[user["userName"]] = user["userId"];
        }
     }
 
@@ -103,6 +107,8 @@ class AccountsAccess extends DataAccess{
     createAccount(userName, firstName, lastName, password){
         // Make sure accounts buffer is up to date to avoid generating a conflicting userId
         this.getData();
+        // Check if username is already taken
+        if (this.userNames[userName] != undefined) return AccountsAccess.USERNAMETAKEN;
         // Generate a userId
         let userId = this.accountsBuffer.length;
         // Hash the password
@@ -110,6 +116,7 @@ class AccountsAccess extends DataAccess{
         let account = new Account(userId, userName, firstName, lastName, hash);
         // Write new account to buffer and file
         this.accountsBuffer.push(account);
+        this.userNames[userName] = userId;
         this.writeFile(this.accountsBuffer);
     }
 
@@ -117,7 +124,7 @@ class AccountsAccess extends DataAccess{
         // Change account password and return true if successful, false otherwise
         // Make sure buffer is up to date
         this.getData();
-        if (typeof userId != "number")throw "userId expected a number but " + typeof userId + " was given";
+        if (typeof userId != "number") throw "userId expected a number but " + typeof userId + " was given";
         if (typeof newPassword != "string") throw "password expected a string but " + typeof newPassword + " was given";
         let hash = bcrypt.hashSync(newPassword, saltRounds);
         let account = this.accountsBuffer[userId];
@@ -131,13 +138,14 @@ class AccountsAccess extends DataAccess{
     }
 
     checkCredentials(username, password){
-        // Check details against each account, and return userId of account that they match (or -1 if no match)
+        // Check if password matches the given username, and return the userId if so.  Otherwise return -1
         // Make sure accounts buffer is up to date
         this.getData();
-        for (let i = 0; i < this.accountsBuffer.length; i++){
-            let account = this.accountsBuffer[i];
-            if (account.userName === username && bcrypt.compareSync(password, account.password)){
-                return account.userId;
+        let userId = this.userNames[username];
+        if (userId != undefined){
+            let account = this.getAccount(userId);
+            if (bcrypt.compareSync(password, account.password)){
+                return userId;
             }
         }
         return -1;
@@ -170,6 +178,7 @@ class LogAccess extends DataAccess{
         this.writeFile(this.logBuffer);
     }
 }
+
 module.exports = {
     MessagesAccess,
     AccountsAccess, 
