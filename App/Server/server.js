@@ -82,9 +82,13 @@ io.on('connection', socket => {
     }
     else{
       // Details are valid
-      accountsFile.createAccount(details.username, details.firstName, details.lastName, details.password);
-      socket.emit('register-success');
-      logger.log("New account created: " + details.username);
+      if (accountsFile.createAccount(details.username, details.firstName, details.lastName, details.password) == dataAccess.AccountsAccess.USERNAMETAKEN){
+        socket.emit('register-fail', 'Username taken');
+      }
+      else{
+        socket.emit('register-success');
+        logger.log("New account created: " + details.username);
+      }
     }
   })
 
