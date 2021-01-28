@@ -19,6 +19,10 @@ var logger = new dataAccess.LogAccess();
 messagesFile.getData();  // Load all previous messages
 var profanityFilter = new profanity("*", true);
 
+//We should turn these into a settings file at some point 
+var messageLimit = 255; 
+
+
 
 io.on('connection', socket => {
 
@@ -100,6 +104,13 @@ io.on('connection', socket => {
       if (message == ""){
         return
       }
+
+      if (message.length > messageLimit){ // again, just for redundancy 
+        console.log("A message that was too long got though")
+        return
+      }
+
+
       // Must also send message to user that sent it
       socket.emit('chat-message', {message: filteredMessage, name: "You"});
     }
