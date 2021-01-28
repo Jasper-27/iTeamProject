@@ -2,7 +2,7 @@ work/code/nodeMessage/client/node_modules/**
 work/code/nodeMessage/server/node_modules/**
 work/code/CommunicationTests/node_modules/**
 work/code/Realtime-Simple-Chat-App-master/data
-node_modules/**
+App/Server/node_modules/**
 App/Server/data/messages.json
 App/Server/data/messages.json
 App/Server/data/messages.json
