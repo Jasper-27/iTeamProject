@@ -2,6 +2,8 @@ const sendAllPreviousMessages = false;  // When a user connects, send them all p
 const Message = require("./Message");
 const dataAccess = require("./dataAccess");
 const profanity = require("./ProfanityFilter");
+const loggingSystem = require("./Log"); 
+
 const io = require('socket.io')(3000, {
   cors: {
     // Must allow cross origin resource sharing (otherwise server won't accept traffic from localhost)
@@ -12,11 +14,18 @@ const io = require('socket.io')(3000, {
 const users = {}
 var messagesFile = new dataAccess.MessagesAccess();
 var accountsFile = new dataAccess.AccountsAccess();
+var logger = new dataAccess.LogAccess(); 
+
 messagesFile.getData();  // Load all previous messages
 var profanityFilter = new profanity("*", true);
 
+//We should turn these into a settings file at some point 
+var messageLimit = 255; 
+
+
 
 io.on('connection', socket => {
+
 
   //when new user is added to the server
   socket.on('new-user', name => {
@@ -25,6 +34,7 @@ io.on('connection', socket => {
     socket.broadcast.emit('user-connected', name);
     console.log("User " + name + " Connected");
     sendPreviousMessages(socket);
+    logger.log("User " + name + " Connected");
   })
 
   // When user tries to login
@@ -42,12 +52,16 @@ io.on('connection', socket => {
       // Announce that the user has connected
       socket.to('authorised').emit('user-connected', name);
       // Send all previous messages (if that setting is enabled)
-      console.log("User " + name + " connected");
       sendPreviousMessages(socket);
+
+      //Log that the user connected 
+      console.log("User " + name + " connected");
+      logger.log(name + " connected"); 
     }
     else{
       // Tell client that login failed
       socket.emit('login-fail');
+      logger.log("Failed login attempt")
     }
   })
 
@@ -70,6 +84,7 @@ io.on('connection', socket => {
       // Details are valid
       accountsFile.createAccount(details.username, details.firstName, details.lastName, details.password);
       socket.emit('register-success');
+      logger.log("New account created: " + details.username);
     }
   })
 
@@ -85,10 +100,17 @@ io.on('connection', socket => {
       console.log(message)
 
       //If message is blank. don't spam people 
-      //This is done client side as well for redundency
+      //This is done client side as well for redundancy
       if (message == ""){
         return
       }
+
+      if (message.length > messageLimit){ // again, just for redundancy 
+        console.log("A message that was too long got though")
+        return
+      }
+
+
       // Must also send message to user that sent it
       socket.emit('chat-message', {message: filteredMessage, name: "You"});
     }
@@ -96,7 +118,12 @@ io.on('connection', socket => {
 
   socket.on('disconnect', () => {
     socket.to('authorised').emit('user-disconnected', users[socket.id]);
-    delete users[socket.id];
+
+    //logs that the user disconnected at this time
+    let name = accountsFile.getAccount(users[socket.id]).userName;
+    logger.log(name + " disconnected"); 
+
+    delete users[socket.id]; // remove the user from the connected users
   })
 
   // functionality not added yet
