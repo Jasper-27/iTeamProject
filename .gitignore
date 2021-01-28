@@ -4,7 +4,5 @@ work/code/CommunicationTests/node_modules/*
 work/code/Realtime-Simple-Chat-App-master/data
 App/Server/node_modules/*
 App/Server/data/messages.json
-App/Server/data/accounts.json
 *.DS_Store
-
 App/Server/data/Log.json
