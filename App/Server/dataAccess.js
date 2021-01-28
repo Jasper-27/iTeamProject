@@ -3,9 +3,11 @@ const fs = require("fs");
 const bcrypt = require("bcrypt");
 const Message = require("./Message");
 const Account = require("./Account");
+const Log = require("./Log")
 const saltRounds = 10;  // The number of iterations to be done to generate the hash (2^saltRounds)
 const messagesFilePath = __dirname + "/data/messages.json";
 const accountsFilePath = __dirname + "/data/accounts.json";
+const logFilePath = __dirname + "/data/Log.json";
 
 // Base Json access class
 class DataAccess{
@@ -141,7 +143,35 @@ class AccountsAccess extends DataAccess{
         return -1;
     }
 }
+
+class LogAccess extends DataAccess{
+    logBuffer = [];
+    constructor(){
+        super(logFilePath);
+    }
+
+    
+    getData(){
+       this.logBuffer = [];
+       let data = this.readFile();
+       for (let i = 0; i < data.length; i++){
+           let logEntry = data[i];
+           this.logBuffer.push(new Log(logEntry["text"], logEntry["time"]));
+       }
+    }
+
+    log(text){
+        // Make sure buffer is up to date, to avoid conflicting entries 
+        this.getData(); 
+        // Gets the current time, to add to the log
+        let now = new Date(); 
+        let newLog = new Log(text, now)
+        this.logBuffer.push(newLog); 
+        this.writeFile(this.logBuffer);
+    }
+}
 module.exports = {
     MessagesAccess,
-    AccountsAccess
+    AccountsAccess, 
+    LogAccess
 };
