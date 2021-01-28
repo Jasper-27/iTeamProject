@@ -4,10 +4,6 @@ const messageForm = document.getElementById('send-container')
 const messageInput = document.getElementById('message-input')
 var currentSendingUser;
 
-
-// settings (these need to be added by a file in future )
-var lengthLimit = 255
-
 login();
 appendMessage('You joined')
 // socket.emit('new-user', name)
@@ -53,13 +49,6 @@ messageForm.addEventListener('submit', e => {
 
   //stops you from spamming blank
   if (message.trim() == ""){
-    return
-  }
-
-  alert(message.length)
-  if (message.length > lengthLimit){
-    console.log("message is too long")
-    alert("Message is too long");
     return
   }
 
