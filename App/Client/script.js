@@ -4,9 +4,9 @@ const messageForm = document.getElementById('send-container')
 const messageInput = document.getElementById('message-input')
 var currentSendingUser;
 
-var name = prompt('What is your name?')
+login();
 appendMessage('You joined')
-socket.emit('new-user', name)
+// socket.emit('new-user', name)
 
 
 //When a message is sent
@@ -31,6 +31,15 @@ socket.on('get-users', data => {
     console.log(user.name)
   });
 })
+
+// If login fails, force user to try again
+socket.on('login-fail', login);
+
+// If register fails, force user to try again
+socket.on('register-fail', register);
+
+// If register success, notify user
+socket.on('register-success', () => {alert('Account created')});
 
 
 //When the send button is pressed 
@@ -82,4 +91,23 @@ function appendMessageRecieve(message) {
 
 function getUsers(){
   socket.emit('get-users');
+}
+
+function login(){
+  if (prompt("Login or register (login is default") == "register"){
+    register();
+  }
+  else{
+    let username = prompt("Enter username");
+    let password = prompt("Enter password");
+    socket.emit('login', {"username": username, "password": password});
+  }
+}
+
+function register(){
+  let username = prompt("Enter username");
+  let firstName = prompt("Enter first name");
+  let lastName = prompt("Enter last name");
+  let password = prompt("Enter password");
+  socket.emit('create-account', {"username": username, "firstName": firstName, "lastName": lastName, "password": password});
 }
