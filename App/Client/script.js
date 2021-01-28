@@ -56,7 +56,6 @@ messageForm.addEventListener('submit', e => {
     return
   }
 
-  alert(message.length)
   if (message.length > lengthLimit){
     console.log("message is too long")
     alert("Message is too long");
