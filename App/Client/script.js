@@ -25,16 +25,35 @@ socket.on('user-connected', name => {
   getUsers(); 
 })
 
+
+var connectedUsersList = document.getElementById('users');
+
 //When a user disconnects 
 socket.on('user-disconnected', name => {
   appendMessage(`${name} disconnected`)
 })
 
-socket.on('get-users', data => {
-  data.forEach(user => {
-    console.log(user.name)
-  });
+// socket.on('get-users', data => {
+  
+// })
+
+socket.on('send-users', connectedUsers => {
+  console.log("sendRunning")
+  console.log(connectedUsers); 
+
+  generateUserList(connectedUsers); 
+
 })
+
+function generateUserList(list){
+  connectedUsersList.innerHTML = ""; 
+  list.forEach((item, index) => {
+    var entry = document.createElement('li');
+    entry.appendChild(document.createTextNode(item));
+    connectedUsersList.appendChild(entry);
+  });
+}
+
 
 // If login fails, force user to try again
 socket.on('login-fail', login);
@@ -100,7 +119,8 @@ function appendMessageRecieve(message) {
 
 
 function getUsers(){
-  socket.emit('get-users');
+  console.log("runningFunction")
+  socket.emit('get-users', "");
 }
 
 function login(){
