@@ -40,29 +40,30 @@ io.on('connection', socket => {
   // When user tries to login
   socket.on('login', credentials => {
     // Check if credentials are valid
-    let userId = accountsFile.checkCredentials(credentials.username, credentials.password);
-    if (userId != -1){
-      // The details are correct, store the userId in users dictionary
-      users[socket.id] = userId;
-      let name = accountsFile.getAccount(userId).userName;
-      // Tell client that login was successful
-      socket.emit('login-success');
-      // Add socket to the "authorised" room so they can receive messages
-      socket.join('authorised');
-      // Announce that the user has connected
-      socket.to('authorised').emit('user-connected', name);
-      // Send all previous messages (if that setting is enabled)
-      sendPreviousMessages(socket);
-
-      //Log that the user connected 
-      console.log("User " + name + " connected");
-      logger.log(name + " connected"); 
+    if (typeof credentials.username == "string" && typeof credentials.password == "string"){
+      let userId = accountsFile.checkCredentials(credentials.username, credentials.password);
+      if (userId != -1){
+        // The details are correct, store the userId in users dictionary
+        users[socket.id] = userId;
+        let name = accountsFile.getAccount(userId).userName;
+        // Tell client that login was successful
+        socket.emit('login-success');
+        // Add socket to the "authorised" room so they can receive messages
+        socket.join('authorised');
+        // Announce that the user has connected
+        socket.to('authorised').emit('user-connected', name);
+        // Send all previous messages (if that setting is enabled)
+        sendPreviousMessages(socket);
+        //Log that the user connected 
+        console.log("User " + name + " connected");
+        logger.log(name + " connected"); 
+        return;
+      }
     }
-    else{
-      // Tell client that login failed
-      socket.emit('login-fail');
-      logger.log("Failed login attempt")
-    }
+    
+    // Tell client that login failed
+    socket.emit('login-fail');
+    logger.log("Failed login attempt")
   })
 
   // When user tries to create account
