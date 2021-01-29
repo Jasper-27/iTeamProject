@@ -23,6 +23,10 @@ var profanityFilter = new profanity("*", true);
 var messageLimit = 255; 
 
 
+//for getting the connected users 
+
+var connected = []; 
+
 
 io.on('connection', socket => {
 
@@ -35,6 +39,7 @@ io.on('connection', socket => {
     console.log("User " + name + " Connected");
     sendPreviousMessages(socket);
     logger.log("User " + name + " Connected");
+   
   })
 
   // When user tries to login
@@ -57,6 +62,14 @@ io.on('connection', socket => {
       //Log that the user connected 
       console.log("User " + name + " connected");
       logger.log(name + " connected"); 
+
+      // adds the username to list of connected users (provided it isn't there already)
+      if (connected.indexOf(name) < 0){
+        connected.push(name); 
+        socket.to('authorised').emit('send-users', connected); 
+      }
+  
+      console.log(connected); 
     }
     else{
       // Tell client that login failed
@@ -126,13 +139,25 @@ io.on('connection', socket => {
     //logs that the user disconnected at this time
     let name = accountsFile.getAccount(users[socket.id]).userName;
     logger.log(name + " disconnected"); 
+    console.log(name + " disconnected"); 
 
-    delete users[socket.id]; // remove the user from the connected users
+    delete users[socket.id]; // remove the user from the connected users (but doesn't delete them, sets to null i think)
+
+    //removes the users name from the client list when they log out
+    var index = connected.indexOf(name);
+    if (index > -1) {
+        connected.splice(index, 1);
+    }
+    socket.to('authorised').emit('send-users', connected); 
   })
 
-  // functionality not added yet
-  socket.on('get-users', () => {
-    socket.to('authorised').emit(users); 
+
+
+  
+  // allows the client to request a list of new users. tried to remove this but everything broke
+  socket.on('get-users', out => {
+    console.log("sending the connected users")
+    socket.to('authorised').emit('send-users', connected); 
   })
 })
 
