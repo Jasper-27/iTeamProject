@@ -8,6 +8,10 @@ var currentSendingUser;
 // settings (these need to be added by a file in future )
 var lengthLimit = 255
 
+
+
+var connectedUsersList = document.getElementById('users');  // The HTML list that contains the connected users 
+
 login();
 appendMessage('You joined')
 // socket.emit('new-user', name)
@@ -26,17 +30,15 @@ socket.on('user-connected', name => {
 })
 
 
-var connectedUsersList = document.getElementById('users');
+
 
 //When a user disconnects 
 socket.on('user-disconnected', name => {
   appendMessage(`${name} disconnected`)
 })
 
-// socket.on('get-users', data => {
-  
-// })
 
+//When the client is sent a list of users, update the display with that list
 socket.on('send-users', connectedUsers => {
   console.log("sendRunning")
   console.log(connectedUsers); 
@@ -44,16 +46,6 @@ socket.on('send-users', connectedUsers => {
   generateUserList(connectedUsers); 
 
 })
-
-function generateUserList(list){
-  connectedUsersList.innerHTML = ""; 
-  list.forEach((item, index) => {
-    var entry = document.createElement('li');
-    entry.appendChild(document.createTextNode(item));
-    connectedUsersList.appendChild(entry);
-  });
-}
-
 
 // If login fails, force user to try again
 socket.on('login-fail', login);
@@ -118,9 +110,20 @@ function appendMessageRecieve(message) {
 }
 
 
+// asks the server for a list of currently connected users 
 function getUsers(){
   console.log("runningFunction")
   socket.emit('get-users', "");
+}
+
+// Fills up the connected users list on the client interface 
+function generateUserList(list){
+  connectedUsersList.innerHTML = ""; 
+  list.forEach((item, index) => {
+    var entry = document.createElement('li');
+    entry.appendChild(document.createTextNode(item));
+    connectedUsersList.appendChild(entry);
+  });
 }
 
 function login(){
