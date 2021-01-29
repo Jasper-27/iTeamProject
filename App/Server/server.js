@@ -23,6 +23,15 @@ var profanityFilter = new profanity("*", true);
 var messageLimit = 255; 
 
 
+//for getting the connected users 
+var connected = []; 
+
+console.log("*****************************************")
+console.log("*          😉 WINKI SERVER 😉           *")         
+console.log("*****************************************")
+console.log()
+
+
 
 io.on('connection', socket => {
 
@@ -32,9 +41,13 @@ io.on('connection', socket => {
     if (name == null || name == undefined || name == "") name = "unknown";
     users[socket.id] = name;
     socket.broadcast.emit('user-connected', name);
-    console.log("User " + name + " Connected");
     sendPreviousMessages(socket);
+
+
+    // hang on, isn't this done twice?  // This bit never runs Hmmmmmm
+    console.log("User " + name + " Connected");
     logger.log("User " + name + " Connected");
+   
   })
 
   // When user tries to login
@@ -55,10 +68,26 @@ io.on('connection', socket => {
         // Send all previous messages (if that setting is enabled)
         sendPreviousMessages(socket);
         //Log that the user connected 
-        console.log("User " + name + " connected");
-        logger.log(name + " connected"); 
+        //Log that the user connected 
+        console.log("👋 User " + name + " logged in");
+        logger.log(name + " logged in"); 
+
+        // adds the username to list of connected users (provided it isn't there already)
+        if (connected.indexOf(name) < 0){
+          connected.push(name); 
+          socket.to('authorised').emit('send-users', connected); 
+        }
+  
+        //console.log(connected); 
+      }
+      else{
+        // Tell client that login failed
+        socket.emit('login-fail');
+        logger.log("Failed login attempt") //This may get a bit much 
+        console.log("⚠️ Failed login attempt!") 
         return;
       }
+
     }
     
     // Tell client that login failed
@@ -89,6 +118,7 @@ io.on('connection', socket => {
       else{
         socket.emit('register-success');
         logger.log("New account created: " + details.username);
+        console.log("👍 New account created: " + details.username); 
       }
     }
   })
@@ -102,16 +132,17 @@ io.on('connection', socket => {
       if (name == null || name == undefined || name == "") name = "unknown";
       messagesFile.appendData(new Message(name, filteredMessage));
       socket.to('authorised').emit('chat-message', { message: filteredMessage, name: name });
-      console.log(message)
+      // console.log("🟢 " + name + ": " + message)
 
       //If message is blank. don't spam people 
       //This is done client side as well for redundancy
       if (message == ""){
+        console.log("🚨 An empty message got through")
         return
       }
 
       if (message.length > messageLimit){ // again, just for redundancy 
-        console.log("A message that was too long got though")
+        console.log("🚨 A message that was too long got though")
         return
       }
 
@@ -128,13 +159,26 @@ io.on('connection', socket => {
       socket.to('authorised').emit('user-disconnected', name);
       //logs that the user disconnected at this time
       logger.log(name + " disconnected"); 
-      delete users[socket.id]; // remove the user from the connected users
+      console.log("💔 " + name + " disconnected"); 
+
+      delete users[socket.id]; // remove the user from the connected users (but doesn't delete them, sets to null i think)
+
+      //removes the users name from the client list when they log out
+      var index = connected.indexOf(name);
+      if (index > -1) {
+          connected.splice(index, 1);
+      }
+      socket.to('authorised').emit('send-users', connected); 
     }
   })
 
-  // functionality not added yet
-  socket.on('get-users', () => {
-    socket.to('authorised').emit(users); 
+
+
+  
+  // allows the client to request a list of new users. tried to remove this but everything broke
+  socket.on('get-users', out => {
+    // console.log("➡️  sending the connected users")
+    socket.to('authorised').emit('send-users', connected); 
   })
 })
 
