@@ -122,11 +122,13 @@ io.on('connection', socket => {
 
   socket.on('disconnect', () => {
     let name = accountsFile.getAccount(users[socket.id]).userName;
-    socket.to('authorised').emit('user-disconnected', name);
-    //logs that the user disconnected at this time
-    logger.log(name + " disconnected"); 
-
-    delete users[socket.id]; // remove the user from the connected users
+    // Only continue if name exists (meaning user was properly connected and logged in)
+    if (typeof name == "string"){
+      socket.to('authorised').emit('user-disconnected', name);
+      //logs that the user disconnected at this time
+      logger.log(name + " disconnected"); 
+      delete users[socket.id]; // remove the user from the connected users
+    }
   })
 
   // functionality not added yet
