@@ -77,22 +77,13 @@ io.on('connection', socket => {
           connected.push(name); 
           socket.to('authorised').emit('send-users', connected); 
         }
-  
-        //console.log(connected); 
-      }
-      else{
-        // Tell client that login failed
-        socket.emit('login-fail');
-        logger.log("Failed login attempt") //This may get a bit much 
-        console.log("⚠️ Failed login attempt!") 
         return;
       }
-
     }
-    
-    // Tell client that login failed
-    socket.emit('login-fail');
-    logger.log("Failed login attempt")
+      // Tell client that login failed
+      socket.emit('login-fail');
+      logger.log("Failed login attempt") //This may get a bit much 
+      console.log("⚠️ Failed login attempt!") 
   })
 
   // When user tries to create account
