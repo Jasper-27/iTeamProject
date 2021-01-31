@@ -53,38 +53,37 @@ io.on('connection', socket => {
   // When user tries to login
   socket.on('login', credentials => {
     // Check if credentials are valid
-    let userId = accountsFile.checkCredentials(credentials.username, credentials.password);
-    if (userId != -1){
-      // The details are correct, store the userId in users dictionary
-      users[socket.id] = userId;
-      let name = accountsFile.getAccount(userId).userName;
-      // Tell client that login was successful
-      socket.emit('login-success');
-      // Add socket to the "authorised" room so they can receive messages
-      socket.join('authorised');
-      // Announce that the user has connected
-      socket.to('authorised').emit('user-connected', name);
-      // Send all previous messages (if that setting is enabled)
-      sendPreviousMessages(socket);
+    if (typeof credentials.username == "string" && typeof credentials.password == "string"){
+      let userId = accountsFile.checkCredentials(credentials.username, credentials.password);
+      if (userId != -1){
+        // The details are correct, store the userId in users dictionary
+        users[socket.id] = userId;
+        let name = accountsFile.getAccount(userId).userName;
+        // Tell client that login was successful
+        socket.emit('login-success');
+        // Add socket to the "authorised" room so they can receive messages
+        socket.join('authorised');
+        // Announce that the user has connected
+        socket.to('authorised').emit('user-connected', name);
+        // Send all previous messages (if that setting is enabled)
+        sendPreviousMessages(socket);
+        //Log that the user connected 
+        //Log that the user connected 
+        console.log("👋 User " + name + " logged in");
+        logger.log(name + " logged in"); 
 
-      //Log that the user connected 
-      console.log("👋 User " + name + " logged in");
-      logger.log(name + " logged in"); 
-
-      // adds the username to list of connected users (provided it isn't there already)
-      if (connected.indexOf(name) < 0){
-        connected.push(name); 
-        socket.to('authorised').emit('send-users', connected); 
+        // adds the username to list of connected users (provided it isn't there already)
+        if (connected.indexOf(name) < 0){
+          connected.push(name); 
+          socket.to('authorised').emit('send-users', connected); 
+        }
+        return;
       }
-  
-      //console.log(connected); 
     }
-    else{
       // Tell client that login failed
       socket.emit('login-fail');
       logger.log("Failed login attempt") //This may get a bit much 
-      console.log("⚠️ Failed login attempt!")
-    }
+      console.log("⚠️ Failed login attempt!") 
   })
 
   // When user tries to create account
@@ -145,21 +144,23 @@ io.on('connection', socket => {
   })
 
   socket.on('disconnect', () => {
-    socket.to('authorised').emit('user-disconnected', users[socket.id]);
-
-    //logs that the user disconnected at this time
     let name = accountsFile.getAccount(users[socket.id]).userName;
-    logger.log(name + " disconnected"); 
-    console.log("💔 " + name + " disconnected"); 
+    // Only continue if name exists (meaning user was properly connected and logged in)
+    if (typeof name == "string"){
+      socket.to('authorised').emit('user-disconnected', name);
+      //logs that the user disconnected at this time
+      logger.log(name + " disconnected"); 
+      console.log("💔 " + name + " disconnected"); 
 
-    delete users[socket.id]; // remove the user from the connected users (but doesn't delete them, sets to null i think)
+      delete users[socket.id]; // remove the user from the connected users (but doesn't delete them, sets to null i think)
 
-    //removes the users name from the client list when they log out
-    var index = connected.indexOf(name);
-    if (index > -1) {
-        connected.splice(index, 1);
+      //removes the users name from the client list when they log out
+      var index = connected.indexOf(name);
+      if (index > -1) {
+          connected.splice(index, 1);
+      }
+      socket.to('authorised').emit('send-users', connected); 
     }
-    socket.to('authorised').emit('send-users', connected); 
   })
 
 
