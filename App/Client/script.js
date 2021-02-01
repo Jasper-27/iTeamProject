@@ -90,8 +90,8 @@ function addMessage(inName, inMessage) {
 		appendMessage(inMessage)
     }
     else {
-		var message = inName + " : " + inMessage;
-	  appendMessageRecieve(message)
+		var message = inMessage;
+	  appendMessageRecieve(message, inName)
     }    
 
 }
@@ -107,10 +107,35 @@ function appendMessage(message) {
 }
 
 //Adds a message someone else sent to the chat 
-function appendMessageRecieve(message) {
+function appendMessageRecieve(message, inName) {
+	
+  //craete the box 
   const messageElement = document.createElement('div')
-  messageElement.className = "boxRecieve sb2";
-  messageElement.innerText = message;
+  messageElement.className = "msg-bubble";
+  
+  //create the info box
+  const messageInfoBox = document.createElement('div')
+  messageElement.className = "msg-info";
+  document.getElementById('messageElement').appendChild(messageInfoBox);  
+  
+  //set the info
+  const messageInfoName = document.createElement('div')
+  const messageInfoTime = document.createElement('div')
+  messageInfoName.className = "msg-info-name";
+  messageInfoTime.className = "msg-info-time";
+  
+  document.getElementById('messageInfoBox').appendChild(messageInfoName);  
+  document.getElementById('messageInfoBox').appendChild(messageInfoTime);  
+  messageInfoName.innerText = inName;
+  var current = new Date();
+  messageInfoTime. innerHTML = current.toLocaleTimeString();
+  
+  //set the message
+  const messageOutput = document.createElement('div')
+  messageElement.className = "msg-text";
+  messageOutput.innerText = message;
+  
+  //apend to the message div
   messageContainer.append(messageElement);
   messageContainer.scrollTop = messageContainer.scrollHeight;
 }
