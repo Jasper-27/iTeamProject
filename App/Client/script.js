@@ -133,7 +133,7 @@ function generateUserList(list){
 }
 
 function login(){
-  if (prompt("Login or register (login is default") == "register"){
+  if (prompt("Login or register (login is default)") == "register"){
     register();
   }
   else{
