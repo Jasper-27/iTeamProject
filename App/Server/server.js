@@ -65,7 +65,7 @@ io.on('connection', socket => {
         users[socket.id] = userId;
         let name = accountsFile.getAccount(userId).userName;
         // Tell client that login was successful
-        socket.emit('login-success');
+        socket.emit('login-success', {"profilepic": accountsFile.getProfilePictureString(userId)});
         // Add socket to the "authorised" room so they can receive messages
         socket.join('authorised');
         // Announce that the user has connected
@@ -178,7 +178,14 @@ io.on('connection', socket => {
   // allows the client to request a list of new users. tried to remove this but everything broke
   socket.on('get-users', out => {
     // console.log("➡️  sending the connected users")
-    socket.to('authorised').emit('send-users', connected); 
+    // Send all usernames and profile pictures
+    connectedDetails = [];
+    for (let i = 0; i < connected.length; i++){
+      let username = connected[i];
+      let profilePic = accountsFile.getProfilePictureString(accountsFile.getUserId(username));
+      connectedDetails.push({"name": username, "profilepic": profilePic});
+    }
+    socket.to('authorised').emit('send-users', connectedDetails);
   })
 })
 

@@ -1,5 +1,6 @@
 // A class for handling reading and writing to / from the Json files
 const fs = require("fs");
+const path = require("path");
 const bcrypt = require("bcrypt");
 const Message = require("./Message");
 const Account = require("./Account");
@@ -8,6 +9,8 @@ const saltRounds = 10;  // The number of iterations to be done to generate the h
 const messagesFilePath = __dirname + "/data/messages.json";
 const accountsFilePath = __dirname + "/data/accounts.json";
 const logFilePath = __dirname + "/data/Log.json";
+// Use Winki logo as default profile picture
+const defaultProfilePictureString = "data:image/png;charset=utf-8;base64,iVBORw0KGgoAAAANSUhEUgAAAyAAAAMgCAYAAADbcAZoAAAvZnpUWHRSYXcgcHJvZmlsZSB0eXBlIGV4aWYAAHjarZxpdlw3EqX/YxW1BMxALAfjOb2DXn5/F0nKsuWhXKdFS6STmW8AIu4QCDx3/u//ue4///lPCDF5l0vr1Wr1/MmWLQ5+6P7zx96/wef37/sTvU9fr/7udffjF5GX9NPn/3wbn+9h8Hr57QPf5wjz96+7/vWb2L8O9PWL7wMmnZmz+f3zRfJ6/Lwe8teB7Hx+qNbbz5c64+f7+nrju5Svv+u8Q/vwdTL9v/v5hdwYpV14V4rxJF7m35i+riDpb0iD7/o3pB4/r46Ukrn3i/51JQzI727v+7v3Pw/Q7wb5+yf3x9H/8dMfBj+Or9fTH8ayfo0RP/zpL0L588F/Q/zTidOPK4q//8XocfxyO19/79393vO5u5ErI1…D40VxeXobFYkGTyeQP59yfm81mSJhI9G2qVDzlRxrVRLRjUPOv+BzTsF6vh3Mpr0HvDv8uD0nsZUiJCL4f6TWQAiE2/GOPBgss9iJxpnDGGJOcHiU9HrK81pqKoiBrLRlj9HK59FVVXb28vHzBtxIAAP4f+gB93jIiyiFAAADgJ6Vpmk/OuSfn3GBId11H/HdVVeS9J+fclhiR3pNTkSIh5RlIBbWn4lGkwDk1tkNeS1xPBtmvVqtBWCS2m/l8/he+RQAA8HMIEO99ppTSRFRAgAAAwBlR13XYbDZD9mwWCLyXx9baIQg+9i4QfQvy3heDEQueeOqTnHrG5aSHhgVEHFvBxyyqtNZkrUVSPgAA+MWYzWZqOp2SUiqj3vtBRAVGBgAAwEHats3G4/FtVVXBGBO01oGXnNRaB2NMqKoqjMfj27Ztsbw7AAAAIiK6v79XXddlIYS86zobQqhCCJN/AKcid7rGMyhUAAAAAElFTkSuQmCC";
 
 // Base Json access class
 class DataAccess{
@@ -101,6 +104,40 @@ class AccountsAccess extends DataAccess{
         }
         else{
             return -1;
+        }
+    }
+
+    getUserId(username){
+        // Return the userId for the given username (or -1 if it does not match)
+        if (this.accountsBuffer.length == 0){
+            this.getData();
+        }
+        let id = this.userNames[username];
+        if (typeof id == "number") return id;
+        else return -1;
+    }
+
+    getProfilePictureString(userId){
+        // Return the profile picture for the given user as a base64 encoded string
+        if (this.accountsBuffer.length == 0){
+            this.getData();
+        }
+        let account = this.accountsBuffer[userId];
+        // Make sure account exists first
+        if (account instanceof Account){
+            try{
+                // Get the file type of the image
+                let filePath = __dirname + "/data/profilepics/" + account.profilePicture;
+                let fileType = path.extname(filePath);
+                // Get the raw image data and encode it as base64
+                let image = fs.readFileSync(filePath).toString("base64");
+                // construct a string containing the image and its details in format "data:<media type>/<file type>;<character set>;<encoding>,<data>"
+                let base64String = "data:image/" + fileType + ";charset=utf-8;base64," + image;
+                return base64String;
+            }
+            catch{
+                return defaultProfilePictureString;
+            }
         }
     }
 

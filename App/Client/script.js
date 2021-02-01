@@ -3,6 +3,10 @@ const messageContainer = document.getElementById('message-container')
 const messageForm = document.getElementById('send-container')
 const messageInput = document.getElementById('message-input')
 var currentSendingUser;
+// Holds the profile picture of the current user
+var currentSendingUserPicture;
+// Holds the profile pictures of all other connected users
+var connectedUserPictures = {};
 
 
 // settings (these need to be added by a file in future )
@@ -48,7 +52,7 @@ socket.on('user-disconnected', name => {
 //When the client is sent a list of users, update the display with that list
 socket.on('send-users', connectedUsers => {
   console.log("sendRunning")
-  console.log(connectedUsers); 
+  // console.log(connectedUsers); // Writing whole images to console will be slow
 
   generateUserList(connectedUsers); 
 
@@ -56,6 +60,9 @@ socket.on('send-users', connectedUsers => {
 
 // If login fails, force user to try again
 socket.on('login-fail', login);
+
+// On login success, set the profile picture
+socket.on('login-success', data => {currentSendingUserPicture = data.profilepic});
 
 // If register fails, force user to try again
 socket.on('register-fail', register);
@@ -111,7 +118,7 @@ function appendMessage(message) {
   //add user image
   var userImage = document.createElement('div');
   userImage.className = "msg-img";
-  userImage.style.backgroundImage = "url(https://image.flaticon.com/icons/svg/145/145867.svg)";
+  userImage.style.backgroundImage = `url(${currentSendingUserPicture})`;
   messageBox.appendChild(userImage);
   
   //specify and add the actual bubble 
@@ -153,7 +160,7 @@ function appendMessageRecieve(message, inName) {
   //add user image
   var userImage = document.createElement('div');
   userImage.className = "msg-img";
-  userImage.style.backgroundImage = "url(https://image.flaticon.com/icons/svg/327/327779.svg)";
+  userImage.style.backgroundImage = `url(${connectedUserPictures[inName]})`;
   messageBox.appendChild(userImage);
   
   //specify and add the actual bubble 
@@ -227,9 +234,12 @@ function getUsers(){
 function generateUserList(list){
   connectedUsersList.innerHTML = ""; 
   list.forEach((item, index) => {
+    // Add username to list
     var entry = document.createElement('li');
-    entry.appendChild(document.createTextNode(item));
+    entry.appendChild(document.createTextNode(item["name"]));
     connectedUsersList.appendChild(entry);
+    // Add profile picture to connectedUserPictures
+    connectedUserPictures[item["name"]] = item["profilepic"];
   });
 }
 
