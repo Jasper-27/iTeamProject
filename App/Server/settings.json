@@ -1,0 +1,4 @@
+{
+    "maxMessageLength" : 255, 
+    "spamCap" : 5
+}
