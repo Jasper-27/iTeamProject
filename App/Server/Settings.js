@@ -1,11 +1,6 @@
 const fs = require("fs"); 
 
-
-
-
 function readSettings(socket) {
-
-   
     try{
         let rawData = fs.readFileSync('settings.json')
         let settingsJson = JSON.parse(rawData)
@@ -15,14 +10,6 @@ function readSettings(socket) {
         process.exit(1); 
     }
 }
-
-
-// function sendSettings(socket, settings){
-//     socket.emit("settings", settings);
-//     echo("i think it works")
-// }
-
-
 
 module.exports = {
   readSettings
