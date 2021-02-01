@@ -60,6 +60,11 @@ html {
   align-items: flex-end;
   margin-bottom: 10px;
 }
+.msgSystem {
+  display: flex-grow;
+  align-items: flex-end;
+  margin-bottom: 10px;
+}
 .msg:last-of-type {
   margin: 0;
 }
@@ -78,7 +83,7 @@ html {
   padding: 15px;
   border-radius: 15px;
   background: var(--left-msg-bg);
-	margin-bottom: 10px;
+  margin-bottom: 10px;
 }
 .msg-info {
   display: flex;
@@ -128,14 +133,14 @@ html {
 }
 .msger-send-btn {
   margin-left: 10px;
-  background: rgb(0, 196, 65);
+  background: rgb(87, 159, 251);
   color: #fff;
   font-weight: bold;
   cursor: pointer;
   transition: background 0.23s;
 }
 .msger-send-btn:hover {
-  background: rgb(0, 180, 50);
+  background: rgb(87, 170, 270);
 }
 
 .msger-chat {
