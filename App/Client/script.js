@@ -13,9 +13,9 @@ var settings
 var connectedUsersList = document.getElementById('users');  // The HTML list that contains the connected users 
 
 login();
-appendMessage('You joined')
+appendUserJoinOrDisconnect('You joined')
 // socket.emit('new-user', name)
-
+getUsers();
 
 
 socket.on('settings', data => {
@@ -31,16 +31,17 @@ socket.on('chat-message', data => {
 
 // When a user connects 
 socket.on('user-connected', name => {
-  appendMessage(`${name} connected`)
+	
+  var message = `${name} connected`;
+  appendUserJoinOrDisconnect(message);
   getUsers(); 
 })
 
-
-
-
 //When a user disconnects 
 socket.on('user-disconnected', name => {
-  appendMessage(`${name} disconnected`)
+  var message =(`${name} disconnected`)
+  appendUserJoinOrDisconnect(message);
+  getUsers(); 
 })
 
 
@@ -90,32 +91,131 @@ function addMessage(inName, inMessage) {
 		appendMessage(inMessage)
     }
     else {
-		var message = inName + " : " + inMessage;
-	  appendMessageRecieve(message)
+		var message = inMessage;
+	  appendMessageRecieve(message, inName)
     }    
 
 }
 
-
 //Adds a message you sent to that chat
 function appendMessage(message) {
-  const messageElement = document.createElement('div');
-  messageElement.className = "boxSend sb1";
-  messageElement.innerText = message;
-  messageContainer.append(messageElement);
+  // get current time
+  var current = new Date();
+  var current = current.toLocaleTimeString();
+	
+  //create the message box (div to hold the bubble)
+  var messageBox = document.createElement('div');
+  messageBox.className = "msg right-msg";
+  messageContainer.append(messageBox);
+  
+  //add user image
+  var userImage = document.createElement('div');
+  userImage.className = "msg-img";
+  userImage.style.backgroundImage = "url(https://image.flaticon.com/icons/svg/145/145867.svg)";
+  messageBox.appendChild(userImage);
+  
+  //specify and add the actual bubble 
+  var messageBubble = document.createElement('div');
+  messageBubble.className = "msg-bubble";
+  messageBox.appendChild(messageBubble)
+  
+  //create time and date divs
+  var messageInfoTime = document.createElement('div');
+  var messageInfoName = document.createElement('div');
+  messageInfoTime.className = "msg-info-time";
+  messageInfoName.className = "msg-info-name";
+  messageBubble.appendChild(messageInfoTime);
+  messageBubble.appendChild(messageInfoName);
+  messageInfoTime.innerText = current;
+  messageInfoName.innerText = "You";
+  
+  var messageData = document.createElement('div')
+  messageData.className = "msg-text";
+  messageData.innerText = message;
+  
+  messageBubble.appendChild(messageData);
   messageContainer.scrollTop = messageContainer.scrollHeight;
 }
-
+                                              
 //Adds a message someone else sent to the chat 
-function appendMessageRecieve(message) {
-  const messageElement = document.createElement('div')
-  messageElement.className = "boxRecieve sb2";
-  messageElement.innerText = message;
-  messageContainer.append(messageElement);
+function appendMessageRecieve(message, inName) {
+
+  // get current time
+  var current = new Date();
+  var current = current.toLocaleTimeString();
+	
+  //create the message box (div to hold the bubble)
+  var messageBox = document.createElement('div');
+  messageBox.className = "msg left-msg";
+  messageContainer.append(messageBox);
+  
+  //add user image
+  var userImage = document.createElement('div');
+  userImage.className = "msg-img";
+  userImage.style.backgroundImage = "url(https://image.flaticon.com/icons/svg/327/327779.svg)";
+  messageBox.appendChild(userImage);
+  
+  //specify and add the actual bubble 
+  var messageBubble = document.createElement('div');
+  messageBubble.className = "msg-bubble";
+  messageBox.appendChild(messageBubble)
+  
+  //create time and date divs
+  var messageInfoTime = document.createElement('div');
+  var messageInfoName = document.createElement('div');
+  messageInfoTime.className = "msg-info-time";
+  messageInfoName.className = "msg-info-name";
+  messageBubble.appendChild(messageInfoTime);
+  messageBubble.appendChild(messageInfoName);
+  messageInfoTime.innerText = current;
+  messageInfoName.innerText = inName;
+  
+  var messageData = document.createElement('div')
+  messageData.className = "msg-text";
+  messageData.innerText = message;
+  
+  messageBubble.appendChild(messageData);
+  
+  
   messageContainer.scrollTop = messageContainer.scrollHeight;
 }
 
-
+function appendUserJoinOrDisconnect(message){
+	  // get current time
+  var current = new Date();
+  var current = current.toLocaleTimeString();
+	
+  //create the message box (div to hold the bubble)
+  var messageBox = document.createElement('div');
+  messageBox.className = "msg-System";
+  messageContainer.append(messageBox);
+  
+  //add user image
+  var userImage = document.createElement('div');
+  messageBox.appendChild(userImage);
+  
+  //specify and add the actual bubble 
+  var messageBubble = document.createElement('div');
+  messageBubble.className = "msg-bubble";
+  messageBox.appendChild(messageBubble)
+  
+  //create time and date divs
+  var messageInfoTime = document.createElement('div');
+  var messageInfoName = document.createElement('div');
+  messageInfoTime.className = "msg-info-time";
+  messageInfoName.className = "msg-info-name";
+  messageBubble.appendChild(messageInfoTime);
+  messageBubble.appendChild(messageInfoName);
+  messageInfoTime.innerText = current;
+  messageInfoName.innerText = "System";
+  
+  var messageData = document.createElement('div')
+  messageData.innerText = message;
+  
+  messageBubble.appendChild(messageData);
+  messageContainer.scrollTop = messageContainer.scrollHeight;
+	
+}
 // asks the server for a list of currently connected users 
 function getUsers(){
   console.log("runningFunction")
