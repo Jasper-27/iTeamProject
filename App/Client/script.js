@@ -6,7 +6,7 @@ var currentSendingUser;
 
 
 // settings (these need to be added by a file in future )
-var lengthLimit = 255
+var settings 
 
 
 
@@ -15,6 +15,12 @@ var connectedUsersList = document.getElementById('users');  // The HTML list tha
 login();
 appendMessage('You joined')
 // socket.emit('new-user', name)
+
+
+
+socket.on('settings', data => {
+  settings = data; 
+})
 
 
 //When a message is sent
@@ -67,7 +73,7 @@ messageForm.addEventListener('submit', e => {
     return
   }
 
-  if (message.length > lengthLimit){
+  if (message.length > settings.messageLimit){
     console.log("message is too long")
     alert("Message is too long");
     return
@@ -127,7 +133,7 @@ function generateUserList(list){
 }
 
 function login(){
-  if (prompt("Login or register (login is default") == "register"){
+  if (prompt("Login or register (login is default)") == "register"){
     register();
   }
   else{

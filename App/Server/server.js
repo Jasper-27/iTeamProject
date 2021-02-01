@@ -3,6 +3,8 @@ const Message = require("./Message");
 const dataAccess = require("./dataAccess");
 const profanity = require("./ProfanityFilter");
 const loggingSystem = require("./Log"); 
+const Settings = require("./Settings.js")
+
 
 const io = require('socket.io')(3000, {
   cors: {
@@ -19,8 +21,9 @@ var logger = new dataAccess.LogAccess();
 messagesFile.getData();  // Load all previous messages
 var profanityFilter = new profanity("*", true);
 
-//We should turn these into a settings file at some point 
-var messageLimit = 255; 
+//reading settings from settings file 
+ let settings = Settings.readSettings()
+
 
 
 //for getting the connected users 
@@ -46,7 +49,9 @@ io.on('connection', socket => {
 
     // hang on, isn't this done twice?  // This bit never runs Hmmmmmm
     console.log("User " + name + " Connected");
-    logger.log("User " + name + " Connected");
+    logger.log("User " + name + " Connected"); 
+
+   
    
   })
 
@@ -77,6 +82,10 @@ io.on('connection', socket => {
           connected.push(name); 
           socket.to('authorised').emit('send-users', connected); 
         }
+
+        //Sends settings to the client 
+        socket.emit('settings', settings)
+
         return;
       }
     }
@@ -132,7 +141,7 @@ io.on('connection', socket => {
         return
       }
 
-      if (message.length > messageLimit){ // again, just for redundancy 
+      if (message.length > settings.messageLimit){ // again, just for redundancy 
         console.log("🚨 A message that was too long got though")
         return
       }
@@ -182,4 +191,5 @@ function sendPreviousMessages(socket){
     }
   }
 }
+
 
