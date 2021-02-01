@@ -59,7 +59,7 @@ html {
   display: flex;
   align-items: flex-end;
   margin-bottom: 10px;
-  word-wrap: "break-word";
+  word-wrap: break-word;
 }
 .msgSystem {
   display: flex-grow;
