@@ -51,8 +51,7 @@ io.on('connection', socket => {
     console.log("User " + name + " Connected");
     logger.log("User " + name + " Connected"); 
 
-    //Sends settings to the client 
-    // Settings.sendSettings(settings)
+   
    
   })
 
@@ -83,6 +82,10 @@ io.on('connection', socket => {
           connected.push(name); 
           socket.to('authorised').emit('send-users', connected); 
         }
+
+        //Sends settings to the client 
+        socket.emit('settings', settings)
+
         return;
       }
     }

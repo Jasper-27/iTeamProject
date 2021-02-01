@@ -17,10 +17,10 @@ function readSettings(socket) {
 }
 
 
-function sendSettings(socket, settings){
-    socket.emit("settings", settings);
-    echo("i think it works")
-}
+// function sendSettings(socket, settings){
+//     socket.emit("settings", settings);
+//     echo("i think it works")
+// }
 
 
 

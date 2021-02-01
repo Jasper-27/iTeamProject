@@ -1,4 +1,3 @@
 {
-    "messageLimit" : 255, 
-    "spamCap" : 5
+    "messageLimit" : 10, 
 }
