@@ -132,6 +132,7 @@ function appendMessage(message) {
   var messageData = document.createElement('div')
   messageData.className = "msg-text";
   messageData.innerText = message;
+
   
   messageBubble.appendChild(messageData);
   messageContainer.scrollTop = messageContainer.scrollHeight;
