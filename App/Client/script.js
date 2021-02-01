@@ -8,8 +8,6 @@ var currentSendingUser;
 // settings (these need to be added by a file in future )
 var settings 
 
-
-
 var connectedUsersList = document.getElementById('users');  // The HTML list that contains the connected users 
 
 login();
@@ -250,4 +248,7 @@ function register(){
   let lastName = prompt("Enter last name");
   let password = prompt("Enter password");
   socket.emit('create-account', {"username": username, "firstName": firstName, "lastName": lastName, "password": password});
+  
+  //login the user once the account is created with the given credentials
+  socket.emit('login', {"username": username, "password": password});
 }
