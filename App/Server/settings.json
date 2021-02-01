@@ -1,4 +1,4 @@
 {
-    "maxMessageLength" : 255, 
+    "messageLimit" : 255, 
     "spamCap" : 5
 }

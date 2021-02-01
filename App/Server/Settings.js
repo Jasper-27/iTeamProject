@@ -1,6 +1,9 @@
 const fs = require("fs"); 
 
-function readSettings() {
+
+
+
+function readSettings(socket) {
 
    
     try{
@@ -9,11 +12,18 @@ function readSettings() {
         return settingsJson
     }catch{
         console.log("Error, can't read settings file")
-        return 1; 
+        process.exit(1); 
     }
-  }
+}
 
 
-  module.exports = {
-      readSettings
-  }
+function sendSettings(socket, settings){
+    socket.emit("settings", settings);
+    echo("i think it works")
+}
+
+
+
+module.exports = {
+  readSettings
+}

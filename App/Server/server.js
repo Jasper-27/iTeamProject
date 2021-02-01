@@ -22,10 +22,8 @@ messagesFile.getData();  // Load all previous messages
 var profanityFilter = new profanity("*", true);
 
 //reading settings from settings file 
-let settings = Settings.readSettings()
-if (settings === 1){
-  process.exit(1)
-}
+ let settings = Settings.readSettings()
+
 
 
 //for getting the connected users 
@@ -51,7 +49,10 @@ io.on('connection', socket => {
 
     // hang on, isn't this done twice?  // This bit never runs Hmmmmmm
     console.log("User " + name + " Connected");
-    logger.log("User " + name + " Connected");
+    logger.log("User " + name + " Connected"); 
+
+    //Sends settings to the client 
+    // Settings.sendSettings(settings)
    
   })
 
@@ -137,7 +138,7 @@ io.on('connection', socket => {
         return
       }
 
-      if (message.length > messageLimit){ // again, just for redundancy 
+      if (message.length > settings.messageLimit){ // again, just for redundancy 
         console.log("🚨 A message that was too long got though")
         return
       }
