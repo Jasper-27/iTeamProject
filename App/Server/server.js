@@ -3,7 +3,7 @@ const Message = require("./Message");
 const dataAccess = require("./dataAccess");
 const profanity = require("./ProfanityFilter");
 const loggingSystem = require("./Log"); 
-const Settings = require("./Settings.js")
+const Settings = require("./Settings.js"); 
 
 
 const io = require('socket.io')(3000, {
@@ -13,7 +13,7 @@ const io = require('socket.io')(3000, {
   }
 });
 
-const users = {}
+const users = {}; 
 var messagesFile = new dataAccess.MessagesAccess();
 var accountsFile = new dataAccess.AccountsAccess();
 var logger = new dataAccess.LogAccess(); 
@@ -32,7 +32,7 @@ var connected = [];
 console.log("*****************************************");
 console.log("*          😉 WINKI SERVER 😉           *");      
 console.log("*****************************************");
-console.log()
+console.log(); 
 
 
 
@@ -132,7 +132,7 @@ io.on('connection', socket => {
       if (name == null || name == undefined || name == "") name = "unknown";
       messagesFile.appendData(new Message(name, filteredMessage));
       socket.to('authorised').emit('chat-message', { message: filteredMessage, name: name });
-      // console.log("🟢 " + name + ": " + message)
+      // console.log("🟢 " + name + ": " + message); 
 
       //If message is blank. don't spam people 
       //This is done client side as well for redundancy

@@ -173,7 +173,7 @@ class LogAccess extends DataAccess{
         this.getData(); 
         // Gets the current time, to add to the log
         let now = new Date(); 
-        let newLog = new Log(text, now)
+        let newLog = new Log(text, now);
         this.logBuffer.push(newLog); 
         this.writeFile(this.logBuffer);
     }

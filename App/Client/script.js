@@ -1,7 +1,7 @@
-const socket = io('http://localhost:3000')
-const messageContainer = document.getElementById('message-container')
-const messageForm = document.getElementById('send-container')
-const messageInput = document.getElementById('message-input')
+const socket = io('http://localhost:3000'); 
+const messageContainer = document.getElementById('message-container'); 
+const messageForm = document.getElementById('send-container');
+const messageInput = document.getElementById('message-input'); 
 var currentSendingUser;
 
 
@@ -11,7 +11,7 @@ var settings
 var connectedUsersList = document.getElementById('users');  // The HTML list that contains the connected users 
 
 login();
-appendUserJoinOrDisconnect('You joined')
+appendUserJoinOrDisconnect('You joined'); 
 // socket.emit('new-user', name)
 getUsers();
 
@@ -23,7 +23,7 @@ socket.on('settings', data => {
 
 //When a message is sent
 socket.on('chat-message', data => {
-  addMessage(`${data.name}`,`${data.message}`)
+  addMessage(`${data.name}`,`${data.message}`); 
   //appendMessage(`${data.name}: ${data.message}`)
 })
 
