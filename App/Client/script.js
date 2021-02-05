@@ -1,7 +1,7 @@
-const socket = io('http://localhost:3000')
-const messageContainer = document.getElementById('message-container')
-const messageForm = document.getElementById('send-container')
-const messageInput = document.getElementById('message-input')
+const socket = io('http://localhost:3000');
+const messageContainer = document.getElementById('message-container');
+const messageForm = document.getElementById('send-container');
+const messageInput = document.getElementById('message-input');
 
 // HTML Id of <input> tag for selecting file to be used as profile picture
 const profilePicSelectorId = "chooseProfilePicture";
@@ -15,12 +15,10 @@ var connectedUserPictures = {};
 // settings (these need to be added by a file in future )
 var settings 
 
-
-
 var connectedUsersList = document.getElementById('users');  // The HTML list that contains the connected users 
 
 login();
-appendUserJoinOrDisconnect('You joined')
+appendUserJoinOrDisconnect('You joined'); 
 // socket.emit('new-user', name)
 getUsers();
 
@@ -32,7 +30,7 @@ socket.on('settings', data => {
 
 //When a message is sent
 socket.on('chat-message', data => {
-  addMessage(`${data.name}`,`${data.message}`)
+  addMessage(`${data.name}`,`${data.message}`); 
   //appendMessage(`${data.name}: ${data.message}`)
 })
 
@@ -46,7 +44,7 @@ socket.on('user-connected', name => {
 
 //When a user disconnects 
 socket.on('user-disconnected', name => {
-  var message =(`${name} disconnected`)
+  var message =(`${name} disconnected`);
   appendUserJoinOrDisconnect(message);
   getUsers(); 
 })
@@ -54,9 +52,8 @@ socket.on('user-disconnected', name => {
 
 //When the client is sent a list of users, update the display with that list
 socket.on('send-users', connectedUsers => {
-  console.log("sendRunning")
+  console.log("sendRunning");
   // console.log(connectedUsers); // Writing whole images to console will be slow
-
   generateUserList(connectedUsers); 
 
 })
@@ -79,33 +76,38 @@ socket.on('updated-profile-picture', picture => {currentSendingUserPicture = pic
 
 //When the send button is pressed 
 messageForm.addEventListener('submit', e => {
-  e.preventDefault()
-  const message = messageInput.value
+  e.preventDefault();
+  const message = messageInput.value;
 
-  //stops you from spamming blank
-  if (message.trim() == ""){
-    return
+  if (message.trim() == ""){  //Stops blank messages from being sent 
+    return;
   }
 
-  if (message.length > settings.messageLimit){
-    console.log("message is too long")
+  if (message.length > settings.messageLimit){  //Makes sure the message is not longer than the message limit 
+    console.log("message is too long");
     alert("Message is too long");
     return
   }
 
-  socket.emit('send-chat-message', message)
-  messageInput.value = ''
+  socket.emit('send-chat-message', message);
+  messageInput.value = '';
 })
+
+function checkForAting(inText){
+  
+
+
+}
 
 
 //Decides who sent a message, then adds it to chat
 function addMessage(inName, inMessage) {
     if (inName == "You") {
-		appendMessage(inMessage)
+		appendMessage(inMessage);
     }
     else {
 		var message = inMessage;
-	  appendMessageRecieve(message, inName)
+	  appendMessageRecieve(message, inName);
     }    
 
 }
@@ -172,7 +174,7 @@ function appendMessageRecieve(message, inName) {
   //specify and add the actual bubble 
   var messageBubble = document.createElement('div');
   messageBubble.className = "msg-bubble";
-  messageBox.appendChild(messageBubble)
+  messageBox.appendChild(messageBubble);
   
   //create time and date divs
   var messageInfoTime = document.createElement('div');
@@ -184,7 +186,7 @@ function appendMessageRecieve(message, inName) {
   messageInfoTime.innerText = current;
   messageInfoName.innerText = inName;
   
-  var messageData = document.createElement('div')
+  var messageData = document.createElement('div');
   messageData.className = "msg-text";
   messageData.innerText = message;
   
@@ -211,7 +213,7 @@ function appendUserJoinOrDisconnect(message){
   //specify and add the actual bubble 
   var messageBubble = document.createElement('div');
   messageBubble.className = "msg-bubble";
-  messageBox.appendChild(messageBubble)
+  messageBox.appendChild(messageBubble);
   
   //create time and date divs
   var messageInfoTime = document.createElement('div');
@@ -223,7 +225,7 @@ function appendUserJoinOrDisconnect(message){
   messageInfoTime.innerText = current;
   messageInfoName.innerText = "System";
   
-  var messageData = document.createElement('div')
+  var messageData = document.createElement('div');
   messageData.innerText = message;
   
   messageBubble.appendChild(messageData);
@@ -232,7 +234,7 @@ function appendUserJoinOrDisconnect(message){
 }
 // asks the server for a list of currently connected users 
 function getUsers(){
-  console.log("runningFunction")
+  console.log("runningFunction");
   socket.emit('get-users', "");
 }
 
@@ -285,4 +287,7 @@ function register(){
   let lastName = prompt("Enter last name");
   let password = prompt("Enter password");
   socket.emit('create-account', {"username": username, "firstName": firstName, "lastName": lastName, "password": password});
+  
+  //login the user once the account is created with the given credentials
+  socket.emit('login', {"username": username, "password": password});
 }
