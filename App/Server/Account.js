@@ -7,7 +7,7 @@ class Account{
     password;
     profilePicture;
 
-    constructor(userId, userName, firstName, lastName, password){
+    constructor(userId, userName, firstName, lastName, password, profilePicture){
         if (typeof userId == "number"){
             this.userId = userId;
         }
@@ -43,19 +43,11 @@ class Account{
             let dataType = typeof password;
             throw "password expected a string but " + dataType + "was given";
         }
-
-        // Hardcode profile pictures for now, until adding profile pictures is added to register menu
-        let nameLowerCase = userName.toLowerCase();
-        if (nameLowerCase.charCodeAt(0) -97 < 12){
-            // For usernames beginning with A-K use pic1
-            this.profilePicture = "pic1.jpg";
-        }
-        else if (nameLowerCase.charCodeAt(0) - 97 < 20){
-            // For usernames beginning with L - T
-            this.profilePicture = "pic2.jpg";
+        if (typeof profilePicture == "string"){
+            this.profilePicture = profilePicture;
         }
         else{
-            this.profilePicture = "pic3.jpg"
+            throw "profilePicture expected a string but " + typeof profilePicture + " was given";
         }
     }
 }

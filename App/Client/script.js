@@ -2,6 +2,9 @@ const socket = io('http://localhost:3000')
 const messageContainer = document.getElementById('message-container')
 const messageForm = document.getElementById('send-container')
 const messageInput = document.getElementById('message-input')
+
+// HTML Id of <input> tag for selecting file to be used as profile picture
+const profilePicSelectorId = "chooseProfilePicture";
 var currentSendingUser;
 // Holds the profile picture of the current user
 var currentSendingUserPicture;
@@ -69,6 +72,9 @@ socket.on('register-fail', register);
 
 // If register success, notify user
 socket.on('register-success', () => {alert('Account created')});
+
+// When the logged in user's profile picture is changed
+socket.on('updated-profile-picture', picture => {currentSendingUserPicture = picture});
 
 
 //When the send button is pressed 
@@ -241,6 +247,25 @@ function generateUserList(list){
     // Add profile picture to connectedUserPictures
     connectedUserPictures[item["name"]] = item["profilepic"];
   });
+}
+
+function changeProfilePicture(){
+  // Send request to server to change the users profile picture
+  let selector = document.getElementById(profilePicSelectorId);
+  if (0 < selector.files.length){  // Only proceed if a file has been selected
+    if (selector.files[0].type.split("/")[0] === "image" ){  // Only proceed if the selected file is an image
+      // Convert file to base64 and send it to server.  This should be done asyncronously to avoid large files blocking the UI thread
+      reader = new FileReader();
+      // Set event listener to run asyncronously when conversion is complete
+      reader.addEventListener("load", () => {
+        // Send base64 string to server
+        socket.emit('change-profile-picture', reader.result);
+      });
+      // Convert the file to base64
+      reader.readAsDataURL(selector.files[0]);
+  }
+    
+  }
 }
 
 function login(){

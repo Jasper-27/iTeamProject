@@ -87,7 +87,7 @@ class AccountsAccess extends DataAccess{
        let data = this.readFile();
        for (let i = 0; i < data.length; i++){
            let user = data[i];
-           this.accountsBuffer.push(new Account(user["userId"], user["userName"], user["firstName"], user["lastName"], user["password"]));
+           this.accountsBuffer.push(new Account(user["userId"], user["userName"], user["firstName"], user["lastName"], user["password"], user["profilePicture"]));
            this.userNames[user["userName"]] = user["userId"];
        }
     }
@@ -125,23 +125,34 @@ class AccountsAccess extends DataAccess{
         let account = this.accountsBuffer[userId];
         // Make sure account exists first
         if (account instanceof Account){
-            try{
-                // Get the file type of the image
-                let filePath = __dirname + "/data/profilepics/" + account.profilePicture;
-                let fileType = path.extname(filePath);
-                // Get the raw image data and encode it as base64
-                let image = fs.readFileSync(filePath).toString("base64");
-                // construct a string containing the image and its details in format "data:<media type>/<file type>;<character set>;<encoding>,<data>"
-                let base64String = "data:image/" + fileType + ";charset=utf-8;base64," + image;
-                return base64String;
+            if (account.profilePicture != ""){
+                // If the string is not empty
+                return account.profilePicture;
             }
-            catch{
+            else{
+                // Otherwise return the default profile picture
                 return defaultProfilePictureString;
             }
         }
     }
 
-    createAccount(userName, firstName, lastName, password){
+    changeProfilePictureString(userId, newProfilePictureString){
+        // Change the profile picture of the specified user
+        if (this.accountsBuffer.length == 0){
+            this.getData();
+        }
+        let account = this.accountsBuffer[userId];
+        // Only update is account exists, and newProfilePictureString is not empty
+        if (account instanceof Account && typeof newProfilePictureString == "string" && newProfilePictureString !== ""){
+            account.profilePicture = newProfilePictureString;
+            // Write to file
+            this.writeFile(this.accountsBuffer);
+            return true;
+        }
+        return false;
+    }
+
+    createAccount(userName, firstName, lastName, password, profilePictureString){
         // Make sure accounts buffer is up to date to avoid generating a conflicting userId
         this.getData();
         // Check if username is already taken
@@ -150,7 +161,7 @@ class AccountsAccess extends DataAccess{
         let userId = this.accountsBuffer.length;
         // Hash the password
         let hash = bcrypt.hashSync(password, saltRounds);
-        let account = new Account(userId, userName, firstName, lastName, hash);
+        let account = new Account(userId, userName, firstName, lastName, hash, profilePictureString);
         // Write new account to buffer and file
         this.accountsBuffer.push(account);
         this.userNames[userName] = userId;
@@ -215,6 +226,7 @@ class LogAccess extends DataAccess{
         this.writeFile(this.logBuffer);
     }
 }
+
 
 module.exports = {
     MessagesAccess,

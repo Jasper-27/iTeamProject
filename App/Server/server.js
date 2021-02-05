@@ -111,8 +111,12 @@ io.on('connection', socket => {
       socket.emit('register-fail', 'Invalid password');
     }
     else{
+      if (typeof details.picture != "string"){
+        // If no profile picture provided, just give an empty string and the default will be used
+        details.picture = "";
+      }
       // Details are valid
-      if (accountsFile.createAccount(details.username, details.firstName, details.lastName, details.password) == dataAccess.AccountsAccess.USERNAMETAKEN){
+      if (accountsFile.createAccount(details.username, details.firstName, details.lastName, details.password, details.picture) == dataAccess.AccountsAccess.USERNAMETAKEN){
         socket.emit('register-fail', 'Username taken');
       }
       else{
@@ -121,6 +125,17 @@ io.on('connection', socket => {
         console.log("👍 New account created: " + details.username); 
       }
     }
+  })
+
+  socket.on('change-profile-picture', picture => {
+    let userId = users[socket.id];
+    accountsFile.changeProfilePictureString(userId, picture);
+    // Resend the users list, to give all clients the updated picture
+    getUsers(socket);
+    // Tell the client that its profile picture was updated
+    socket.emit('updated-profile-picture', accountsFile.getProfilePictureString(userId));
+    logger.log("Profile picture changed: " + userId);
+    console.log("Profile picture changed:" + userId);
   })
 
   socket.on('send-chat-message', message => {
@@ -171,13 +186,14 @@ io.on('connection', socket => {
       socket.to('authorised').emit('send-users', connected); 
     }
   })
-
-
-
   
   // allows the client to request a list of new users. tried to remove this but everything broke
-  socket.on('get-users', out => {
-    // console.log("➡️  sending the connected users")
+  socket.on('get-users', () => {getUsers(socket)});
+});
+
+function getUsers(socket){
+  // Broadcast the list of users to all authorised clients
+  // console.log("➡️  sending the connected users")
     // Send all usernames and profile pictures
     connectedDetails = [];
     for (let i = 0; i < connected.length; i++){
@@ -186,8 +202,7 @@ io.on('connection', socket => {
       connectedDetails.push({"name": username, "profilepic": profilePic});
     }
     socket.to('authorised').emit('send-users', connectedDetails);
-  })
-})
+  }
 
 function sendPreviousMessages(socket){
   // Send all previous messages to the newly connected user
@@ -198,5 +213,3 @@ function sendPreviousMessages(socket){
     }
   }
 }
-
-
