@@ -22,16 +22,16 @@ messagesFile.getData();  // Load all previous messages
 var profanityFilter = new profanity("*", true);
 
 //reading settings from settings file 
- let settings = Settings.readSettings()
+ let settings = Settings.readSettings();
 
 
 
 //for getting the connected users 
 var connected = []; 
 
-console.log("*****************************************")
-console.log("*          😉 WINKI SERVER 😉           *")         
-console.log("*****************************************")
+console.log("*****************************************");
+console.log("*          😉 WINKI SERVER 😉           *");      
+console.log("*****************************************");
 console.log()
 
 
@@ -84,15 +84,15 @@ io.on('connection', socket => {
         }
 
         //Sends settings to the client 
-        socket.emit('settings', settings)
+        socket.emit('settings', settings);
 
         return;
       }
     }
       // Tell client that login failed
       socket.emit('login-fail');
-      logger.log("Failed login attempt") //This may get a bit much 
-      console.log("⚠️ Failed login attempt!") 
+      logger.log("Failed login attempt"); //This may get a bit much 
+      console.log("⚠️ Failed login attempt!") ;
   })
 
   // When user tries to create account
@@ -137,13 +137,13 @@ io.on('connection', socket => {
       //If message is blank. don't spam people 
       //This is done client side as well for redundancy
       if (message == ""){
-        console.log("🚨 An empty message got through")
-        return
+        console.log("🚨 An empty message got through");
+        return;
       }
 
       if (message.length > settings.messageLimit){ // again, just for redundancy 
-        console.log("🚨 A message that was too long got though")
-        return
+        console.log("🚨 A message that was too long got though");
+        return;
       }
 
 
