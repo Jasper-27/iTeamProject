@@ -38,7 +38,6 @@ console.log();
 
 io.on('connection', socket => {
 
-
   //when new user is added to the server
   socket.on('new-user', name => {
     if (name == null || name == undefined || name == "") name = "unknown";
@@ -153,28 +152,14 @@ io.on('connection', socket => {
 
 
       // Checks to see if the message was @ing anyone 
-
       if (message.includes("@")){
-        console.log("Well someone is @ing someone")
-        console.log(socket.id)
-
-        let splitString = message.split(" "); 
-
-        splitString.forEach((item, index) => {
+         message.split(" ").forEach((item, index) => {
          if (item.charAt(0) == "@"){
-
-
-          socket.to('authorised').emit('mentioned', item.substring(1));
-
-
+          socket.to('authorised').emit('mentioned', { target: item.substring(1), sender: name} );
          }
         });
         
       }
-
-
-
-
     }
   })
 
