@@ -38,7 +38,6 @@ console.log();
 
 io.on('connection', socket => {
 
-
   //when new user is added to the server
   socket.on('new-user', name => {
     if (name == null || name == undefined || name == "") name = "unknown";
@@ -46,13 +45,9 @@ io.on('connection', socket => {
     socket.broadcast.emit('user-connected', name);
     sendPreviousMessages(socket);
 
-
     // hang on, isn't this done twice?  // This bit never runs Hmmmmmm
     console.log("User " + name + " Connected");
     logger.log("User " + name + " Connected"); 
-
-   
-   
   })
 
   // When user tries to login
@@ -65,14 +60,15 @@ io.on('connection', socket => {
         users[socket.id] = userId;
         let name = accountsFile.getAccount(userId).userName;
         // Tell client that login was successful
-        socket.emit('login-success');
+        io.to(socket.id).emit('login-success');
         // Add socket to the "authorised" room so they can receive messages
         socket.join('authorised');
-        // Announce that the user has connected
-        socket.to('authorised').emit('user-connected', name);
+        socket.to('authorised').emit('user-connected', name); // Announce that the user has connected
+        io.to(socket.id).emit("send-username", name); // tells the new user what their name is
         // Send all previous messages (if that setting is enabled)
-        sendPreviousMessages(socket);
-        //Log that the user connected 
+        
+        sendPreviousMessages(socket);  // doesn't do anything atm. 
+        
         //Log that the user connected 
         console.log("👋 User " + name + " logged in");
         logger.log(name + " logged in"); 
@@ -84,7 +80,7 @@ io.on('connection', socket => {
         }
 
         //Sends settings to the client 
-        socket.emit('settings', settings);
+        io.to(socket.id).emit('settings', settings);
 
         return;
       }
@@ -146,9 +142,19 @@ io.on('connection', socket => {
         return;
       }
 
-
       // Must also send message to user that sent it
-      socket.emit('chat-message', {message: filteredMessage, name: "You"});
+      socket.emit('chat-message', {message: filteredMessage, name: name});
+
+
+      // Checks to see if the message was @ing anyone 
+      if (message.includes("@")){
+         message.split(" ").forEach((item, index) => {
+         if (item.charAt(0) == "@"){
+          socket.to('authorised').emit('mentioned', { target: item.substring(1), sender: name} );
+         }
+        });
+        
+      }
     }
   })
 
@@ -173,8 +179,6 @@ io.on('connection', socket => {
   })
 
 
-
-  
   // allows the client to request a list of new users. tried to remove this but everything broke
   socket.on('get-users', out => {
     // console.log("➡️  sending the connected users")
@@ -182,6 +186,8 @@ io.on('connection', socket => {
   })
 })
 
+
+// This part of the application isn't actually doing anything. It worked for a bit then got turned off. 
 function sendPreviousMessages(socket){
   // Send all previous messages to the newly connected user
   if (sendAllPreviousMessages){

@@ -4,8 +4,9 @@ const messageForm = document.getElementById('send-container');
 const messageInput = document.getElementById('message-input'); 
 var currentSendingUser;
 
+var myUsername = ""; 
 
-// settings (these need to be added by a file in future )
+// settings 
 var settings 
 
 var connectedUsersList = document.getElementById('users');  // The HTML list that contains the connected users 
@@ -15,7 +16,13 @@ appendUserJoinOrDisconnect('You joined');
 // socket.emit('new-user', name)
 getUsers();
 
+// gets a username sent from the server
+socket.on('send-username', data => {
+  myUsername = data; 
+  console.log("My username is: " + myUsername)
+}) 
 
+//Syncing settings with the server
 socket.on('settings', data => {
   settings = data; 
 })
@@ -24,12 +31,17 @@ socket.on('settings', data => {
 //When a message is sent
 socket.on('chat-message', data => {
   addMessage(`${data.name}`,`${data.message}`); 
-  //appendMessage(`${data.name}: ${data.message}`)
+})
+
+//This code runs if the user gets mentioned in a message
+socket.on('mentioned', data => {
+  if (data.target == myUsername){
+    alert("You got mentioned by " + data.sender)
+  }
 })
 
 // When a user connects 
 socket.on('user-connected', name => {
-	
   var message = `${name} connected`;
   appendUserJoinOrDisconnect(message);
   getUsers(); 
@@ -45,11 +57,8 @@ socket.on('user-disconnected', name => {
 
 //When the client is sent a list of users, update the display with that list
 socket.on('send-users', connectedUsers => {
-  console.log("sendRunning");
   console.log(connectedUsers); 
-
   generateUserList(connectedUsers); 
-
 })
 
 // If login fails, force user to try again
@@ -65,7 +74,7 @@ socket.on('register-success', () => {alert('Account created')});
 //When the send button is pressed 
 messageForm.addEventListener('submit', e => {
   e.preventDefault();
-  const message = messageInput.value;
+  let message = messageInput.value;
 
   if (message.trim() == ""){  //Stops blank messages from being sent 
     return;
@@ -74,29 +83,24 @@ messageForm.addEventListener('submit', e => {
   if (message.length > settings.messageLimit){  //Makes sure the message is not longer than the message limit 
     console.log("message is too long");
     alert("Message is too long");
-    return
+    return; 
   }
 
   socket.emit('send-chat-message', message);
   messageInput.value = '';
 })
 
-function checkForAting(inText){
-  
-
-
-}
 
 
 //Decides who sent a message, then adds it to chat
 function addMessage(inName, inMessage) {
-    if (inName == "You") {
+  if (inName == myUsername) {
 		appendMessage(inMessage);
-    }
-    else {
+  }
+  else {
 		var message = inMessage;
 	  appendMessageRecieve(message, inName);
-    }    
+  }    
 
 }
 
@@ -130,7 +134,7 @@ function appendMessage(message) {
   messageBubble.appendChild(messageInfoTime);
   messageBubble.appendChild(messageInfoName);
   messageInfoTime.innerText = current;
-  messageInfoName.innerText = "You";
+  messageInfoName.innerText = "You (" + myUsername + ")";
   
   var messageData = document.createElement('div')
   messageData.className = "msg-text";
@@ -185,7 +189,7 @@ function appendMessageRecieve(message, inName) {
 }
 
 function appendUserJoinOrDisconnect(message){
-	  // get current time
+	// get current time
   var current = new Date();
   var current = current.toLocaleTimeString();
 	
@@ -236,6 +240,8 @@ function generateUserList(list){
   });
 }
 
+
+// this stuff is temporary. Will be handled by a login page at some point. 
 function login(){
   if (prompt("Login or register (login is default)") == "register"){
     register();
