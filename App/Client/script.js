@@ -4,6 +4,7 @@ const messageForm = document.getElementById('send-container');
 const messageInput = document.getElementById('message-input'); 
 var currentSendingUser;
 
+let myUsername = ""; 
 
 // settings (these need to be added by a file in future )
 var settings 
@@ -15,6 +16,11 @@ appendUserJoinOrDisconnect('You joined');
 // socket.emit('new-user', name)
 getUsers();
 
+
+socket.on('send-username', data => {
+  myUsername = data; 
+  console.log("My username is: " + myUsername)
+}) 
 
 socket.on('settings', data => {
   settings = data; 
@@ -45,11 +51,8 @@ socket.on('user-disconnected', name => {
 
 //When the client is sent a list of users, update the display with that list
 socket.on('send-users', connectedUsers => {
-  console.log("sendRunning");
   console.log(connectedUsers); 
-
   generateUserList(connectedUsers); 
-
 })
 
 // If login fails, force user to try again
@@ -65,7 +68,7 @@ socket.on('register-success', () => {alert('Account created')});
 //When the send button is pressed 
 messageForm.addEventListener('submit', e => {
   e.preventDefault();
-  const message = messageInput.value;
+  let message = messageInput.value;
 
   if (message.trim() == ""){  //Stops blank messages from being sent 
     return;
@@ -81,22 +84,17 @@ messageForm.addEventListener('submit', e => {
   messageInput.value = '';
 })
 
-function checkForAting(inText){
-  
-
-
-}
 
 
 //Decides who sent a message, then adds it to chat
 function addMessage(inName, inMessage) {
-    if (inName == "You") {
+  if (inName == myUsername) {
 		appendMessage(inMessage);
-    }
-    else {
+  }
+  else {
 		var message = inMessage;
 	  appendMessageRecieve(message, inName);
-    }    
+  }    
 
 }
 
@@ -130,7 +128,7 @@ function appendMessage(message) {
   messageBubble.appendChild(messageInfoTime);
   messageBubble.appendChild(messageInfoName);
   messageInfoTime.innerText = current;
-  messageInfoName.innerText = "You";
+  messageInfoName.innerText = "You (" + myUsername + ")";
   
   var messageData = document.createElement('div')
   messageData.className = "msg-text";
@@ -185,7 +183,7 @@ function appendMessageRecieve(message, inName) {
 }
 
 function appendUserJoinOrDisconnect(message){
-	  // get current time
+	// get current time
   var current = new Date();
   var current = current.toLocaleTimeString();
 	

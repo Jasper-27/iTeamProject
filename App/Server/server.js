@@ -65,14 +65,15 @@ io.on('connection', socket => {
         users[socket.id] = userId;
         let name = accountsFile.getAccount(userId).userName;
         // Tell client that login was successful
-        socket.emit('login-success');
+        io.to(socket.id).emit('login-success');
         // Add socket to the "authorised" room so they can receive messages
         socket.join('authorised');
-        // Announce that the user has connected
-        socket.to('authorised').emit('user-connected', name);
+        socket.to('authorised').emit('user-connected', name); // Announce that the user has connected
+        io.to(socket.id).emit("send-username", name); // tells the new user what their name is
         // Send all previous messages (if that setting is enabled)
-        sendPreviousMessages(socket);
-        //Log that the user connected 
+        
+        sendPreviousMessages(socket); 
+        
         //Log that the user connected 
         console.log("👋 User " + name + " logged in");
         logger.log(name + " logged in"); 
@@ -84,7 +85,7 @@ io.on('connection', socket => {
         }
 
         //Sends settings to the client 
-        socket.emit('settings', settings);
+        io.to(socket.id).emit('settings', settings);
 
         return;
       }
@@ -148,7 +149,7 @@ io.on('connection', socket => {
 
 
       // Must also send message to user that sent it
-      socket.emit('chat-message', {message: filteredMessage, name: "You"});
+      socket.emit('chat-message', {message: filteredMessage, name: name});
     }
   })
 
