@@ -30,7 +30,20 @@ socket.on('settings', data => {
 //When a message is sent
 socket.on('chat-message', data => {
   addMessage(`${data.name}`,`${data.message}`); 
+
+  if (data.message.includes("@" + myUsername) ){
+    console.log("Girl you gone and got @ed"); 
+  }
+
+
   //appendMessage(`${data.name}: ${data.message}`)
+})
+
+
+socket.on('mentioned', data => {
+  if (data == myUsername){
+    alert("You got mentioned")
+  }
 })
 
 // When a user connects 

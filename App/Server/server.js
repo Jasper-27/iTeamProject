@@ -150,6 +150,31 @@ io.on('connection', socket => {
 
       // Must also send message to user that sent it
       socket.emit('chat-message', {message: filteredMessage, name: name});
+
+
+      // Checks to see if the message was @ing anyone 
+
+      if (message.includes("@")){
+        console.log("Well someone is @ing someone")
+        console.log(socket.id)
+
+        let splitString = message.split(" "); 
+
+        splitString.forEach((item, index) => {
+         if (item.charAt(0) == "@"){
+
+
+          socket.to('authorised').emit('mentioned', item.substring(1));
+
+
+         }
+        });
+        
+      }
+
+
+
+
     }
   })
 
