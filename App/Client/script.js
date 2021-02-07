@@ -4,9 +4,9 @@ const messageForm = document.getElementById('send-container');
 const messageInput = document.getElementById('message-input'); 
 var currentSendingUser;
 
-let myUsername = ""; 
+var myUsername = ""; 
 
-// settings (these need to be added by a file in future )
+// settings 
 var settings 
 
 var connectedUsersList = document.getElementById('users');  // The HTML list that contains the connected users 
@@ -16,12 +16,13 @@ appendUserJoinOrDisconnect('You joined');
 // socket.emit('new-user', name)
 getUsers();
 
-
+// gets a username sent from the server
 socket.on('send-username', data => {
   myUsername = data; 
   console.log("My username is: " + myUsername)
 }) 
 
+//Syncing settings with the server
 socket.on('settings', data => {
   settings = data; 
 })
@@ -41,7 +42,6 @@ socket.on('mentioned', data => {
 
 // When a user connects 
 socket.on('user-connected', name => {
-	
   var message = `${name} connected`;
   appendUserJoinOrDisconnect(message);
   getUsers(); 
@@ -83,7 +83,7 @@ messageForm.addEventListener('submit', e => {
   if (message.length > settings.messageLimit){  //Makes sure the message is not longer than the message limit 
     console.log("message is too long");
     alert("Message is too long");
-    return
+    return; 
   }
 
   socket.emit('send-chat-message', message);
@@ -240,6 +240,8 @@ function generateUserList(list){
   });
 }
 
+
+// this stuff is temporary. Will be handled by a login page at some point. 
 function login(){
   if (prompt("Login or register (login is default)") == "register"){
     register();

@@ -45,13 +45,9 @@ io.on('connection', socket => {
     socket.broadcast.emit('user-connected', name);
     sendPreviousMessages(socket);
 
-
     // hang on, isn't this done twice?  // This bit never runs Hmmmmmm
     console.log("User " + name + " Connected");
     logger.log("User " + name + " Connected"); 
-
-   
-   
   })
 
   // When user tries to login
@@ -71,7 +67,7 @@ io.on('connection', socket => {
         io.to(socket.id).emit("send-username", name); // tells the new user what their name is
         // Send all previous messages (if that setting is enabled)
         
-        sendPreviousMessages(socket); 
+        sendPreviousMessages(socket);  // doesn't do anything atm. 
         
         //Log that the user connected 
         console.log("👋 User " + name + " logged in");
@@ -146,7 +142,6 @@ io.on('connection', socket => {
         return;
       }
 
-
       // Must also send message to user that sent it
       socket.emit('chat-message', {message: filteredMessage, name: name});
 
@@ -184,8 +179,6 @@ io.on('connection', socket => {
   })
 
 
-
-  
   // allows the client to request a list of new users. tried to remove this but everything broke
   socket.on('get-users', out => {
     // console.log("➡️  sending the connected users")
@@ -193,6 +186,8 @@ io.on('connection', socket => {
   })
 })
 
+
+// This part of the application isn't actually doing anything. It worked for a bit then got turned off. 
 function sendPreviousMessages(socket){
   // Send all previous messages to the newly connected user
   if (sendAllPreviousMessages){
