@@ -6,6 +6,7 @@ var currentSendingUser;
 
 var myUsername = ""; 
 
+
 // settings 
 var settings 
 
@@ -37,6 +38,8 @@ socket.on('chat-message', data => {
 socket.on('mentioned', data => {
   if (data.target == myUsername){
     alert("You got mentioned by " + data.sender)
+	
+	
   }
 })
 
@@ -99,7 +102,7 @@ function addMessage(inName, inMessage) {
   }
   else {
 		var message = inMessage;
-	  appendMessageRecieve(message, inName);
+		appendMessageRecieve(message, inName);
   }    
 
 }
@@ -180,12 +183,24 @@ function appendMessageRecieve(message, inName) {
   
   var messageData = document.createElement('div');
   messageData.className = "msg-text";
+  
+  //check if the user is being @ed and make it bold 
+  var inc = message.includes("@" + myUsername);
+  
+  //if they are being @ed.
+  if (inc == true) {
   messageData.innerText = message;
+  messageData.style.fontWeight = "bold";
+  } 
+  //if they are not being @ed then display the un-edited message
+  else{
+  messageData.innerText = message;
+  }
   
   messageBubble.appendChild(messageData);
-  
-  
   messageContainer.scrollTop = messageContainer.scrollHeight;
+
+ 
 }
 
 function appendUserJoinOrDisconnect(message){
