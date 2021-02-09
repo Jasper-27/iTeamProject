@@ -18,13 +18,6 @@
                 height: 100px;  
                 padding: 5px 0;
             }
-            #rcorners2 {
-                border-radius: 25px;
-                background-color: #73AD21;
-                padding: 20px; 
-                width: 300px;
-                height: 50px;  
-            }
             #box {
                 background-color: rgba(52, 55, 196, 0.685);
                 padding: 50px;
@@ -40,6 +33,12 @@
                 color:floralwhite;
                 padding-left: 10px;
             }
+            .fields {
+                font-family: "Lucida Console";
+                color: rgba(52, 55, 196, 0.685);
+                padding-left: 10px;
+            }
+            
             .p4{
                 font-family: "Lucida Console";
                 color:floralwhite;
@@ -86,23 +85,47 @@
 
                 <div id="credentials">
                     <div class="row">
-                        <p class="p3">Username:</p>
+                        <p class="p3">Username: <input type="text" class="fields" name="username" id="user" placeholder="username"></p>
                     </div>
                 </div>
                 <br>
                 <div id="credentials">
                     <div class="row">
-                        <p class="p3">Password:</p>
+                        <p class="p3">Password: <input type="password" class="fields" name="password" id="pass" placeholder="password"></p>
                     </div>  
                 </div>
                 <div class="row">
                     <br>
-                    <button class="p3 button btnLogin">Log In</button>
+                    <button class="p3 button btnLogin" onclick="validate()">Log In</button>
                 </div>
                 <div class="p4">
-                    <p>Forgot password?</p>
+                    <p><a href="https://www.google.com/">Forgot password?</a></p>
                 </div>
             </div>
         </div>
     </body>
 </html>
+
+
+<script>
+    var attempt = 3; // Variable to count number of attempts.
+
+function validate(){
+    var username = document.getElementById("user").value;
+    var password = document.getElementById("pass").value;
+    if ( username == "test" && password == "test"){
+    // alert ("Login successfully");
+    window.location = "index.html"; // Redirecting to other page.
+    return false;
+    }
+    else{
+        attempt --;// Decrementing by one.
+        alert("You have left "+attempt+" attempt;");
+        // Disabling fields after 3 attempts.
+        if( attempt == 0){
+        document.getElementById("username").disabled = true;
+        document.getElementById("password").disabled = true;
+        document.getElementById("submit").disabled = true;
+        return false;
+}}}
+</script>
