@@ -91,7 +91,7 @@
                 </div>
                 <div class="row">
                     <br>
-                    <button class="p3 button btnLogin" onclick="validate()">Log In</button>
+                    <button class="p3 button btnLogin" onclick="login()">Log In</button>
                 </div>
                 <div class="p4">
                     <p><a href="#">Forgot password?</a></p>
@@ -103,24 +103,34 @@
 
 
 <script>
-    var attempt = 3; // Variable to count number of attempts.
+    // Variable to count number of attempts.
+    var attempt = 3;
 
-function validate(){
-    var username = document.getElementById("user").value;
-    var password = document.getElementById("pass").value;
-    if ( username == "test" && password == "test"){
-    // alert ("Login successfully");
-    window.location = "index.html"; // Redirecting to other page.
-    return false;
+    function login(){
+        // Declare username and password variable to get the text in each of the input values.
+        var username = document.getElementById("user").value;
+        var password = document.getElementById("pass").value;
+
+        // If the username and password are equal to X, then authenticate.  
+        if ( username == "test" && password == "test"){
+
+            // Redirecting to success page.
+            window.location = "index.html"; 
+            return false;
+        }
+        // If the username and password do not match, then do not authenticate.
+        else{
+            // Decrement the amount of login attempts by one.
+            attempt --;
+            alert("You have left "+attempt+" attempt;");
+
+            // Disabling fields after 3 attempts.
+            if( attempt == 0){
+            document.getElementById("username").disabled = true;
+            document.getElementById("password").disabled = true;
+            document.getElementById("submit").disabled = true;
+            return false;
+            }
+        }
     }
-    else{
-        attempt --;// Decrementing by one.
-        alert("You have left "+attempt+" attempt;");
-        // Disabling fields after 3 attempts.
-        if( attempt == 0){
-        document.getElementById("username").disabled = true;
-        document.getElementById("password").disabled = true;
-        document.getElementById("submit").disabled = true;
-        return false;
-}}}
 </script>
