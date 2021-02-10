@@ -102,35 +102,3 @@
 </html>
 
 
-<script>
-    // Variable to count number of attempts.
-    var attempt = 3;
-
-    function login(){
-        // Declare username and password variable to get the text in each of the input values.
-        var username = document.getElementById("user").value;
-        var password = document.getElementById("pass").value;
-
-        // If the username and password are equal to X, then authenticate.  
-        if ( username == "test" && password == "test"){
-
-            // Redirecting to success page.
-            window.location = "index.html"; 
-            return false;
-        }
-        // If the username and password do not match, then do not authenticate.
-        else{
-            // Decrement the amount of login attempts by one.
-            attempt --;
-            alert("You have left "+attempt+" attempt;");
-
-            // Disabling fields after 3 attempts.
-            if( attempt == 0){
-            document.getElementById("user").disabled = true;
-            document.getElementById("pass").disabled = true;
-            document.getElementById("submit").disabled = true;
-            return false;
-            }
-        }
-    }
-</script>
