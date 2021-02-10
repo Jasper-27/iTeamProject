@@ -70,12 +70,6 @@ socket.on('login-fail', () => {
   window.location.replace("./loginPage.html");
 });
 
-// If register fails, force user to try again
-socket.on('register-fail', register);
-
-// If register success, notify user
-socket.on('register-success', () => {alert('Account created')});
-
 
 //When the send button is pressed 
 messageForm.addEventListener('submit', e => {
