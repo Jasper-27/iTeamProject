@@ -1,7 +1,0 @@
-#message-container div {
-  background-color: #33c1ff;
-}
-
-#message-container div:nth-child(2n) {
-  background-color: #fff;
-}
