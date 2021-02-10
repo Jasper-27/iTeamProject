@@ -13,7 +13,7 @@ var settings
 var connectedUsersList = document.getElementById('users');  // The HTML list that contains the connected users 
 
 login();
-appendUserJoinOrDisconnect('You joined'); 
+// appendUserJoinOrDisconnect('You joined'); 
 // socket.emit('new-user', name)
 getUsers();
 
@@ -65,7 +65,10 @@ socket.on('send-users', connectedUsers => {
 })
 
 // If login fails, force user to try again
-socket.on('login-fail', login);
+socket.on('login-fail', () => {
+  alert("Login failed"); 
+  window.location.replace("./loginPage.html");
+});
 
 // If register fails, force user to try again
 socket.on('register-fail', register);
@@ -189,12 +192,12 @@ function appendMessageRecieve(message, inName) {
   
   //if they are being @ed.
   if (inc == true) {
-  messageData.innerText = message;
-  messageData.style.fontWeight = "bold";
+    messageData.innerText = message;
+    messageData.style.fontWeight = "bold";
   } 
   //if they are not being @ed then display the un-edited message
   else{
-  messageData.innerText = message;
+    messageData.innerText = message;
   }
   
   messageBubble.appendChild(messageData);
@@ -258,14 +261,12 @@ function generateUserList(list){
 
 // this stuff is temporary. Will be handled by a login page at some point. 
 function login(){
-  if (prompt("Login or register (login is default)") == "register"){
-    register();
-  }
-  else{
-    let username = prompt("Enter username");
-    let password = prompt("Enter password");
-    socket.emit('login', {"username": username, "password": password});
-  }
+
+  //Gets the username and password from the session storage
+  let username = sessionStorage.session_user; 
+  let password = sessionStorage.session_pass; 
+  socket.emit('login', {"username": username, "password": password});
+  
 }
 
 function register(){

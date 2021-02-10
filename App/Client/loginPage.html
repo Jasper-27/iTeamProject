@@ -3,9 +3,6 @@
     <head>
         <title>Login</title>
 
-        <!-- <script defer src="http://localhost:3000/socket.io/socket.io.js"></script> -->
-
-        <script defer src="login.js"></script>
 
         <style>
             #credentials {
@@ -99,6 +96,20 @@
                 </div>
             </div>
         </div>
+
+        <script>
+            
+            function login(){
+                // Adds the username and password to the session storage
+                sessionStorage.setItem('session_pass', document.getElementById("pass").value); 
+                sessionStorage.setItem('session_user', document.getElementById("user").value)
+
+                window.location.replace("./app.html"); //changes to the main app window 
+
+            }
+        </script>
+
+
     </body>
 </html>
 
