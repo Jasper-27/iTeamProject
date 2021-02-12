@@ -2,9 +2,10 @@
 class Message{
     timeStamp;
     senderId;
+    type;
     content;
 
-    constructor(senderId, content, timeStamp){
+    constructor(senderId, type, content, timeStamp){
         if (timeStamp != undefined && timeStamp instanceof Date){
             this.timeStamp = timeStamp;
         }
@@ -19,6 +20,17 @@ class Message{
         else{
             let dataType = typeof senderId;
             throw "senderId expected a string but " + dataType + " was given";
+        }
+        if (typeof type == "string"){
+            if (type === "text" || type === "image" || type === "file"){
+                this.type = type;
+            }
+            else{
+                throw type + " is not a valid message type";
+            }
+        }
+        else{
+            throw "type expected a string but " + typeof type + " was given";
         }
         if (typeof content == "string"){
             this.content = content;
