@@ -1,8 +1,11 @@
-const socket = io('http://localhost:3000'); 
+const socket = io('http://localhost:3000');
 const messageContainer = document.getElementById('message-container'); 
 const messageForm = document.getElementById('send-container');
 const messageInput = document.getElementById('message-input'); 
-var messageFileSelector = document.getElementById("");  // The <input type="file"/> element for selecting a file to send
+const fileSelectButton = document.getElementById("choose-file-button");
+const messageFileSelector = document.getElementById("choose-file-dialog");  // The <input type="file"/> element for selecting a file to send
+
+var sendMessage;  // Holds a reference to the function for sending messages (will switch between sendText and sendFile)
 var currentSendingUser;
 
 var myUsername = ""; 
@@ -74,10 +77,9 @@ socket.on('register-fail', register);
 // If register success, notify user
 socket.on('register-success', () => {alert('Account created')});
 
+// Functions for sending messages
 
-//When the send button is pressed 
-messageForm.addEventListener('submit', e => {
-  e.preventDefault();
+function sendText(){
   let message = messageInput.value;
 
   if (message.trim() == ""){  //Stops blank messages from being sent 
@@ -92,9 +94,40 @@ messageForm.addEventListener('submit', e => {
 
   socket.emit('send-chat-message', message);
   messageInput.value = '';
+}
+
+function sendFile(){
+  // Only proceed if a file has been selected
+  if (0 < messageFileSelector.files.length){
+    file = messageFileSelector.files[0];
+    message = {type: "", content: ""};
+    // Set message type
+    if (file.type.split("/")[0] === "image") message.type = "image";
+    else message.type = "file";
+    // Convert file to base64 and send.  This should be done asyncronously to avoid large files blocking the UI thread
+    reader = new FileReader();
+    // Add code to event listener to run asyncronously when conversion to base64 is complete
+    reader.addEventListener("load", () => {
+      // Send message
+      message.content = reader.result;
+      socket.emit('send-chat-message', message);
+    });
+    // Start conversion to base64
+    reader.readAsDataURL(file);
+    // Return to normal text mode
+    exitSendFileMode();
+  }
+}
+
+// Send text is the default
+sendMessage = sendText;
+
+//When the send button is pressed 
+messageForm.addEventListener('submit', e => {
+  e.preventDefault();
+  // Call function for sending messages
+  sendMessage();
 })
-
-
 
 //Decides who sent a message, then adds it to chat
 function addMessage(inName, inMessage) {
@@ -256,25 +289,41 @@ function generateUserList(list){
   });
 }
 
-function sendFile(){
-  // Only proceed if a file has been selected
+// Add event handler for when a file is selected
+messageFileSelector.onchange = () => {
   if (0 < messageFileSelector.files.length){
-    file = messageFileSelector.files[0];
-    message = {type: "", content: ""};
-    // Set message type
-    if (file.type.split("/")[0] === "image") message.type = "image";
-    else message.type = "file";
-    // Convert file to base64 and send.  This should be done asyncronously to avoid large files blocking the UI thread
-    reader = new FileReader();
-    // Add code to event listener to run asyncronously when conversion to base64 is complete
-    reader.addEventListener("load", () => {
-      // Send message
-      message.content = reader.result;
-      socket.emit('send-chat-message', message);
-    });
-    // Start conversion to base64
-    reader.readAsDataURL(file);
+    // A file has been selected, display the name of the file in the message input area
+    // Disable the input box
+    messageInput.disabled = true;
+    // Add filename to input box
+    messageInput.value = messageFileSelector.files[0].name;
+    // Change "choose file" button to cancel file sending
+    fileSelectButton.innerText = "Cancel";
+    fileSelectButton.onclick = exitSendFileMode;
+
+    // Override sendMessage to sendFile
+    sendMessage = sendFile;
   }
+};
+
+function exitSendFileMode(){
+  // Exit send file mode and allow text messages to be sent
+  // Clear messageInput
+  messageInput.value = "";
+  // Re-enable messageInput
+  messageInput.disabled = false;
+  
+  // Change "choose file" button back to its usual functionality (displaying file selector)
+  fileSelectButton.innerText = "Choose File";
+  fileSelectButton.onclick = showFileSelector;
+
+  // Override sendMessage back to sendText
+  sendMessage = sendText;
+}
+
+function showFileSelector(){
+  // Trigger the selector dialog
+  messageFileSelector.click();
 }
 
 // this stuff is temporary. Will be handled by a login page at some point. 
