@@ -2,6 +2,7 @@ const socket = io('http://localhost:3000');
 const messageContainer = document.getElementById('message-container'); 
 const messageForm = document.getElementById('send-container');
 const messageInput = document.getElementById('message-input'); 
+var messageFileSelector = document.getElementById("");  // The <input type="file"/> element for selecting a file to send
 var currentSendingUser;
 
 var myUsername = ""; 
@@ -255,6 +256,26 @@ function generateUserList(list){
   });
 }
 
+function sendFile(){
+  // Only proceed if a file has been selected
+  if (0 < messageFileSelector.files.length){
+    file = messageFileSelector.files[0];
+    message = {type: "", content: ""};
+    // Set message type
+    if (file.type.split("/")[0] === "image") message.type = "image";
+    else message.type = "file";
+    // Convert file to base64 and send.  This should be done asyncronously to avoid large files blocking the UI thread
+    reader = new FileReader();
+    // Add code to event listener to run asyncronously when conversion to base64 is complete
+    reader.addEventListener("load", () => {
+      // Send message
+      message.content = reader.result;
+      socket.emit('send-chat-message', message);
+    });
+    // Start conversion to base64
+    reader.readAsDataURL(file);
+  }
+}
 
 // this stuff is temporary. Will be handled by a login page at some point. 
 function login(){
