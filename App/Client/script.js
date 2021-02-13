@@ -110,6 +110,7 @@ function sendFile(){
     reader.addEventListener("load", () => {
       // Send message
       message.content = reader.result;
+      // ISSUE: Disconnection issue occurs here when sending large files.  Emitting probably blocks -> Heartbeat pings cannot be responded to -> Too many heartbeats are missed -> Server presumes connection is dead -> Server disconnects client
       socket.emit('send-chat-message', message);
     });
     // Start conversion to base64
