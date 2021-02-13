@@ -145,7 +145,7 @@ io.on('connection', socket => {
         return;
       }
 
-      if (message.content.length > settings.messageLimit){ // again, just for redundancy 
+      if (message.type === "text" && message.content.length > settings.messageLimit){ // again, just for redundancy 
         console.log("🚨 A message that was too long got though");
         return;
       }
