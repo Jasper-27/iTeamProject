@@ -198,7 +198,14 @@ function appendMessage(message) {
 
   
   messageBubble.appendChild(messageData);
-  messageContainer.scrollTop = messageContainer.scrollHeight;
+  if (message.type === "image"){
+    // For images, messageData may not always be fully loaded by the end of this function so scrollHeight can be innacurate.  So change the scrollTop in an event handler once messageData is fully loaded instead
+    messageData.onload = () => messageContainer.scrollTop = messageContainer.scrollHeight;
+  }
+  else{
+    // However, for other types of messages do the scrolling here, as div elements fo not have an onload event
+    messageContainer.scrollTop = messageContainer.scrollHeight;
+  }
 }
                                               
 //Adds a message someone else sent to the chat 
@@ -272,7 +279,14 @@ function appendMessageRecieve(message, inName) {
   }
   
   messageBubble.appendChild(messageData);
-  messageContainer.scrollTop = messageContainer.scrollHeight;
+  if (message.type === "image"){
+    // For images, messageData may not always be fully loaded by the end of this function so scrollHeight can be innacurate.  So change the scrollTop in an event handler once messageData is fully loaded instead
+    messageData.onload = () => messageContainer.scrollTop = messageContainer.scrollHeight;
+  }
+  else{
+    // However, for other types of messages do the scrolling here, as div elements fo not have an onload event
+    messageContainer.scrollTop = messageContainer.scrollHeight;
+  }
 
  
 }
