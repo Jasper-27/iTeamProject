@@ -4,8 +4,16 @@ class Message{
     senderId;
     type;
     content;
+    fileName;
 
-    constructor(senderId, type, content, timeStamp){
+    constructor(senderId, type, content, fileName, timeStamp){
+        if (typeof fileName == "string"){
+            this.fileName = fileName;
+        }
+        else{
+            // Text based messages do not have fileNames, so just use empty string
+            this.fileName = "";
+        }
         if (timeStamp != undefined && timeStamp instanceof Date){
             this.timeStamp = timeStamp;
         }

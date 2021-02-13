@@ -52,7 +52,7 @@ class MessagesAccess extends DataAccess{
         for (let i = 0; i < data.length; i++){
             let msg = data[i];
             let timeStamp = new Date(msg["timeStamp"]);
-            this.messagesBuffer.push(new Message(msg["senderId"], msg["type"], msg["content"], timeStamp));
+            this.messagesBuffer.push(new Message(msg["senderId"], msg["type"], msg["content"], msg["fileName"], timeStamp));
         }
         return this.messagesBuffer;
     }

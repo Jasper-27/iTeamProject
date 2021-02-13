@@ -34,7 +34,7 @@ socket.on('settings', data => {
 
 
 //When a message is sent
-socket.on('chat-message', data => {  // Messages will be recieved in format: {name: "<username of sender>", message: {type: "<text/image/file>", content: "<data>"}}
+socket.on('chat-message', data => {  // Messages will be recieved in format: {name: "<username of sender>", message: {type: "<text/image/file>", content: "<data>", fileName: "<name of file sent (only for file / image messages)>"}}
   addMessage(data.name, data.message); 
 })
 
@@ -100,7 +100,7 @@ function sendFile(){
   // Only proceed if a file has been selected
   if (0 < messageFileSelector.files.length){
     file = messageFileSelector.files[0];
-    message = {type: "", content: ""};
+    message = {type: "", content: "", fileName: file.name};  // File messages also have a filename field
     // Set message type
     if (file.type.split("/")[0] === "image") message.type = "image";
     else message.type = "file";
@@ -189,7 +189,7 @@ function appendMessage(message) {
     messageData = document.createElement('div');
     messageData.className = "msg-text";
     let downloadBtn = document.createElement('a');
-    downloadBtn.innerText = "Save File";
+    downloadBtn.innerText = message.fileName;
     downloadBtn.href = message.content;
     messageData.appendChild(downloadBtn);
   }
@@ -262,7 +262,7 @@ function appendMessageRecieve(message, inName) {
     messageData = document.createElement('div');
     messageData.className = "msg-text";
     let downloadBtn = document.createElement('a');
-    downloadBtn.innerText = "Save File";
+    downloadBtn.innerText = message.fileName;
     downloadBtn.href = message.content;
     messageData.appendChild(downloadBtn);
   }

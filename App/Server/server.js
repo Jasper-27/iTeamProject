@@ -134,8 +134,8 @@ io.on('connection', socket => {
       // Only filter text based messages for profanity
       if (message.type === "text") filteredMessage = profanityFilter.filter(filteredMessage);
       if (name == null || name == undefined || name == "") name = "unknown";
-      messagesFile.appendData(new Message(name, message.type, filteredMessage));
-      socket.to('authorised').emit('chat-message', { message: {type: message.type, content: filteredMessage}, name: name });
+      messagesFile.appendData(new Message(name, message.type, filteredMessage, message.fileName));
+      socket.to('authorised').emit('chat-message', { message: {type: message.type, content: filteredMessage, fileName: message.fileName}, name: name });
       // console.log("🟢 " + name + ": " + message); 
 
       //If message is blank. don't spam people 
@@ -151,7 +151,7 @@ io.on('connection', socket => {
       }
 
       // Must also send message to user that sent it
-      socket.emit('chat-message', {message: {type: message.type, content: filteredMessage}, name: name});
+      socket.emit('chat-message', {message: {type: message.type, content: filteredMessage, fileName: message.fileName}, name: name});
 
 
       // Checks to see if the message was @ing anyone 
