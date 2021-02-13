@@ -34,8 +34,8 @@ socket.on('settings', data => {
 
 
 //When a message is sent
-socket.on('chat-message', data => {
-  addMessage(`${data.name}`,`${data.message}`); 
+socket.on('chat-message', data => {  // Messages will be recieved in format: {name: "<username of sender>", message: {type: "<text/image/file>", content: "<data>"}}
+  addMessage(data.name, data.message); 
 })
 
 //This code runs if the user gets mentioned in a message
@@ -92,7 +92,7 @@ function sendText(){
     return; 
   }
 
-  socket.emit('send-chat-message', message);
+  socket.emit('send-chat-message', {type: "text", content: message});
   messageInput.value = '';
 }
 
@@ -173,9 +173,26 @@ function appendMessage(message) {
   messageInfoTime.innerText = current;
   messageInfoName.innerText = "You (" + myUsername + ")";
   
-  var messageData = document.createElement('div')
-  messageData.className = "msg-text";
-  messageData.innerText = message;
+  var messageData;
+  // How the message is displayed depends on the type of content
+  if (message.type === "text"){
+    messageData = document.createElement('div');
+    messageData.className = "msg-text";
+    messageData.innerText = message.content;
+  }
+  else if (message.type === "image"){
+    messageData = document.createElement('img');
+    messageData.className = "image-message msg-image";
+    messageData.src = message.content;
+  }
+  else if (message.type === "file"){
+    messageData = document.createElement('div');
+    messageData.className = "msg-text";
+    let downloadBtn = document.createElement('a');
+    downloadBtn.innerText = "Save File";
+    downloadBtn.href = message.content;
+    messageData.appendChild(downloadBtn);
+  }
 
   
   messageBubble.appendChild(messageData);
@@ -217,18 +234,37 @@ function appendMessageRecieve(message, inName) {
   
   var messageData = document.createElement('div');
   messageData.className = "msg-text";
+
+  var messageData;
+  // How the message is displayed depends on the type of content
+  if (message.type === "text"){
+    messageData = document.createElement('div');
+    messageData.className = "msg-text";
+     //check if the user is being @ed and make it bold 
+    var inc = message.content.includes("@" + myUsername);
   
-  //check if the user is being @ed and make it bold 
-  var inc = message.includes("@" + myUsername);
-  
-  //if they are being @ed.
-  if (inc == true) {
-  messageData.innerText = message;
-  messageData.style.fontWeight = "bold";
-  } 
-  //if they are not being @ed then display the un-edited message
-  else{
-  messageData.innerText = message;
+    //if they are being @ed.
+    if (inc == true) {
+      messageData.innerText = message.content;
+      messageData.style.fontWeight = "bold";
+    } 
+    //if they are not being @ed then display the un-edited message
+    else{
+      messageData.innerText = message.content;
+    }
+  }
+  else if (message.type === "image"){
+    messageData = document.createElement('img');
+    messageData.className = "image-message msg-image";
+    messageData.src = message.content;
+  }
+  else if (message.type === "file"){
+    messageData = document.createElement('div');
+    messageData.className = "msg-text";
+    let downloadBtn = document.createElement('a');
+    downloadBtn.innerText = "Save File";
+    downloadBtn.href = message.content;
+    messageData.appendChild(downloadBtn);
   }
   
   messageBubble.appendChild(messageData);
