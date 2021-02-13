@@ -189,6 +189,8 @@ function appendMessage(message) {
     messageData = document.createElement('div');
     messageData.className = "msg-text";
     let downloadBtn = document.createElement('a');
+    // Specify that the link is to download, and specify the file name
+    downloadBtn.download = message.fileName;
     downloadBtn.innerText = message.fileName;
     downloadBtn.href = message.content;
     messageData.appendChild(downloadBtn);
@@ -262,6 +264,8 @@ function appendMessageRecieve(message, inName) {
     messageData = document.createElement('div');
     messageData.className = "msg-text";
     let downloadBtn = document.createElement('a');
+    // Specify that the link is for downloading, and specify the file name
+    downloadBtn.download = message.fileName;
     downloadBtn.innerText = message.fileName;
     downloadBtn.href = message.content;
     messageData.appendChild(downloadBtn);
