@@ -5,7 +5,6 @@
 
         <link rel="shortcut icon" type="image/png" href="./logo.png"/>
 
-        <script src="https://kit.fontawesome.com/a076d05399.js"></script>
         <style>
             #credentials {
                 border-radius: 10px;
@@ -24,13 +23,13 @@
             #box {
                 background-color: rgba(52, 55, 196, 0.685);
                 padding: 50px;
-                margin: 20px;
                 width: 350px;
                 height: 600px;
                 top: 50%;
-                left: 50%;
-                margin-left: 500px;
+                margin: auto;
+                top: 50%;
             }
+
             .p3 {
                 font-family: "Lucida Console";
                 color:floralwhite;
@@ -74,7 +73,7 @@
                 <div>
                     <br>
                     <div class="imgcontainer">
-                        <img src="girl.png" alt="Avatar" class="avatar" height="220">
+                        <img src="logo.png" alt="Avatar" class="avatar" height="220">
                       </div>
                 </div>
                 
@@ -96,11 +95,22 @@
                     <br>
                     <button class="p3 button btnLogin" onclick="login()" id="submit">Log In</button>
                 </div>
-                <div class="p4">
-                    <p><a href="#">Forgot password?</a></p>
-                </div>
             </div>
         </div>
+
+        <script>
+            
+            function login(){
+                // Adds the username and password to the session storage
+                sessionStorage.setItem('session_pass', document.getElementById("pass").value); 
+                sessionStorage.setItem('session_user', document.getElementById("user").value)
+
+                window.location.replace("./app.html"); //changes to the main app window 
+
+            }
+        </script>
+
+
     </body>
 </html>
 
