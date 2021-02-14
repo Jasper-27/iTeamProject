@@ -1,0 +1,10 @@
+.image-message{
+    /* For images inside message bubbles */
+    width: 90%;
+    height: 90%;
+    /* Centre */
+    margin-left: 5%;
+    margin-right: 5%;
+    /* Rounded corners */
+    border-radius: 15px;
+}

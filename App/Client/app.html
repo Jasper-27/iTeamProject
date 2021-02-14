@@ -49,10 +49,13 @@
                         <h1>Message Area</h1>
                         
                         <div class="flex-grow-1 justify-content-xl-start" id="message-container" style="height: 70vh;overflow-y: scroll;"> </div>
+                        <!-- Invisible file input to be triggered by choose-file-button -->
+                        <input type="file" id="choose-file-dialog" style="display: none;"/>
                         
                         <form id="send-container" class="msger-inputarea">
                             <input class="msger-input" autocomplete="off" type="text" id="message-input">
                             <button class="msger-send-btn" id="send-button" type="submit">Send Message</button>
+                            <button class="msger-send-btn" id="choose-file-button" type="button" onclick="showFileSelector()">Choose File</button>
                         </form>
                     </div>
 
