@@ -1,7 +1,11 @@
-const socket = io('http://localhost:3000'); 
+const socket = io('http://localhost:3000');
 const messageContainer = document.getElementById('message-container'); 
 const messageForm = document.getElementById('send-container');
 const messageInput = document.getElementById('message-input'); 
+const fileSelectButton = document.getElementById("choose-file-button");
+const messageFileSelector = document.getElementById("choose-file-dialog");  // The <input type="file"/> element for selecting a file to send
+
+var sendMessage;  // Holds a reference to the function for sending messages (will switch between sendText and sendFile)
 var currentSendingUser;
 
 var myUsername = ""; 
@@ -30,8 +34,8 @@ socket.on('settings', data => {
 
 
 //When a message is sent
-socket.on('chat-message', data => {
-  addMessage(`${data.name}`,`${data.message}`); 
+socket.on('chat-message', data => {  // Messages will be recieved in format: {name: "<username of sender>", message: {type: "<text/image/file>", content: "<data>", fileName: "<name of file sent (only for file / image messages)>"}}
+  addMessage(data.name, data.message); 
 })
 
 //This code runs if the user gets mentioned in a message
@@ -73,10 +77,9 @@ socket.on('register-fail', register);
 // If register success, notify user
 socket.on('register-success', () => {alert('Account created')});
 
+// Functions for sending messages
 
-//When the send button is pressed 
-messageForm.addEventListener('submit', e => {
-  e.preventDefault();
+function sendText(){
   let message = messageInput.value;
 
   if (message.trim() == ""){  //Stops blank messages from being sent 
@@ -89,11 +92,49 @@ messageForm.addEventListener('submit', e => {
     return; 
   }
 
-  socket.emit('send-chat-message', message);
+  socket.emit('send-chat-message', {type: "text", content: message});
   messageInput.value = '';
+}
+
+function sendFile(){
+  // Only proceed if a file has been selected
+  if (0 < messageFileSelector.files.length){
+    file = messageFileSelector.files[0];
+    message = {type: "", content: "", fileName: file.name};  // File messages also have a filename field
+    // Set message type
+    if (file.type.split("/")[0] === "image") message.type = "image";
+    else message.type = "file";
+    // Convert file to base64 and send.  This should be done asyncronously to avoid large files blocking the UI thread
+    reader = new FileReader();
+    // Add code to event listener to run asyncronously when conversion to base64 is complete
+    reader.addEventListener("load", () => {
+      // Send message
+      message.content = reader.result;
+      // ISSUE: Disconnection issue occurs here when sending large files.  The client gets disconnected if the file is larger than the servers io.engine.maxHttpBufferSize
+      // TEMPORARY SOLUTION:
+      if (999900 < JSON.stringify(message).length){  // Limit is 1,000,000 but use 999,000 here to be safe
+        alert("The file is too big to be sent");
+        return;
+      }
+
+      socket.emit('send-chat-message', message);
+    });
+    // Start conversion to base64
+    reader.readAsDataURL(file);
+    // Return to normal text mode
+    exitSendFileMode();
+  }
+}
+
+// Send text is the default
+sendMessage = sendText;
+
+//When the send button is pressed 
+messageForm.addEventListener('submit', e => {
+  e.preventDefault();
+  // Call function for sending messages
+  sendMessage();
 })
-
-
 
 //Decides who sent a message, then adds it to chat
 function addMessage(inName, inMessage) {
@@ -139,13 +180,39 @@ function appendMessage(message) {
   messageInfoTime.innerText = current;
   messageInfoName.innerText = "You (" + myUsername + ")";
   
-  var messageData = document.createElement('div')
-  messageData.className = "msg-text";
-  messageData.innerText = message;
+  var messageData;
+  // How the message is displayed depends on the type of content
+  if (message.type === "text"){
+    messageData = document.createElement('div');
+    messageData.className = "msg-text";
+    messageData.innerText = message.content;
+  }
+  else if (message.type === "image"){
+    messageData = document.createElement('img');
+    messageData.className = "image-message msg-image";
+    messageData.src = message.content;
+  }
+  else if (message.type === "file"){
+    messageData = document.createElement('div');
+    messageData.className = "msg-text";
+    let downloadBtn = document.createElement('a');
+    // Specify that the link is to download, and specify the file name
+    downloadBtn.download = message.fileName;
+    downloadBtn.innerText = message.fileName;
+    downloadBtn.href = message.content;
+    messageData.appendChild(downloadBtn);
+  }
 
   
   messageBubble.appendChild(messageData);
-  messageContainer.scrollTop = messageContainer.scrollHeight;
+  if (message.type === "image"){
+    // For images, messageData may not always be fully loaded by the end of this function so scrollHeight can be innacurate.  So change the scrollTop in an event handler once messageData is fully loaded instead
+    messageData.onload = () => messageContainer.scrollTop = messageContainer.scrollHeight;
+  }
+  else{
+    // However, for other types of messages do the scrolling here, as div elements fo not have an onload event
+    messageContainer.scrollTop = messageContainer.scrollHeight;
+  }
 }
                                               
 //Adds a message someone else sent to the chat 
@@ -183,22 +250,50 @@ function appendMessageRecieve(message, inName) {
   
   var messageData = document.createElement('div');
   messageData.className = "msg-text";
+
+  var messageData;
+  // How the message is displayed depends on the type of content
+  if (message.type === "text"){
+    messageData = document.createElement('div');
+    messageData.className = "msg-text";
+     //check if the user is being @ed and make it bold 
+    var inc = message.content.includes("@" + myUsername);
   
-  //check if the user is being @ed and make it bold 
-  var inc = message.includes("@" + myUsername);
-  
-  //if they are being @ed.
-  if (inc == true) {
-  messageData.innerText = message;
-  messageData.style.fontWeight = "bold";
-  } 
-  //if they are not being @ed then display the un-edited message
-  else{
-  messageData.innerText = message;
+    //if they are being @ed.
+    if (inc == true) {
+      messageData.innerText = message.content;
+      messageData.style.fontWeight = "bold";
+    } 
+    //if they are not being @ed then display the un-edited message
+    else{
+      messageData.innerText = message.content;
+    }
+  }
+  else if (message.type === "image"){
+    messageData = document.createElement('img');
+    messageData.className = "image-message msg-image";
+    messageData.src = message.content;
+  }
+  else if (message.type === "file"){
+    messageData = document.createElement('div');
+    messageData.className = "msg-text";
+    let downloadBtn = document.createElement('a');
+    // Specify that the link is for downloading, and specify the file name
+    downloadBtn.download = message.fileName;
+    downloadBtn.innerText = message.fileName;
+    downloadBtn.href = message.content;
+    messageData.appendChild(downloadBtn);
   }
   
   messageBubble.appendChild(messageData);
-  messageContainer.scrollTop = messageContainer.scrollHeight;
+  if (message.type === "image"){
+    // For images, messageData may not always be fully loaded by the end of this function so scrollHeight can be innacurate.  So change the scrollTop in an event handler once messageData is fully loaded instead
+    messageData.onload = () => messageContainer.scrollTop = messageContainer.scrollHeight;
+  }
+  else{
+    // However, for other types of messages do the scrolling here, as div elements fo not have an onload event
+    messageContainer.scrollTop = messageContainer.scrollHeight;
+  }
 
  
 }
@@ -255,6 +350,42 @@ function generateUserList(list){
   });
 }
 
+// Add event handler for when a file is selected
+messageFileSelector.onchange = () => {
+  if (0 < messageFileSelector.files.length){
+    // A file has been selected, display the name of the file in the message input area
+    // Disable the input box
+    messageInput.disabled = true;
+    // Add filename to input box
+    messageInput.value = messageFileSelector.files[0].name;
+    // Change "choose file" button to cancel file sending
+    fileSelectButton.innerText = "Cancel";
+    fileSelectButton.onclick = exitSendFileMode;
+
+    // Override sendMessage to sendFile
+    sendMessage = sendFile;
+  }
+};
+
+function exitSendFileMode(){
+  // Exit send file mode and allow text messages to be sent
+  // Clear messageInput
+  messageInput.value = "";
+  // Re-enable messageInput
+  messageInput.disabled = false;
+  
+  // Change "choose file" button back to its usual functionality (displaying file selector)
+  fileSelectButton.innerText = "Choose File";
+  fileSelectButton.onclick = showFileSelector;
+
+  // Override sendMessage back to sendText
+  sendMessage = sendText;
+}
+
+function showFileSelector(){
+  // Trigger the selector dialog
+  messageFileSelector.click();
+}
 
 // this stuff is temporary. Will be handled by a login page at some point. 
 function login(){
