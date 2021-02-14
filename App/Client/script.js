@@ -110,7 +110,13 @@ function sendFile(){
     reader.addEventListener("load", () => {
       // Send message
       message.content = reader.result;
-      // ISSUE: Disconnection issue occurs here when sending large files.  Emitting probably blocks -> Heartbeat pings cannot be responded to -> Too many heartbeats are missed -> Server presumes connection is dead -> Server disconnects client
+      // ISSUE: Disconnection issue occurs here when sending large files.  The client gets disconnected if the file is larger than the servers io.engine.maxHttpBufferSize
+      // TEMPORARY SOLUTION:
+      if (999900 < JSON.stringify(message).length){  // Limit is 1,000,000 but use 999,000 here to be safe
+        alert("The file is too big to be sent");
+        return;
+      }
+
       socket.emit('send-chat-message', message);
     });
     // Start conversion to base64
