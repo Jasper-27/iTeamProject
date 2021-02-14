@@ -252,8 +252,7 @@ function generateUserList(list){
   });
 }
 
-
-// this stuff is temporary. Will be handled by a login page at some point. 
+// gets the login details from session storage, then connects with those
 function login(){
 
   //Gets the username and password from the session storage
@@ -263,13 +262,3 @@ function login(){
   
 }
 
-function register(){
-  let username = prompt("Enter username");
-  let firstName = prompt("Enter first name");
-  let lastName = prompt("Enter last name");
-  let password = prompt("Enter password");
-  socket.emit('create-account', {"username": username, "firstName": firstName, "lastName": lastName, "password": password});
-  
-  //login the user once the account is created with the given credentials
-  socket.emit('login', {"username": username, "password": password});
-}
