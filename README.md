@@ -10,13 +10,14 @@ installation instructions will follow.
 ### Configuration instructions ###
 configuration instructions will follow.
 
+
 ### Credits ###
-Hannah Brown <br>
-Alex Redmond <br>
-Tom Nash <br>
-Etienne Brand <br>
-Jasper Cox <br>
-Callum Gorman-Williams <br>
+Hannah Brown - https://github.com/hannahmaebrown <br>
+Alex Redmond - https://github.com/AlexFF000 <br>
+Tom Nash - https://github.com/Tom451 <br>
+Etienne Brand - https://github.com/etiennebrand<br>
+Jasper Cox - https://github.com/Jasper-27 <br>
+Callum Gorman-Williams - https://github.com/CallumGWilliams <br>
 
 ### Troubleshooting ###
 
