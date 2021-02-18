@@ -32,8 +32,7 @@ var connected = [];
 console.log("*****************************************");
 console.log("*          😉 WINKI SERVER 😉           *");      
 console.log("*****************************************");
-console.log(); 
-
+console.log();
 
 
 io.on('connection', socket => {
