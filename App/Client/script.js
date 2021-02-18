@@ -94,11 +94,31 @@ function sendText(){
 }
 
 function sendFile(){
+
   // Only proceed if a file has been selected
   if (0 < messageFileSelector.files.length){
     file = messageFileSelector.files[0];
     message = {type: "", content: "", fileName: file.name};  // File messages also have a filename field
-    // Set message type
+
+    // Hard-coded the blacklist for now
+    var restrictedFiles = [".docx", ".pdf"];
+
+    for (var i of restrictedFiles) {
+    console.log(i);
+      
+      // Checks filename for the blacklisted file extensions
+      if (file.name.search(i) != -1) {
+
+        console.log("Invalid File Type");
+        alert("File type not allowed!");
+        return;
+        
+        // Needs to unselect the disallowed file for user-friendliness
+      }
+  }
+
+
+    // Set message type 
     if (file.type.split("/")[0] === "image") message.type = "image";
     else message.type = "file";
     // Convert file to base64 and send.  This should be done asyncronously to avoid large files blocking the UI thread
