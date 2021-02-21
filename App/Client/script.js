@@ -41,7 +41,8 @@ socket.on('chat-message', data => {  // Messages will be recieved in format: {na
 //This code runs if the user gets mentioned in a message
 socket.on('mentioned', data => {
   if (data.target == myUsername){
-    alert("You got mentioned by " + data.sender)
+    // alert("You got mentioned by " + data.sender)
+    setTimeout(function() {alert("You got mentioned by " + data.sender); }, 1);
 	
 	
   }
