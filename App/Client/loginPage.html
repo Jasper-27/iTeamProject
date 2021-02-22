@@ -1,117 +1,82 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <title>Login</title>
 
-        <link rel="shortcut icon" type="image/png" href="./logo.png"/>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+    <title>New Wiki Design</title>
+    <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css">
+	
+    <!-- Links for the style sheets Colour -->
+	<link rel="stylesheet" href="assets/css/colour/light/Footer-Basic-Colour.css">
+	<link rel="stylesheet" href="assets/css/colour/light/Login-Form-Clean-Colour.css">
+	<link rel="stylesheet" href="assets/css/colour/light/messageBubble-Colour.css">
+	<link rel="stylesheet" href="assets/css/colour/light/Navigation-with-Button.css">
+	
+	<!-- Links for the style sheets Layout -->
+	<link rel="stylesheet" href="assets/css/layout/light/Footer-Basic.css">
+	<link rel="stylesheet" href="assets/css/layout/light/Login-Form-Clean.css">
+	<link rel="stylesheet" href="assets/css/layout/light/messageBubble.css">
+	<link rel="stylesheet" href="assets/css/layout/light/Navigation-with-Button-Layout.css">
 
-        <style>
-            #credentials {
-                border-radius: 10px;
-                background-color: rgba(90, 92, 207, 0.685);
-                width: 360px;
-                height: 50px;  
-                padding: 2px 0;
-            }
-            #logo {
-                border-radius: 25px;
-                background-color: rgba(90, 92, 207, 0.685);
-                width: 100px;
-                height: 100px;  
-                padding: 5px 0;
-            }
-            #box {
-                background-color: rgba(52, 55, 196, 0.685);
-                padding: 50px;
-                width: 350px;
-                height: 600px;
-                top: 50%;
-                margin: auto;
-                top: 50%;
-            }
+</head>
 
-            .p3 {
-                font-family: "Lucida Console";
-                color:floralwhite;
-                padding-left: 10px;
-            }
-            .fields {
-                font-family: "Lucida Console";
-                color: rgba(52, 55, 196, 0.685);
-                padding-left: 10px;
-            }
-            
-            .p4{
-                font-family: "Lucida Console";
-                color:floralwhite;
-                text-align: right;
-                padding-right: 10px;
-                text-decoration: underline;     
-                text-decoration-color: white;  
-            }
-            .btnLogin{
-                border-radius: 10px;
-                background-color: white;
-                border: none;
-                color: rgba(52, 55, 196, 0.685);
-                padding: 15px;
-                text-align: center;
-                text-decoration: none;
-                display: inline-block;
-                font-size: 16px;
-                margin: 4px 2px;
-                cursor: pointer;
-            }
-            .btnLogin:hover {
-                box-shadow: 0 12px 16px 0 rgba(0,0,0,0.24), 0 17px 50px 0 rgba(0,0,0,0.19);
-            }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div id="box" id="content">
-                <div>
-                    <br>
-                    <div class="imgcontainer">
-                        <img src="logo.png" alt="Avatar" class="avatar" height="220">
-                      </div>
-                </div>
-                
-                <h1 class="p3">Welcome</h1>
-                <h3 class="p3">Sign in to continue</h3>
-
-                <div id="credentials">
-                    <div class="row">
-                        <p class="p3">Username: <input type="text" class="fields" name="username" id="user" placeholder="username" ></p>
-                    </div>
-                </div>
-                <br>
-                <div id="credentials">
-                    <div class="row">
-                        <p class="p3">Password: <input type="password" class="fields" name="password" id="pass" placeholder="password" ></p>
-                    </div>  
-                </div>
-                <div class="row">
-                    <br>
-                    <button class="p3 button btnLogin" onclick="login()" id="submit">Log In</button>
-                </div>
+<body>
+    <nav class="navbar navbar-light navbar-expand-md">
+        <div class="container-fluid"><a class="navbar-brand" href="index.html">WinkiMessenger</a><button data-toggle="collapse" class="navbar-toggler" data-target="#navcol-1"><span class="sr-only">Toggle navigation</span><span class="navbar-toggler-icon"></span></button>
+            <div class="collapse navbar-collapse" id="navcol-1">
+                <ul class="nav navbar-nav">
+                    <li class="nav-item"><a class="nav-link active" href="app.html">Messages</a></li>
+                    <li class="nav-item"></li>
+                    <li class="nav-item"></li>
+                </ul>
             </div>
         </div>
+    </nav>
+    <div></div>
+    <div id="credentials">
+	
+	<section class="login-clean">
+	
+        <form method="post" action="./app.html" onsubmit = "login()">
+            <h2 class="sr-only">Login Form</h2>
+            <div id="credentials" class="illustration"><img src="logo.png" height="220"></div>
+            <div class="form-group"><input class="form-control" type="text" id="user" placeholder="Username" name="username"></div>
+            <div class="form-group"><input class="form-control" type="password" id="pass" name="password" placeholder="Password"></div>
+			
+			<div class="form-group"><button class="btn btn-primary btn-block" id="submit"  type="submit" style="background: var(--right-msg-bg);">Log In</button></div>
+			
+        </form>
+		
+		
+		
+		
+    </section>
+	
+	
+	
+	</div>
 
-        <script>
+	
+
+	<script>
+			var submitButton = document.getElementById( 'submit' ); 
+			myButton.addEventListener( 'click', l );
             
             function login(){
                 // Adds the username and password to the session storage
                 sessionStorage.setItem('session_pass', document.getElementById("pass").value); 
                 sessionStorage.setItem('session_user', document.getElementById("user").value)
 
-                window.location.replace("./app.html"); //changes to the main app window 
-
             }
-        </script>
+	</script>
+	
+	
+    <script src="assets/js/jquery.min.js"></script>
+    <script src="assets/bootstrap/js/bootstrap.min.js"></script>
+	
 
+		
+</body>
 
-    </body>
 </html>
-
-
