@@ -1,4 +1,4 @@
-@import url("/light/Footer-Basic-Colour.css");
-@import url("/light/Login-Form-Clean-Colour.css");
-@import url("/light/messageBubble-Colour.css");
-@import url("/light/Navigation-with-Button.css");
+@import "./light/Footer-Basic-Colour.css";
+@import "./light/Login-Form-Clean-Colour.css";
+@import "./light/messageBubble-Colour.css";
+@import "./light/Navigation-with-Button.css";
