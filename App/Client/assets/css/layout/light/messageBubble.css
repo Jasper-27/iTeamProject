@@ -1,11 +1,3 @@
-:root {
-  --body-bg: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  --msger-bg: #fff;
-  --border: 2px solid #ddd;
-  --left-msg-bg: #ececec;
-  --right-msg-bg: #579ffb;
-}
-
 html {
   box-sizing: border-box;
 }
@@ -26,8 +18,6 @@ html {
   height: calc(100% - 50px);
   border: var(--border);
   border-radius: 5px;
-  background: var(--msger-bg);
-  box-shadow: 0 15px 15px -5px rgba(0, 0, 0, 0.2);
 }
 
 .msger-header {
@@ -35,8 +25,6 @@ html {
   justify-content: space-between;
   padding: 10px;
   border-bottom: var(--border);
-  background: #eee;
-  color: #666;
 }
 
 .msger-chat {
@@ -49,13 +37,6 @@ html {
   width: 6px;
 }
 
-.msger-chat::-webkit-scrollbar-track {
-  background: #ddd;
-}
-
-.msger-chat::-webkit-scrollbar-thumb {
-  background: #bdbdbd;
-}
 
 .msg {
   display: flex;
@@ -78,7 +59,6 @@ html {
   width: 50px;
   height: 50px;
   margin-right: 10px;
-  background: #ddd;
   background-repeat: no-repeat;
   background-position: center;
   background-size: cover;
@@ -89,7 +69,6 @@ html {
   max-width: 450px;
   padding: 15px;
   border-radius: 15px;
-  background: var(--left-msg-bg);
   margin-bottom: 10px;
 }
 
@@ -118,8 +97,6 @@ html {
 }
 
 .right-msg .msg-bubble {
-  background: var(--right-msg-bg);
-  color: #fff;
   border-bottom-right-radius: 0;
 }
 
@@ -131,7 +108,6 @@ html {
   display: flex;
   padding: 10px;
   border-top: var(--border);
-  background: #eee;
 }
 
 .msger-inputarea * {
@@ -143,24 +119,14 @@ html {
 
 .msger-input {
   flex: 1;
-  background: #ddd;
 }
 
 .msger-send-btn {
   margin-left: 10px;
-  background: rgb(87, 159, 251);
-  color: #fff;
   font-weight: bold;
   cursor: pointer;
   transition: background 0.23s;
 }
 
-.msger-send-btn:hover {
-  background: rgb(87, 170, 270);
-}
 
-.msger-chat {
-  background-color: #fcfcfe;
-  background-image: url([svg]);
-}
 
