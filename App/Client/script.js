@@ -71,7 +71,7 @@ socket.on('send-users', connectedUsers => {
 // If login fails, force user to try again
 socket.on('login-fail', () => {
   alert("Login failed"); 
-  window.location.replace("./loginPage.html");
+  // window.location.replace("./loginPage.html");  // Temp blocked for testing
 });
 
 // Functions for sending messages
@@ -90,6 +90,7 @@ function sendText(){
   }
 
   socket.emit('send-chat-message', {type: "text", content: message});
+  console.log("Message sent: " + message)
   messageInput.value = '';
 }
 
@@ -131,6 +132,8 @@ messageForm.addEventListener('submit', e => {
   e.preventDefault();
   // Call function for sending messages
   sendMessage();
+
+  console.log("test")
 })
 
 //Decides who sent a message, then adds it to chat
