@@ -9,6 +9,7 @@ var sendMessage;  // Holds a reference to the function for sending messages (wil
 var currentSendingUser;
 
 var myUsername = ""; 
+var name = "tester";
 
 
 // settings 
@@ -42,8 +43,9 @@ socket.on('mentioned', data => {
   if (data.target == myUsername){
 
     // alert("You got mentioned by " + data.sender)
-    setTimeout(function() {alert("You got mentioned by " + data.sender); }, 1);
-    
+
+    // setTimeout(function() {alert("You got mentioned by " + data.sender); }, 1);
+    msgAlert(data.sender, 'has mentioned you!')
   }
 })
 
