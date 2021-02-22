@@ -1,34 +1,34 @@
 .login-clean {
-  background: #f1f7fc;
+  background: #000000;
 }
 
 .login-clean form {
-  background-color: #ffffff;
-  color: #505e6c;
+  background-color: #5a5a5a;
+  color: #ffffff;
   box-shadow: 1px 1px 5px rgba(0,0,0,0.1);
 }
 
 .login-clean .illustration {
-  color: rgb(244,71,107);
+  color: rgb(244, 71, 107);
 }
 
 .login-clean form .form-control {
-  background: #f7f9fc;
-  border-bottom: 1px solid #dfe7f1;
+  background: #030303;
+  border-bottom: 1px solid #000000;
   color: inherit;
 }
 
 .login-clean form .btn-primary {
-  background: #f4476b;
+  background: #ffffff;
 }
 
 .login-clean form .btn-primary:hover, .login-clean form .btn-primary:active {
-  background: #eb3b60;
+  background: #ffffff;
 }
 
 
 .login-clean form .forgot {
-  color: #6f7a85;
+  color: #c3c8cd;
   opacity: 0.9;
 }
 

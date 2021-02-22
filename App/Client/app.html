@@ -17,11 +17,7 @@
     <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css">
     <link rel="stylesheet" href="assets/fonts/ionicons.min.css">
 	
-	
-
-
-	
-	
+		
     <script defer src="http://localhost:3000/socket.io/socket.io.js"></script>
     <script defer src="script.js"></script>
     
@@ -73,9 +69,16 @@
                         <input class="form-control-plaintext" type="text" value="Extra Item Desktop Area" readonly="">
 
                         <h2>Connected users</h2>
+						
+						
                         <ul id="users"></ul>
 						
-						<button onclick="changeCss('dark')" > Press me </button>
+						
+						<h2>Colour Picker</h2>
+						
+						<input type="text" id="cssSheet" name="css"><br><br>
+
+						<button id="colourInput" type="submit" onclick="changeCSS();">Change</button>
 
 
 
