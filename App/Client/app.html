@@ -7,15 +7,17 @@
     
     <title>Winki - App</title>
     <link rel="shortcut icon" type="image/png" href="./logo.png"/>
+	
+	    	<!-- Links for the style sheets Colour -->
+	<link rel="stylesheet" href="assets/css/colour/light/styles-Colour.css">
+	
+	    	<!-- Links for the style sheets Layout -->
+	<link rel="stylesheet" href="assets/css/layout/normal/styles.css">
 
     <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css">
     <link rel="stylesheet" href="assets/fonts/ionicons.min.css">
-    <link rel="stylesheet" href="assets/css/Footer-Basic.css">
-    <link rel="stylesheet" href="assets/css/Navigation-with-Button.css">
-    <link rel="stylesheet" href="assets/css/styles.css">
-	<link rel="stylesheet" href="assets/css/messageBubble.css">
 	
-	
+		
     <script defer src="http://localhost:3000/socket.io/socket.io.js"></script>
     <script defer src="script.js"></script>
     
@@ -39,6 +41,8 @@
         </div>
     </nav>
     <div></div>
+	
+	
     <div id="allItems" style="min-height: 100%;">
         <div class="container">
             <div class="row" style="height: 80%;min-height: 80%;">
@@ -65,7 +69,16 @@
                         <input class="form-control-plaintext" type="text" value="Extra Item Desktop Area" readonly="">
 
                         <h2>Connected users</h2>
+						
+						
                         <ul id="users"></ul>
+						
+						
+						<h2>Colour Picker</h2>
+						
+						<input type="text" id="cssSheet" name="css"><br><br>
+
+						<button id="colourInput" type="submit" onclick="changeCSS();">Change</button>
 
 
 
@@ -93,6 +106,7 @@
     <!-- Scripts -->
     <script src="assets/js/jquery.min.js"></script>
     <script src="assets/bootstrap/js/bootstrap.min.js"></script>
+	<script src="assets/js/changeCss.js"></script>
 
 
 
