@@ -1,26 +1,25 @@
 <!DOCTYPE html>
 <html>
-    		<head>
+<head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
     <title>New Wiki Design</title>
     <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css">
 	
-	    	<!-- Links for the style sheets Colour -->
+    <!-- Links for the style sheets Colour -->
 	<link rel="stylesheet" href="assets/css/colour/light/styles-Colour.css">
 	
-	    	<!-- Links for the style sheets Layout -->
+	<!-- Links for the style sheets Layout -->
 	<link rel="stylesheet" href="assets/css/layout/normal/styles.css">
 
+	<script defer src="http://localhost:4500/socket.io/socket.io.js"></script>
+    <script defer src="register.js"></script>
 
-		<script defer src="http://localhost:4500/socket.io/socket.io.js"></script>
-        <script defer src="register.js"></script>
 </head>
 
 
-    <body>
-	
-	    <nav class="navbar navbar-light navbar-expand-md">
+<body>
+	<nav class="navbar navbar-light navbar-expand-md">
         <div class="container-fluid"><a class="navbar-brand" href="index.html">WinkiMessenger</a><button data-toggle="collapse" class="navbar-toggler" data-target="#navcol-1"><span class="sr-only">Toggle navigation</span><span class="navbar-toggler-icon"></span></button>
             <div class="collapse navbar-collapse" id="navcol-1">
                 <ul class="nav navbar-nav">
@@ -29,14 +28,15 @@
                     <li class="nav-item"><a class="nav-link active" href="register.html">register</a></li>
                 </ul>
             </div>
+
         </div>
     </nav>
+
 	
-	    <div></div>
-    <div id="credentials">
+    <!-- <div id="credentials">
+         -->
 	
 	<section class="login-clean">
-	
         <form method="post" onsubmit = "register()">
             <h2>Register Form</h2>
             <div id="credentials" class="illustration"><img src="logo.png" height="220"></div>
@@ -51,15 +51,9 @@
 			<div class="form-group"><button class="btn btn-primary btn-block" id="submit"  type="submit" style="background: var(--right-msg-bg);">Register</button></div>
 			
         </form>
-		
-		
-		
-		
     </section>
 
-
-
-    </body>
+</body>
 </html>
 
 

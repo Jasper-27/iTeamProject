@@ -41,13 +41,16 @@ socket.on('chat-message', data => {  // Messages will be recieved in format: {na
 //This code runs if the user gets mentioned in a message
 socket.on('mentioned', data => {
   if (data.target == myUsername){
-
-    // alert("You got mentioned by " + data.sender)
-
-    // setTimeout(function() {alert("You got mentioned by " + data.sender); }, 1);
-    msgAlert(data.sender, 'has mentioned you!')
+    msgAlert(data.sender, 'has mentioned you!');
   }
 })
+
+// function which creates an alert that doesn't pause JS
+function msgAlert(TITLE,MESSAGE) {
+  "use strict";   
+  document.getElementById("msg").innerHTML = `<span class='closebtn' onclick="this.parentElement.style.visibility='hidden';"'>&times;</span><strong>   ${TITLE}  </strong>  ${MESSAGE}`;
+  msg.style.visibility = 'visible';
+}
 
 // When a user connects 
 socket.on('user-connected', name => {
@@ -81,7 +84,7 @@ function sendText(){
 
   if (message.length > settings.messageLimit){  //Makes sure the message is not longer than the message limit 
     console.log("message is too long");
-    alert("Message is too long");
+    msgAlert('Alert!', 'Message is TOO long.')
     return; 
   }
 
@@ -130,7 +133,7 @@ function sendFile(){
       // ISSUE: Disconnection issue occurs here when sending large files.  The client gets disconnected if the file is larger than the servers io.engine.maxHttpBufferSize
       // TEMPORARY SOLUTION:
       if (999900 < JSON.stringify(message).length){  // Limit is 1,000,000 but use 999,000 here to be safe
-        alert("The file is too big to be sent");
+        msgAlert('Alert!', 'File is too big to be sent.')
         return;
       }
 

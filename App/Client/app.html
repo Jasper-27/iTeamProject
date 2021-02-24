@@ -32,16 +32,16 @@
                 color: white;
             }
 
-            .closebtn {
-                margin-left: 15px;
-                color: white;
-                font-weight: bold;
-                float: right;
-                font-size: 22px;
-                line-height: 20px;
-                cursor: pointer;
-                transition: 0.3s;
-            }
+        .closebtn {
+            margin-left: 15px;
+            color: white;
+            font-weight: bold;
+            float: right;
+            font-size: 22px;
+            line-height: 20px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
 
             .closebtn:hover {
                 color: black;
@@ -104,9 +104,7 @@
 
 						<button id="colourInput" type="submit" onclick="changeCSS();">Change</button>
 
-
-                        <div class="alert" id="msg" style="visibility:hidden">
-                            <span class="closebtn" onclick="this.parentElement.style.display='none';">&times;</span> 
+                        <div class="alert" id="msg" style="visibility: hidden;">
                         </div>
 
                     </div>
@@ -142,6 +140,7 @@
 
 </html>
 <script>
+    // function which creates an alert that doesn't pause JS
     function msgAlert(TITLE,MESSAGE) {
         "use strict";   
         document.getElementById("msg").innerHTML = "<strong>" + TITLE + "</strong> " + MESSAGE;
