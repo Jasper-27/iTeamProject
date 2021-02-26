@@ -100,20 +100,23 @@ function sendFile(){
     file = messageFileSelector.files[0];
     message = {type: "", content: "", fileName: file.name};  // File messages also have a filename field
 
-    // Hard-coded the blacklist for now
-    var restrictedFiles = [".docx", ".pdf"];
+
+    var restrictedFiles = settings.restrictedFiles;
+    console.log(restrictedFiles);
 
     for (var i of restrictedFiles) {
-    console.log(i);
       
       // Checks filename for the blacklisted file extensions
       if (file.name.search(i) != -1) {
 
         console.log("Invalid File Type");
-        alert("File type not allowed!");
-        return;
+        alert("File type not allowed! Please chose another file.");
         
-        // Needs to unselect the disallowed file for user-friendliness
+        // User-friendliness
+        exitSendFileMode();
+        showFileSelector();
+
+        return;
       }
   }
 
