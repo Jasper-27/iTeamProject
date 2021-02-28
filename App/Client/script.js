@@ -16,12 +16,7 @@ var settings
 
 var connectedUsersList = document.getElementById('users');  // The HTML list that contains the connected users 
 
-// login();
-// appendUserJoinOrDisconnect('You joined'); 
-// socket.emit('new-user', name)
 getUsers();
-
-temptoken= "f0ed45e816e7a9cff4d6ef9e109450e75a6254b36773ee357df4087e9e3e46d74000caabc447e9ac39f2cca66bdac883bc18ef6f4df338e02fa23f9f2550b533"
 
 attemptAuth()
 
@@ -46,8 +41,6 @@ socket.on('chat-message', data => {  // Messages will be recieved in format: {na
 socket.on('mentioned', data => {
   if (data.target == myUsername){
     alert("You got mentioned by " + data.sender)
-	
-	
   }
 })
 
@@ -72,14 +65,8 @@ socket.on('send-users', connectedUsers => {
   generateUserList(connectedUsers); 
 })
 
-// If login fails, force user to try again
-socket.on('login-fail', () => {
-  alert("Login failed"); 
-  // window.location.replace("./loginPage.html");  // Temp blocked for testing
-});
 
 // Functions for sending messages
-
 function sendText(){
   let message = messageInput.value;
 
@@ -94,8 +81,8 @@ function sendText(){
   }
 
   socket.emit('send-chat-message', {type: "text", content: message});
-  console.log("Message sent: " + message)
-  messageInput.value = '';
+  // console.log("Message sent: " + message)
+  messageInput.value = ''; 
 }
 
 function sendFile(){
@@ -133,11 +120,8 @@ sendMessage = sendText;
 
 //When the send button is pressed 
 messageForm.addEventListener('submit', e => {
-  e.preventDefault();
-  // Call function for sending messages
+  e.preventDefault(); 
   sendMessage();
-
-  console.log("test")
 })
 
 //Decides who sent a message, then adds it to chat
@@ -299,8 +283,6 @@ function appendMessageRecieve(message, inName) {
     // However, for other types of messages do the scrolling here, as div elements fo not have an onload event
     messageContainer.scrollTop = messageContainer.scrollHeight;
   }
-
- 
 }
 
 function appendUserJoinOrDisconnect(message){
@@ -393,23 +375,7 @@ function showFileSelector(){
   messageFileSelector.click();
 }
 
-// gets the login details from session storage, then connects with those
-function login(){
-
-  //Gets the username and password from the session storage
-  let username = sessionStorage.session_user; 
-  let password = sessionStorage.session_pass; 
-  socket.emit('login', {"username": username, "password": password});
-  
-}
-
 
 function attemptAuth(){
-  // socket.emit("attempt-auth", sessionStorage.token)
-  // socket.emit("attempt-auth", temptoken)
-
-  // socket.emit('attempt-auth', {"token": temptoken, "username" : "2"})
-
   socket.emit('attempt-auth', {"token": sessionStorage.token, "username" : sessionStorage.username})
-
 }

@@ -100,25 +100,20 @@
 
         <script>
 
-            let APIserver = "http://localhost:8080/login/"
+            let API = "http://localhost:8080/login/"
             
             function login(){
-                // Adds the username and password to the session storage
-                // sessionStorage.setItem('session_pass', document.getElementById("pass").value); 
-                // sessionStorage.setItem('session_user', document.getElementById("user").value)
 
-               
-
-                // Sends the post request to the API
-
+                // POSTs the username and password to the server
                 var xhr = new XMLHttpRequest();
-                xhr.open("POST", APIserver, true);
+                xhr.open("POST", API, true);
                 xhr.setRequestHeader('Content-Type', 'application/json');
                 xhr.send(JSON.stringify({
                     "username" : document.getElementById("user").value, 
 	                "password" : document.getElementById("pass").value
                 }));    
 
+                // handles the response from the POST request
                 xhr.onload = function() {
                     console.log(this.responseText);
                     var data = JSON.parse(this.responseText);
@@ -131,9 +126,7 @@
                     }else{
                         alert("Login failed")
                     }
-                
                 }
-
             }
         </script>
 
