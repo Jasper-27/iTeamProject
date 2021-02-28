@@ -12,6 +12,8 @@ Lowest timestamp in block (8 bytes)|Highest timestamp in block (8 bytes)|block n
 const fs = require('fs');
 const path = require('path');
 
+const idealBufferSize = 2730;  // The number of entries that getBlocks should try to read from the file at a time
+
 class indexAccess{
     static async createIndex(filePath, overwrite=false){  // If there is already a valid index file at the location and overwrite is false, it won't be overwritten
         // Create a new index file at the given path
@@ -80,8 +82,71 @@ class indexAccess{
        }
     }
 
+    static addBlock(filePath, smallestTimestamp, largestTimestamp, blockNumber){
+        // Add a block to the index and return a promise indicating whether successful or not
+        return new Promise((resolve, reject) => {
+            // First check that provided timestamps are valid
+            if (typeof smallestTimestamp != "number") reject("smallestTimestamp is not a valid number");
+            else if (typeof largestTimestamp != "number") reject("largestTimestamp is not a valid number");
+            else if (typeof blockNumber != "number") reject("blockNumber is not a valid number");
+            else if (largestTimestamp < smallestTimestamp) reject("largestTimestamp is smaller than smallestTimestamp");
+            else{
+                // Load file
+                fs.open(filePath, "r+", (err, descriptor) => {
+                    if (err) reject(err);
+                    else{
+                        // First read the index headers to find the end of the file
+                        fs.read(descriptor, {size: 24, buffer: Buffer.alloc(24), position: 0}, (err, bytesRead, data) => {
+                            if (err) reject(err);
+                            else{
+                                let indexLength = Number(data.readBigInt64BE(0));
+                                let indexSmallestTime = Number(data.readBigInt64BE(8));
+                                let indexLargestTime = Number(data.readBigInt64BE(16));
+                                if (smallestTimestamp < indexLargestTime) reject("This block's smallest timestamp is smaller than the previous block's largest one.  This would break the index (so the block has not been added).  This likely indicates an error with timestamp generation");
+                                else{
+                                    // Prepare data to be written to file
+                                    let newEntry = Buffer.alloc(24);
+                                    newEntry.writeBigInt64BE(BigInt(smallestTimestamp), 0);
+                                    newEntry.writeBigInt64BE(BigInt(largestTimestamp), 8);
+                                    newEntry.writeBigInt64BE(BigInt(blockNumber), 16);
+                                    /*
+                                    Write the new entry before rewriting the headers.  This has two advantages:
+                                    a) Searches won't notice the entry unless it is included in the indexLength header.  This means that there will be no issue if a search operation gets scheduled between writing the new entry and rewriting the headers
+                                    b) This function uses the indexLength header to work out where to write the new entry.  This means that if the operation to rewrite the headers fails but the operation to add the entry has already succeeded, the new entry will simply by overwritten the next time an entry is added
+                                    */
+                                    fs.write(descriptor, newEntry, 0, 24, (24 + (indexLength * 24)), (err) => {
+                                        if (err) reject(err);
+                                        else{
+                                            // Now rewrite the headers
+                                            if (smallestTimestamp < indexSmallestTime) indexSmallestTime = smallestTimestamp;
+                                            if (indexLargestTime < largestTimestamp) indexLargestTime = largestTimestamp;
+                                            indexLength++;
+                                            let newHeaders = Buffer.alloc(24);
+                                            newHeaders.writeBigInt64BE(BigInt(indexLength), 0);
+                                            newHeaders.writeBigInt64BE(BigInt(indexSmallestTime), 8);
+                                            newHeaders.writeBigInt64BE(BigInt(indexLargestTime), 16);
+                                            // Write
+                                            fs.write(descriptor, newHeaders, 0, 24, 0, (err) => {
+                                                if (err) reject(err);
+                                                else{
+                                                    // Write was successful
+                                                    resolve(true);
+                                                }
+                                            })
+                                        }
+                                    });
+                                }
+                            }
+                        })
+                    }
+                });
+            }
+            
+        });
+    }
+
     static getBlocks(filePath, startTime, endTime){
-        // Return the block numbers for every block that contains values between the provided timestamps
+        // Return a promise containing the block numbers for every block that contains values between the provided timestamps
 
         // First set up a promise that the method will return
         let promisedResult = new Promise((resolve, reject) => {
@@ -192,7 +257,6 @@ class indexAccess{
 
     static _calculateBufferDetails(indexLength, currentEntry){
         // Return [<first entry in buffer>, <last entry in buffer>, <buffer size (number of entries)>, <point in file to read buffer from>]
-        const idealBufferSize = 2730;
         // currentEntry should be middle entry in buffer (as we do not know which side of the entry we will be have to search next)
         // Get first entry
         let bufferStart = Math.max(0, currentEntry - Math.floor(idealBufferSize / 2));  // If there are too few entries before currentEntry we use as many as we can
