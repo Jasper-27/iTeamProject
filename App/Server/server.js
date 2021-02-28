@@ -99,11 +99,9 @@ io.on('connection', socket => {
     let token = data.token
 
     if (username == null){
-      console.log("Username is null")
       return
     }
     if (token == null){
-      console.log("token is null")
       return
     }
 
@@ -130,6 +128,7 @@ io.on('connection', socket => {
 
       users[socket.id] = id; // The old uses array still needs the userId in it
 
+      
       // adds the username to list of connected users (provided it isn't there already)
       if (connected.indexOf(username) < 0){
         connected.push(username); 
