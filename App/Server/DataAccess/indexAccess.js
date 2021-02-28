@@ -1,7 +1,15 @@
 /* 
 Class for searching and modifying index files
 Index files record which block contains each message or log entry
+
+Index format (| symbols not included in file, just here to make it easier to read):
+Number of entries (8 bytes)|Lowest timestamp (8 bytes)|Highest timestamp (8 bytes)|entries (24 bytes each)
+
+Entry format:
+Lowest timestamp in block (8 bytes)|Highest timestamp in block (8 bytes)|block number (8 bytes)
 */
+
+const { timeStamp } = require('console');
 const fs = require('fs');
 const path = require('path');
 
@@ -72,4 +80,95 @@ class indexAccess{
            return false;
        }
     }
+
+    static getBlocks(filePath, startTime, endTime){
+        // Return the block numbers for every block that contains values between the provided timestamps
+
+        // First set up a promise that the method will return
+        let promisedResult = new Promise((resolve, reject) => {
+        fs.open(filePath, "r", (err, descriptor) =>{
+            // First compare with index headers to check the given timestamps are within the range of the file (if not then we already know the index does not have what we are looking for so there is no need to search)
+            // There is no promise based implementation of fs.read so messy nested callbacks must be used instead
+            fs.read(descriptor, {length: 24, position: 0, buffer: Buffer.alloc(24)}, (err, bytesRead, data) =>{
+                let indexLength = Number(data.readBigInt64BE(0));
+                let lowestTimestamp = Number(data.readBigInt64BE(8));
+                let highestTimestamp = Number(data.readBigInt64BE(16));
+                if (indexLength === 0 || highestTimestamp < startTime || lowestTimestamp > endTime){
+                    // Return empty list, as index does not contain what we are looking for
+                    resolve([]);
+                }
+                else{
+                    let firstEntry, currentEntry, lastEntry;
+                    // First create a callback to be used "recursively" to find a block whose time range includes start time (not really recursive, as the callback registers itself with fs.read rather than calling itself (this means the recursion limit won't be an issue))
+                    let searchIndex = function(err, bytesRead, data){
+                        let smallestTime = Number(data.readBigInt64BE(0));
+                        let largestTime = Number(data.readBigInt64BE(8));
+                        if (smallestTime <= startTime && startTime <= largestTime){
+                            // We have found the first block that contains timestamps in the given range
+                            let blockNumber = Number(data.readBigInt64BE(16));
+                            console.log(`Found block: ${blockNumber}`);
+                        }
+                        else if (startTime <= smallestTime){
+                            // startTime is smaller than (or equal to) smallestTime, so we know the correct entries must be before this one
+                            lastEntry = currentEntry;
+                            currentEntry = Math.floor((firstEntry + lastEntry) / 2);
+                            if (currentEntry === lastEntry){
+                                // The entry is not in the index
+                                resolve([]);
+                            }
+                            else{
+                                fs.read(descriptor, {length: 24, buffer: Buffer.alloc(24), position: 24 + (currentEntry * 24)}, searchIndex);
+                            }
+                        }
+                        else{
+                            // startTime is larger than (or equal to) largestTime, so we know the correct entries must be after this one
+                            firstEntry = currentEntry;
+                            currentEntry = Math.floor((firstEntry + lastEntry) / 2);
+                            if (currentEntry === firstEntry){
+                                // The entry is not in the index
+                                resolve([]);
+                            }
+                            else{
+                                fs.read(descriptor, {length: 24, buffer: Buffer.alloc(24), position: 24 + (currentEntry * 24)}, searchIndex);
+                            }
+                        }
+                    }
+                    // Use binary search to find the first entry whose time range includes startTime
+                    firstEntry = 0;
+                    lastEntry = indexLength;
+                    currentEntry = Math.floor((firstEntry + lastEntry) / 2);
+                    fs.read(descriptor, {length: 24, buffer: Buffer.alloc(24), position: 24 + (currentEntry * 24)}, searchIndex);        
+                }
+
+            })
+
+        });
+    });
+    }
 }
+
+//indexAccess.createIndex(__dirname + "/../data/index_test.wki", overwrite=true)
+
+/*
+let indexLength = 50000;
+let smallestStamp, largestStamp;
+let the_time = 12345678910;
+let data = Buffer.alloc(24 + (24 * indexLength));
+smallestStamp = the_time;
+for (let i = 0; i < indexLength; i++){
+    data.writeBigInt64BE(BigInt(the_time), 24 + (i * 24));
+    the_time += 5000
+    data.writeBigInt64BE(BigInt(the_time), 24 + (i * 24) + 8);
+    largestStamp = the_time;
+    the_time += 5000
+    data.writeBigInt64BE(BigInt(i), 24 + (i * 24) + 16);
+}
+// Write headers
+data.writeBigInt64BE(BigInt(indexLength));
+data.writeBigInt64BE(BigInt(smallestStamp), 8);
+data.writeBigInt64BE(BigInt(largestStamp), 16);
+
+fs.writeFileSync(__dirname + "/../data/index_test.wki", data);
+*/
+
+indexAccess.getBlocks(__dirname + "/../data/index_test.wki", 12545673910, 12678934510)
