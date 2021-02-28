@@ -11,11 +11,17 @@ let loggedInUsers = {}
 //-----------------------------------------------------------------------------------------------------------------
 //// Login API 
 
+
+var cors = require('cors')
+
+
 const express = require('express')
 const app = express()
 const PORT = 8080
 
 app.use ( express.json() )
+app.use( cors() ) // Use this after the variable declaration
+
 
 
 app.post('/login', (req, res) => {
@@ -46,7 +52,7 @@ app.post('/login', (req, res) => {
 
 
     res.send({
-      response: `Authentication success`,
+      message: `Authentication success`,
       token: `${ token }`,    // the response 
     })
 
