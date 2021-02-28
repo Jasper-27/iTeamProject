@@ -102,8 +102,11 @@
             
             function login(){
                 // Adds the username and password to the session storage
-                sessionStorage.setItem('session_pass', document.getElementById("pass").value); 
-                sessionStorage.setItem('session_user', document.getElementById("user").value)
+                // sessionStorage.setItem('session_pass', document.getElementById("pass").value); 
+                // sessionStorage.setItem('session_user', document.getElementById("user").value)
+
+                sessionStorage.setItem('token', "695dcdf0ed17a72c4e816ea848e8fdabcc14e59aa81848fc13c4a1feae1d9b3fd43200102a1387bdc0d08706d9ea85ee80eeb5efd3793f8ca56b05af6aa58471")
+                sessionStorage.setItem('username', "2")
 
                 window.location.replace("./app.html"); //changes to the main app window 
 

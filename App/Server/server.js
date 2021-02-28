@@ -156,7 +156,7 @@ io.on('connection', socket => {
       socket.to('authorised').emit('user-connected', username); // Announce that the user has connected
       io.to(socket.id).emit("send-username", username); // tells the new user what their name is
 
-      users[socket.id] = id;
+      users[socket.id] = id; // The old uses array still needs the userId in it
 
 
       // adds the username to list of connected users (provided it isn't there already)
@@ -174,17 +174,6 @@ io.on('connection', socket => {
     }else{
       socket.emit('authentication-failed')
     }
-
-    
-
-
-    
-
-
-    //let authed = checkToken(token)
-
-    // console.log(authed); 
-    
     
   })
 

@@ -16,10 +16,14 @@ var settings
 
 var connectedUsersList = document.getElementById('users');  // The HTML list that contains the connected users 
 
-login();
+// login();
 // appendUserJoinOrDisconnect('You joined'); 
 // socket.emit('new-user', name)
 getUsers();
+
+temptoken= "f0ed45e816e7a9cff4d6ef9e109450e75a6254b36773ee357df4087e9e3e46d74000caabc447e9ac39f2cca66bdac883bc18ef6f4df338e02fa23f9f2550b533"
+
+attemptAuth()
 
 // gets a username sent from the server
 socket.on('send-username', data => {
@@ -399,3 +403,13 @@ function login(){
   
 }
 
+
+function attemptAuth(){
+  // socket.emit("attempt-auth", sessionStorage.token)
+  // socket.emit("attempt-auth", temptoken)
+
+  // socket.emit('attempt-auth', {"token": temptoken, "username" : "2"})
+
+  socket.emit('attempt-auth', {"token": sessionStorage.token, "username" : sessionStorage.username})
+
+}
