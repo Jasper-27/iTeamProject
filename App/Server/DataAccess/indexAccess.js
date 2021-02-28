@@ -9,7 +9,6 @@ Entry format:
 Lowest timestamp in block (8 bytes)|Highest timestamp in block (8 bytes)|block number (8 bytes)
 */
 
-const { timeStamp } = require('console');
 const fs = require('fs');
 const path = require('path');
 
@@ -98,15 +97,49 @@ class indexAccess{
                     resolve([]);
                 }
                 else{
+                    if (startTime < lowestTimestamp) startTime = lowestTimestamp;  // Search will only work if startTime fits within the range of timestamps in the index
+                    let blocks = [];  // Numbers of all the blocks that can contain timestamps in the given range
                     let firstEntry, currentEntry, lastEntry;
-                    // First create a callback to be used "recursively" to find a block whose time range includes start time (not really recursive, as the callback registers itself with fs.read rather than calling itself (this means the recursion limit won't be an issue))
-                    let searchIndex = function(err, bytesRead, data){
+                    /*
+                    The "findFirstSuitableBlock" callback searches the file to find the first block that can contain timestamps in the range we are looking for
+                    The "findNextSuitableBlocks" callback then finds all the following blocks that can contain timestamps in the range we are looking for
+                    */
+                    // First create a callback to be used "recursively" to find all blocks within the given timestamp range given the first suitable block (not really recursive, as the callback registers itself with fs.read rather than calling itself (this means the recursion limit won't be an issue))
+                    let findNextSuitableBlocks = function(err, bytesRead, data){
+                        for (let i = 0; i < bytesRead; i += 24){
+                            currentEntry++;
+                            let smallestTime = Number(data.readBigInt64BE(i));
+                            if (smallestTime <= endTime){
+                                // This block can contain entries in the range we are looking for, so add it to blocks
+                                blocks.push(Number(data.readBigInt64BE(i + 16)));
+                            }
+                            else{
+                                // This block cannot contain entries in the range we are looking for, so no following ones can either.  So we can stop searching
+                                resolve(blocks);
+                                return;
+                            }
+                        }
+                        if (currentEntry === indexLength - 1){
+                            // The entire file has been searched
+                            resolve(blocks);
+                        }
+                        else{
+                            // We still haven't found all suitable blocks, and we have also not reached the end of the index.  So rerun on the next cluster
+                            // On most file systems cluster size is 4096 bytes, but 24 byte entries don't fit exactly into 4096 so get 4080 bytes instead
+                            fs.read(descriptor, {length: 4080, buffer: Buffer.alloc(4080), position: 24 + ((currentEntry + 1) * 24)}, findNextSuitableBlocks);
+                        }
+
+                    }
+                    // Another "recursive" callback to find a the first block whose time range includes start time
+                    let findFirstSuitableBlock = function(err, bytesRead, data){
                         let smallestTime = Number(data.readBigInt64BE(0));
                         let largestTime = Number(data.readBigInt64BE(8));
                         if (smallestTime <= startTime && startTime <= largestTime){
                             // We have found the first block that contains timestamps in the given range
-                            let blockNumber = Number(data.readBigInt64BE(16));
-                            console.log(`Found block: ${blockNumber}`);
+                            blocks.push(Number(data.readBigInt64BE(16)));
+                            // We now need to find all following blocks that can contain timestamps in the given range
+                            // On most file systems cluster size is 4096 bytes, but 24 byte entries don't fit exactly into 4096 so get 4080 bytes instead
+                            fs.read(descriptor, {length: 4080, buffer: Buffer.alloc(4080), position: 24 + ((currentEntry + 1) * 24)}, findNextSuitableBlocks);
                         }
                         else if (startTime <= smallestTime){
                             // startTime is smaller than (or equal to) smallestTime, so we know the correct entries must be before this one
@@ -117,7 +150,7 @@ class indexAccess{
                                 resolve([]);
                             }
                             else{
-                                fs.read(descriptor, {length: 24, buffer: Buffer.alloc(24), position: 24 + (currentEntry * 24)}, searchIndex);
+                                fs.read(descriptor, {length: 24, buffer: Buffer.alloc(24), position: 24 + (currentEntry * 24)}, findFirstSuitableBlock);
                             }
                         }
                         else{
@@ -129,7 +162,7 @@ class indexAccess{
                                 resolve([]);
                             }
                             else{
-                                fs.read(descriptor, {length: 24, buffer: Buffer.alloc(24), position: 24 + (currentEntry * 24)}, searchIndex);
+                                fs.read(descriptor, {length: 24, buffer: Buffer.alloc(24), position: 24 + (currentEntry * 24)}, findFirstSuitableBlock);
                             }
                         }
                     }
@@ -137,38 +170,14 @@ class indexAccess{
                     firstEntry = 0;
                     lastEntry = indexLength;
                     currentEntry = Math.floor((firstEntry + lastEntry) / 2);
-                    fs.read(descriptor, {length: 24, buffer: Buffer.alloc(24), position: 24 + (currentEntry * 24)}, searchIndex);        
+                    fs.read(descriptor, {length: 24, buffer: Buffer.alloc(24), position: 24 + (currentEntry * 24)}, findFirstSuitableBlock);        
                 }
 
             })
 
         });
     });
+    return promisedResult;
     }
 }
 
-//indexAccess.createIndex(__dirname + "/../data/index_test.wki", overwrite=true)
-
-/*
-let indexLength = 50000;
-let smallestStamp, largestStamp;
-let the_time = 12345678910;
-let data = Buffer.alloc(24 + (24 * indexLength));
-smallestStamp = the_time;
-for (let i = 0; i < indexLength; i++){
-    data.writeBigInt64BE(BigInt(the_time), 24 + (i * 24));
-    the_time += 5000
-    data.writeBigInt64BE(BigInt(the_time), 24 + (i * 24) + 8);
-    largestStamp = the_time;
-    the_time += 5000
-    data.writeBigInt64BE(BigInt(i), 24 + (i * 24) + 16);
-}
-// Write headers
-data.writeBigInt64BE(BigInt(indexLength));
-data.writeBigInt64BE(BigInt(smallestStamp), 8);
-data.writeBigInt64BE(BigInt(largestStamp), 16);
-
-fs.writeFileSync(__dirname + "/../data/index_test.wki", data);
-*/
-
-indexAccess.getBlocks(__dirname + "/../data/index_test.wki", 12545673910, 12678934510)
