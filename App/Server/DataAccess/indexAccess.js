@@ -130,47 +130,57 @@ class indexAccess{
                         }
 
                     }
+                    let bufferStart, bufferEnd;  // The first and last entries in the current buffer
                     // Another "recursive" callback to find a the first block whose time range includes start time
                     let findFirstSuitableBlock = function(err, bytesRead, data){
-                        let smallestTime = Number(data.readBigInt64BE(0));
-                        let largestTime = Number(data.readBigInt64BE(8));
-                        if (smallestTime <= startTime && startTime <= largestTime){
-                            // We have found the first block that contains timestamps in the given range
-                            blocks.push(Number(data.readBigInt64BE(16)));
-                            // We now need to find all following blocks that can contain timestamps in the given range
-                            // On most file systems cluster size is 4096 bytes, but 24 byte entries don't fit exactly into 4096 so get 4080 bytes instead
-                            fs.read(descriptor, {length: 4080, buffer: Buffer.alloc(4080), position: 24 + ((currentEntry + 1) * 24)}, findNextSuitableBlocks);
-                        }
-                        else if (startTime <= smallestTime){
-                            // startTime is smaller than (or equal to) smallestTime, so we know the correct entries must be before this one
-                            lastEntry = currentEntry;
-                            currentEntry = Math.floor((firstEntry + lastEntry) / 2);
-                            if (currentEntry === lastEntry){
-                                // The entry is not in the index
-                                resolve([]);
+                        while (bufferStart <= currentEntry && currentEntry <= bufferEnd){  // If the entry is in the buffer we can continue, otherwise we will have to refill the buffer so that it contains the entry
+                            let entryPositionInBuffer = (currentEntry - bufferStart) * 24;
+                            let smallestTime = Number(data.readBigInt64BE(entryPositionInBuffer));
+                            let largestTime = Number(data.readBigInt64BE(entryPositionInBuffer + 8));
+                            if (smallestTime <= startTime && startTime <= largestTime){
+                                // We have found the first block that contains timestamps in the given range
+                                blocks.push(Number(data.readBigInt64BE(16)));
+                                // We now need to find all following blocks that can contain timestamps in the given range
+                                // On most file systems cluster size is 4096 bytes, but 24 byte entries don't fit exactly into 4096 so get 4080 bytes instead
+                                fs.read(descriptor, {length: 4080, buffer: Buffer.alloc(4080), position: 24 + ((currentEntry + 1) * 24)}, findNextSuitableBlocks);
+                                return;
+                            }
+                            else if (startTime <= smallestTime){
+                                // startTime is smaller than (or equal to) smallestTime, so we know the correct entries must be before this one
+                                lastEntry = currentEntry;
+                                currentEntry = Math.floor((firstEntry + lastEntry) / 2);
+                                if (currentEntry === lastEntry){
+                                    // The entry is not in the index
+                                    resolve([]);
+                                    return;
+                                }
                             }
                             else{
-                                fs.read(descriptor, {length: 24, buffer: Buffer.alloc(24), position: 24 + (currentEntry * 24)}, findFirstSuitableBlock);
+                                // startTime is larger than (or equal to) largestTime, so we know the correct entries must be after this one
+                                firstEntry = currentEntry;
+                                currentEntry = Math.floor((firstEntry + lastEntry) / 2);
+                                if (currentEntry === firstEntry){
+                                    // The entry is not in the index
+                                    resolve([]);
+                                    return;
+                                }
                             }
                         }
-                        else{
-                            // startTime is larger than (or equal to) largestTime, so we know the correct entries must be after this one
-                            firstEntry = currentEntry;
-                            currentEntry = Math.floor((firstEntry + lastEntry) / 2);
-                            if (currentEntry === firstEntry){
-                                // The entry is not in the index
-                                resolve([]);
-                            }
-                            else{
-                                fs.read(descriptor, {length: 24, buffer: Buffer.alloc(24), position: 24 + (currentEntry * 24)}, findFirstSuitableBlock);
-                            }
-                        }
+                        // The entry we need to check is not in the current buffer, so we need to load from the file
+                        let details = indexAccess._calculateBufferDetails(indexLength, currentEntry);
+                        bufferStart = details[0];
+                        bufferEnd = details[1];
+                        fs.read(descriptor, {length: details[2] * 24, buffer: Buffer.alloc(details[2] * 24), position: details[3]}, findFirstSuitableBlock);
                     }
                     // Use binary search to find the first entry whose time range includes startTime
                     firstEntry = 0;
                     lastEntry = indexLength;
                     currentEntry = Math.floor((firstEntry + lastEntry) / 2);
-                    fs.read(descriptor, {length: 24, buffer: Buffer.alloc(24), position: 24 + (currentEntry * 24)}, findFirstSuitableBlock);        
+                    // Read in 2730 entries at once (~64kb) as this takes about the same amount of time as reading 1 entry
+                    let details = indexAccess._calculateBufferDetails(indexLength, currentEntry);
+                    bufferStart = details[0];
+                    bufferEnd = details[1];
+                    fs.read(descriptor, {length: details[2] * 24, buffer: Buffer.alloc(details[2] * 24), position: details[3]}, findFirstSuitableBlock);        
                 }
 
             })
@@ -179,5 +189,18 @@ class indexAccess{
     });
     return promisedResult;
     }
-}
 
+    static _calculateBufferDetails(indexLength, currentEntry){
+        // Return [<first entry in buffer>, <last entry in buffer>, <buffer size (number of entries)>, <point in file to read buffer from>]
+        const idealBufferSize = 2730;
+        // currentEntry should be middle entry in buffer (as we do not know which side of the entry we will be have to search next)
+        // Get first entry
+        let bufferStart = Math.max(0, currentEntry - Math.floor(idealBufferSize / 2));  // If there are too few entries before currentEntry we use as many as we can
+        // Get last entry
+        let bufferEnd = Math.min(indexLength, currentEntry + Math.floor(idealBufferSize / 2));  // If there are too few entries after currentEntry we use as many as we can
+        let bufferSize = bufferEnd - bufferStart;
+        // Calculate position in file that new buffer should be read from
+        let position = 24 + (bufferStart * 24);  // + 24 to skip over the index headers
+        return [bufferStart, bufferEnd, bufferSize, position];
+    }
+}
