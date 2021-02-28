@@ -94,18 +94,6 @@ console.log(`📧 Message socket online: http://localhost:${socketPort}`)
 
 io.on('connection', socket => {
 
-  //when new user is added to the server
-  socket.on('new-user', name => {
-    if (name == null || name == undefined || name == "") name = "unknown";
-    users[socket.id] = name;
-    socket.broadcast.emit('user-connected', name);
-    sendPreviousMessages(socket);
-
-    // hang on, isn't this done twice?  // This bit never runs Hmmmmmm
-    console.log("User " + name + " Connected");
-    logger.log("User " + name + " Connected"); 
-  })
-
   socket.on('attempt-auth', data =>{
     let username = data.username
     let token = data.token
