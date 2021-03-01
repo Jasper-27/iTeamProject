@@ -150,6 +150,24 @@ io.on('connection', socket => {
         return;
       }
 
+      // If filetype is blacklisted - dont allow the message to be sent.
+      var blacklist = settings.restrictedFiles
+
+      for (var i of blacklist) {
+        
+        if (file.name.search(i) != -1) {
+
+          console.log("Blacklisted filetype attempted to be sent!");
+
+          exitSendFileMode();
+          showFileSelector();
+
+          return
+        }
+      }
+
+    
+
       // Must also send message to user that sent it
       socket.emit('chat-message', {message: {type: message.type, content: filteredMessage, fileName: message.fileName}, name: name});
 
