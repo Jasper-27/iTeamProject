@@ -21,7 +21,7 @@ class indexAccess{
             // Only proceed if overwrite is true or if there is not already a valid index file
             // Create directory
             try{
-                // If the path given directly in a root directory, this will throw an error.  But the error won't matter as the direcotry does not need to be created anyway
+                // If the path given directly in a root directory, this will throw an error.  But the error won't matter as the directory does not need to be created anyway
                 fs.mkdirSync(path.dirname(filePath), {recursive: true});
             }
             catch{}
@@ -118,7 +118,7 @@ class indexAccess{
                                         if (err) reject(err);
                                         else{
                                             // Now rewrite the headers
-                                            if (smallestTimestamp < indexSmallestTime) indexSmallestTime = smallestTimestamp;
+                                            if (smallestTimestamp < indexSmallestTime || indexSmallestTime === 0) indexSmallestTime = smallestTimestamp;  // indexSmallestTime being 0 indicates that this is the first entry
                                             if (indexLargestTime < largestTimestamp) indexLargestTime = largestTimestamp;
                                             indexLength++;
                                             let newHeaders = Buffer.alloc(24);
@@ -142,6 +142,32 @@ class indexAccess{
                 });
             }
             
+        });
+    }
+
+    static async getLastBlockNumber(filePath){
+        // Returns a promise containing the block number of the last block in the index (needed by blockAccess to generate new block numbers)
+        return new Promise((resolve, reject) => {
+            fs.open(filePath, "r", (err, descriptor) => {
+                if (err) reject(err);
+                else{
+                    // Get number of entries in order to be able to find last entry
+                    fs.read(descriptor, {length: 8, buffer: Buffer.alloc(8), position: 0}, (err, bytesRead, data) => {
+                        if (err) reject(err);
+                        else{
+                            let indexLength = Number(data.readBigInt64BE(0));
+                            // Now jump to the last entry and read its block number
+                            fs.read(descriptor, {position: 24 + (24 * (indexLength - 1)) + 16, length: 8, buffer: Buffer.alloc(8)}, (err, bytesRead, data) =>{
+                                if (err) reject(err);
+                                else{
+                                    let blockNumber = Number(data.readBigInt64BE(0));
+                                    resolve(blockNumber);
+                                }
+                            });
+                        }
+                    });
+                }
+            });
         });
     }
 
@@ -268,3 +294,5 @@ class indexAccess{
         return [bufferStart, bufferEnd, bufferSize, position];
     }
 }
+
+module.exports = indexAccess;
