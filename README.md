@@ -15,7 +15,7 @@ configuration instructions will follow.
 Hannah Brown - https://github.com/hannahmaebrown <br>
 Alex Redmond - https://github.com/AlexFF000 <br>
 Tom Nash - https://github.com/Tom451 <br>
-Etienne Brand - https://github.com/etiennebrand<br>
+Etienne Brand - https://github.com/etiennebrandd<br>
 Jasper Cox - https://github.com/Jasper-27 <br>
 Callum Gorman-Williams - https://github.com/CallumGWilliams <br>
 
