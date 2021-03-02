@@ -4,6 +4,7 @@ const messageForm = document.getElementById('send-container');
 const messageInput = document.getElementById('message-input'); 
 const fileSelectButton = document.getElementById("choose-file-button");
 const messageFileSelector = document.getElementById("choose-file-dialog");  // The <input type="file"/> element for selecting a file to send
+const feedback = document.getElementById("feedback");
 
 var sendMessage;  // Holds a reference to the function for sending messages (will switch between sendText and sendFile)
 var currentSendingUser;
@@ -396,3 +397,30 @@ function login(){
   
 }
 
+
+
+
+
+
+messageInput.addEventListener('keypress', myUsername => {
+
+  socket.emit('user_typing', myUsername);
+  console.log("Client: I am typing");
+})
+
+
+
+
+
+
+
+
+
+
+
+socket.on('user_typing', myUsername => {
+
+  feedback.innerHTML = '<p><em>' + myUsername + ' is typing...</em></p>';
+  console.log("Client: That guy is typing");
+})
+ 

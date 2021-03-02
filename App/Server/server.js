@@ -167,6 +167,56 @@ io.on('connection', socket => {
     }
   })
 
+
+
+
+
+
+  socket.on('user_typing', myUsername => {
+    
+    socket.to('authorised').emit('user_typing', myUsername);
+    console.log("Server: You are typing");
+    
+  })
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   socket.on('disconnect', () => {
     let name = accountsFile.getAccount(users[socket.id]).userName;
     // Only continue if name exists (meaning user was properly connected and logged in)
