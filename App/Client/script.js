@@ -118,7 +118,7 @@ function sendFile(){
 
         return;
       }
-  }
+    }
 
 
     // Set message type 
