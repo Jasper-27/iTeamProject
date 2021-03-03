@@ -3,6 +3,10 @@
   background-repeat: repeat;
 }
 
+.credentials {
+  background: #f1f7fc;
+}
+
 .login-clean form {
   background-color: #ffffff;
   color: #505e6c;
@@ -36,4 +40,6 @@
 .login-clean form .forgot:hover, .login-clean form .forgot:active {
   opacity: 1;
 }
+
+
 
