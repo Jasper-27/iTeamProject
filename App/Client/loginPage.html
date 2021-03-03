@@ -12,6 +12,8 @@
 	
 	    	<!-- Links for the style sheets Layout -->
 	<link rel="stylesheet" href="assets/css/layout/normal/styles.css">
+	
+
 
 </head>
 
@@ -26,12 +28,14 @@
             </div>
         </div>
     </nav>
-    <div></div>
-    <div id="credentials">
+
+    <div id="credentials" class="login-clean" style="height:100vh;>
 	
-	<section class="login-clean">
 	
-        <form method="post" action="./app.html" onsubmit = "login()">
+	
+	<section class="login-clean" >
+	
+        <form method="post" action="./app.html" onsubmit = "login()" class="login-clean">
             <h2 class="sr-only">Login Form</h2>
             <div id="credentials" class="illustration"><img src="logo.png" height="220"></div>
             <div class="form-group"><input class="form-control" type="text" id="user" placeholder="Username" name="username"></div>
