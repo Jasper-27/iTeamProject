@@ -10,11 +10,20 @@ Lowest timestamp in block (8 bytes)|Highest timestamp in block (8 bytes)|block n
 */
 
 const fs = require('fs');
+const { resolve } = require('path');
 const path = require('path');
 
 const idealBufferSize = 2730;  // The number of entries that getBlocks should try to read from the file at a time
 
 class indexAccess{
+    // Used as arguments to functions to reference headers
+    static INDEXLENGTHHEADER = 0;
+    static LOWESTTIMESTAMPHEADER = 1;
+    static HIGHESTTIMESTAMPHEADER = 2;
+
+    // Hold the headers in memory to reduce number of disk reads
+    static headerData = {};  // format: <index filepath>: {INDEXLENGTHHEADER: <value>, LOWESTTIMESTAMPHEADER: <value>, HIGHESTTIMESTAMPHEADER: <value>}
+
     static async createIndex(filePath, overwrite=false){  // If there is already a valid index file at the location and overwrite is false, it won't be overwritten
         // Create a new index file at the given path
         if (overwrite === true || (await this.isValidIndex(filePath)) === false){
@@ -80,6 +89,116 @@ class indexAccess{
        catch (e){
            return false;
        }
+    }
+
+    static changeLastBlockHighestTimestamp(indexFile, newTimestamp){
+        // Update the highest timestamp header of the last block (used by blockAccess when a new item is added)
+        return new Promise((resolve, reject) =>{
+            let updateBlockEntry = () => {
+                let position = 24 + (indexAccess.headerData[indexFile][indexAccess.INDEXLENGTHHEADER] * 24) + 8;
+                fs.open(indexFile, "r+", (err, descriptor) => {
+                    if (err) reject(err);
+                    else{
+                        let data = Buffer.alloc(8);
+                        data.writeBigInt64BE(BigInt(newTimestamp));
+                        fs.write(descriptor, data, 0, 8, position, err => {
+                            if (err) reject(err);
+                            else resolve(true);
+                        });
+                    }
+                });
+            };
+            if (typeof indexAccess.headerData[indexFile] != "Object"){
+                // We don't have an in-memory copy of the index headers so must load them
+                this._readHeadersToMemory(indexFile).then(value => {
+                    updateBlockEntry();
+                }).catch(reason => {reject(reason)});
+            }
+            else updateBlockEntry();
+        });
+    }
+
+    static writeHeader(filePath, headers, values){
+        // Takes in an array of headers to be written, and an array of values to be written to them
+        return new Promise((resolve, reject) => {
+            // Prepare data to be written
+            let newHeaders = Buffer.alloc(24);
+            // Define as a function as it needs to be used in more than one place
+            let writeHeaders = () => {
+                // Must declare each field of newHeaderData separately due to Javscript's silly syntax rules, which don't allow dots in key definitions
+                let newHeaderData = {};
+                newHeaderData[indexAccess.INDEXLENGTHHEADER] = indexAccess.headerData[filePath][indexAccess.INDEXLENGTHHEADER];
+                newHeaderData[indexAccess.LOWESTTIMESTAMPHEADER] = indexAccess.headerData[filePath][indexAccess.LOWESTTIMESTAMPHEADER];
+                newHeaderData[indexAccess.HIGHESTTIMESTAMPHEADER] = indexAccess.headerData[filePath][indexAccess.HIGHESTTIMESTAMPHEADER];
+            for (let i = 0; i < headers.length; i++){
+                if (headers[i] === indexAccess.INDEXLENGTHHEADER){
+                    newHeaderData[indexAccess.INDEXLENGTHHEADER] = values[i];     
+                }
+                else if (headers[i] === indexAccess.LOWESTTIMESTAMPHEADER){
+                    newHeaderData[indexAccess.LOWESTTIMESTAMPHEADER] = values[i];
+                }
+                else if (headers[i] === indexAccess.HIGHESTTIMESTAMPHEADER){
+                    newHeaderData[indexAccess.HIGHESTTIMESTAMPHEADER] = values[i];
+                }
+            }
+            newHeaders.writeBigInt64BE(BigInt(newHeaderData[indexAccess.INDEXLENGTHHEADER]), 0);
+            newHeaders.writeBigInt64BE(BigInt(newHeaderData[indexAccess.LOWESTTIMESTAMPHEADER]), 8);
+            newHeaders.writeBigInt64BE(BigInt(newHeaderData[indexAccess.HIGHESTTIMESTAMPHEADER]), 16);
+            // Write data
+            fs.open(filePath, "r+", (err, descriptor) => {
+                if (err) reject(err);
+                else{
+                    fs.write(descriptor, newHeaders, 0, 24, 0, err => {
+                        if (err) reject(err);
+                        else{
+                            // Update headerData
+                            indexAccess.headerData[filePath] = newHeaderData;
+                            resolve(true);
+                        }
+                    });
+                }
+            });
+        }
+        if (typeof indexAccess.headerData[filePath] != "Object"){
+            // If headerData has not yet been read for this file then do so now
+            indexAccess._readHeadersToMemory(filePath).then(value => {
+                writeHeaders();
+            });
+        }
+        else{
+            writeHeaders();
+        }
+        });
+    }
+
+    static getHeader(filePath, ...headers){
+        // Takes a variable number of header references and promises an array of corresponding values for those headers
+        return new Promise((resolve, reject) => {
+            // Define as function as needed in two places
+        let getHeaderValues = () => {
+            let headerValues = [];
+            for (let i = 0; i < headers.length; i++){
+                if (headers[i] === indexAccess.INDEXLENGTHHEADER){
+                    headerValues.push(indexAccess.headerData[filePath][indexAccess.INDEXLENGTHHEADER]);
+                }
+                else if (headers[i] === indexAccess.LOWESTTIMESTAMPHEADER){
+                    headerValues.push(indexAccess.headerData[filePath][indexAccess.LOWESTTIMESTAMPHEADER]);
+                }
+                else if(headers[i] === indexAccess.HIGHESTTIMESTAMPHEADER){
+                    headerValues.push(indexAccess.headerData[filePath][indexAccess.HIGHESTTIMESTAMPHEADER]);
+                }
+            }
+            resolve(headerValues);
+        };
+            if (typeof indexAccess.headerData[filePath] != "Object"){
+                // Need to fetch headers from disk as we don't already have them in memory
+                indexAccess._readHeadersToMemory(filePath).then(value => {
+                    getHeaderValues();
+                });
+            }
+            else getHeaderValues();
+        });
+        
     }
 
     static addBlock(filePath, smallestTimestamp, largestTimestamp, blockNumber){
@@ -292,6 +411,24 @@ class indexAccess{
         // Calculate position in file that new buffer should be read from
         let position = 24 + (bufferStart * 24);  // + 24 to skip over the index headers
         return [bufferStart, bufferEnd, bufferSize, position];
+    }
+
+    static _readHeadersToMemory(filePath){
+        // Read headers from given index file into headerData
+        return new Promise((resolve, reject) => {
+            fs.open(filePath, "r", (err, descriptor) => {
+                fs.read(descriptor, {position: 0, buffer: Buffer.alloc(24), length: 24}, (err, bytesRead, data) =>{
+                    if (err) reject(err);
+                    else{
+                        indexAccess.headerData[filePath] = {};
+                        indexAccess.headerData[filePath][indexAccess.INDEXLENGTHHEADER] = Number(data.readBigInt64BE(0));
+                        indexAccess.headerData[filePath][indexAccess.LOWESTTIMESTAMPHEADER] = Number(data.readBigInt64BE(8));
+                        indexAccess.headerData[filePath][indexAccess.HIGHESTTIMESTAMPHEADER] = Number(data.readBigInt64BE(16));
+                        resolve(true);
+                    }
+                });
+            });
+        });
     }
 }
 

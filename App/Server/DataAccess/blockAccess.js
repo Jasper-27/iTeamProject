@@ -19,6 +19,13 @@ const indexAccess = require('./indexAccess');
 const blockSize = 1000;  // The number of entries per block
 
 class blockAccess{
+    static BLOCKFULLHEADER = 0;
+    static ENTRYCOUNTHEADER = 1;
+    static NEXTFREEHEADER = 2;
+    static MIDDLEHEADER = 3;
+
+    // Hold headers of current non-full block in memory to save on disk reads
+    static headerData = {};  // Format: <block folder path>: {BLOCKFULLHEADER: <value>, ENTRYCOUNTHEADER: <value>, NEXTFREEHEADER: <value>, MIDDLEHEADER: <value>};
     /*
     When a block becomes full, a new block will be created when a new message / log entry needs to be added.
     However, if messages / log entries need to be added while a block is being created we need to make sure that this does not cause multiple blocks to be created
@@ -92,6 +99,46 @@ class blockAccess{
 
     }
 
+    static addEntry(indexFilePath, blockFolderPath, entryTimestamp, entryData){
+        // Add a new entry to the currently unfinished block (creating a new block if necessary)
+        return new Promise((resolve, reject) => {
+            // First must find last block
+            indexAccess.getLastBlockNumber(indexFilePath).then(blockNumber => {
+                let blockPath = path.format({dir: blockFolderPath, base: `${blockNumber}.wki`});
+                // Define as function as needed in two places
+                let addEntryToBlock = () => {
+                    // Check that current block is not full
+                    if (0 < blockAccess.headerData[blockFolderPath][blockAccess.BLOCKFULLHEADER]){
+                        // Block is full, so we must create a new and add the entry to that
+                        blockAccess.createBlock(indexFilePath, blockFolderPath, entryTimestamp, entryData).then(value => {
+                            resolve(true);
+                        }).catch(reson => {
+                            reject(reason);
+                        });
+                    }
+                    else{
+                        // Block is not full, so write the entry to it
+                        blockAccess.writeEntryToBlock(blockPath, entryTimestamp, entryData).then(value => {
+                            // Now update the index
+                            indexAccess.changeLastBlockHighestTimestamp(indexFilePath, entryTimestamp);
+                            indexAccess.writeHeader(indexFilePath, [indexAccess.HIGHESTTIMESTAMPHEADER], [entryTimestamp]);
+                        });
+                    }
+                };
+                if (typeof blockAccess.headerData[blockFolderPath] != "Object"){
+                    // We don't have an in-memory copy of block headers yet, so must fetch one
+                    blockAccess._readHeadersToMemory(blockPath).then(value => {
+                        addEntryToBlock();
+                    }).catch(reason => {reject(reason)});
+
+                }
+                else{
+                    addEntryToBlock();
+                }
+            });
+        });
+    }
+
     static async writeEntryToBlock(blockPath, entryTimestamp, entryData){
         // Write an entry to the block (this does not handle updating the index)
         return new Promise((resolve, reject) => {
@@ -158,6 +205,30 @@ class blockAccess{
             
         });
     }
+
+    static _readHeadersToMemory(filePath){
+        // Read headers from given block file into headerData
+        return new Promise((resolve, reject) => {
+            fs.open(filePath, "r", (err, descriptor) => {
+                if (err) reject(err);
+                else{
+                    fs.read(descriptor, {position: 0, buffer: Buffer.alloc(25), length: 25}, (err, bytesRead, data) =>{
+                        if (err) reject(err);
+                        else{
+                            let blockFolderPath = path.dirname(filePath);
+                            // Must declare each key separately due to Javascript's silly syntax rules, which don't allow dots in a key definition
+                            blockAccess.headerData[blockFolderPath] = {};
+                            blockAccess.headerData[blockFolderPath][blockAccess.BLOCKFULLHEADER] = Number(data.readInt8(0));
+                            blockAccess.headerData[blockFolderPath][blockAccess.ENTRYCOUNTHEADER] = Number(data.readBigInt64BE(1));
+                            blockAccess.headerData[blockFolderPath][blockAccess.NEXTFREEHEADER] = Number(data.readBigInt64BE(9));
+                            blockAccess.headerData[blockFolderPath][blockAccess.MIDDLEHEADER] = Number(data.readBigInt64BE(17));
+                            resolve(true);
+                        }
+                    });
+                }
+            });
+        });
+    }
 }
 
 function bigIntToBuffer(bigInt){
@@ -171,3 +242,16 @@ function intToBuffer(int){
     buffer.writeInt8(int);
     return buffer;
 }
+
+let timestonk = Date.now();
+let data = Buffer.from("This is a log entry");
+/* blockAccess.createBlock(__dirname + "/../data/index_test2.wdx", __dirname + "/../data/logsTest2", timestonk, data).then(value => {
+    console.log(value);
+    indexAccess.getBlocks(__dirname + "/../data/index_test2.wdx", 0, 2000000000000000).then(value => {
+        console.log(value);
+    });
+},
+value => {
+    console.log(value);
+}); */
+blockAccess.addEntry(__dirname + "/../data/index_test2.wdx",  __dirname + "/../data/logsTest2", timestonk, data).then(value => console.log(value)).catch(reason => console.log(reason));
