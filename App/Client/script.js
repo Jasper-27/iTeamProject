@@ -294,6 +294,8 @@ function appendMessageRecieve(message, inName) {
     messageContainer.scrollTop = messageContainer.scrollHeight;
   }
 
+  // Remove "is typing..." for user who just sent a message
+  feedback.innerHTML = "";
  
 }
 
@@ -397,30 +399,18 @@ function login(){
   
 }
 
+// Listen for when client starts typing
+// Could change to trigger when message box contents is not blank? Tried but couldn't get it working
+messageInput.addEventListener('keypress', inUsername => {
 
-
-
-
-
-messageInput.addEventListener('keypress', myUsername => {
-
-  socket.emit('user_typing', myUsername);
-  console.log("Client: I am typing");
+  inUsername = myUsername;
+  socket.emit('user_typing', inUsername);
 })
 
-
-
-
-
-
-
-
-
-
-
+// Recieves broadcast from server about someone else typing and updates div
 socket.on('user_typing', myUsername => {
 
+  // Is typing message
   feedback.innerHTML = '<p><em>' + myUsername + ' is typing...</em></p>';
-  console.log("Client: That guy is typing");
 })
  

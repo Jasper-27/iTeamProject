@@ -156,7 +156,7 @@ io.on('connection', socket => {
 
       // Checks to see if the message was @ing anyone 
       if (message.type === "text"){
-        if (message.content.includes("@")){
+        if (message.content.includes("@")) {
           message.content.split(" ").forEach((item, index) => {
             if (item.charAt(0) == "@"){
               socket.to('authorised').emit('mentioned', { target: item.substring(1), sender: name} );
@@ -167,54 +167,12 @@ io.on('connection', socket => {
     }
   })
 
-
-
-
-
-
+  
+  // Broadcast to other users when someone is typing
   socket.on('user_typing', myUsername => {
     
     socket.to('authorised').emit('user_typing', myUsername);
-    console.log("Server: You are typing");
-    
   })
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
   socket.on('disconnect', () => {
