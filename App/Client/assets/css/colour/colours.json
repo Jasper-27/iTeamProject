@@ -1,0 +1,10 @@
+{
+  "dark": {
+    "name": "dark",
+    "description": "A dark colour theme"
+  },
+  "light": {
+    "name": "light",
+    "description": "A light colour theme"
+  }
+}
