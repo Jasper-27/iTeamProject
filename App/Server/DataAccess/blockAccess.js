@@ -16,7 +16,7 @@ const fs = require('fs');
 const path = require('path');
 const indexAccess = require('./indexAccess');
 
-const blockSize = 1000;  // The number of entries per block
+const blockSize = 3;  // The number of entries per block
 
 class blockAccess{
     static BLOCKFULLHEADER = 0;
@@ -70,6 +70,13 @@ class blockAccess{
                                         headers.writeBigInt64BE(0n);  // Entry count
                                         headers.writeBigInt64BE(25n);  // Next free location is at byte 25, after the headers
                                         headers.writeBigInt64BE(0n);  // There are no entries yet so there cannot be a middle entry
+                                        // Update the in-memory copy of the headers with those for the new block
+                                        let newHeaderData = {};
+                                        newHeaderData[blockAccess.BLOCKFULLHEADER] = 0;
+                                        newHeaderData[blockAccess.ENTRYCOUNTHEADER] = 0;
+                                        newHeaderData[blockAccess.NEXTFREEHEADER] = 25;
+                                        newHeaderData[blockAccess.MIDDLEHEADER] = 0;
+                                        blockAccess.headerData[blockFolderPath] = newHeaderData;
                                         resolveHeaders();
                                     });
                                     // Now use a loop to chain operations for adding the entries in blocksBeingCreated
@@ -158,11 +165,12 @@ class blockAccess{
             fs.open(blockPath, "r+", (err, descriptor) => {
                 if (err) reject(err);
                 else{
-                    // Read entry count, next free, and middle entry headers
-                    fs.read(descriptor, {length: 24, buffer: Buffer.alloc(24), position: 1}, (err, bytesRead, data) => {
-                        let entryCount = data.readBigInt64BE(0);
-                        let nextFreePosition = data.readBigInt64BE(8);
-                        let middleEntryPosition = data.readBigInt64BE(16);
+                    let blockFolderPath = path.dirname(blockPath);
+                    // Define as function as needed in two places
+                    let writeEntry = () =>  {
+                        let entryCount = BigInt(blockAccess.headerData[blockFolderPath][blockAccess.ENTRYCOUNTHEADER]);
+                        let nextFreePosition = BigInt(blockAccess.headerData[blockFolderPath][blockAccess.NEXTFREEHEADER]);
+                        let middleEntryPosition = BigInt(blockAccess.headerData[blockFolderPath][blockAccess.MIDDLEHEADER]);
                         // Write the new entry
                         fs.write(descriptor, entry, 0, entryLength, nextFreePosition, err => {
                             if (err) reject(err);
@@ -170,7 +178,7 @@ class blockAccess{
                                 // Create function for modifying the headers (needs to be defined up here as it is needed in two places)
                                 let updateHeaders = () => {
                                     let blockIsFull = 0;
-                                    if (entryCount === blockSize) blockIsFull = 1;
+                                    if (entryCount >= blockSize) blockIsFull = 1;
                                     let headers = Buffer.concat([
                                         intToBuffer(blockIsFull),
                                         bigIntToBuffer(BigInt(entryCount)),
@@ -179,8 +187,15 @@ class blockAccess{
                                     ]);
                                     fs.write(descriptor, headers, 0, 25, 0, (err) => {
                                         if (err) reject(err);
-                                        // The item and headers have been written, so we are done
-                                        else resolve(true);
+                                        else{
+                                            // Update the in-memory versions of the headers
+                                            blockAccess.headerData[blockFolderPath][blockAccess.BLOCKFULLHEADER] = blockIsFull;
+                                            blockAccess.headerData[blockFolderPath][blockAccess.ENTRYCOUNTHEADER] = entryCount;
+                                            blockAccess.headerData[blockFolderPath][blockAccess.NEXTFREEHEADER] = nextFreePosition;
+                                            blockAccess.headerData[blockFolderPath][blockAccess.MIDDLEHEADER] = middleEntryPosition;
+                                            // The item and headers have been written, so we are done
+                                            resolve(true);
+                                        }
                                     });
                                 }
                                 // Update the headers
@@ -209,9 +224,16 @@ class blockAccess{
                                 }
                             }
                         });
-                    });
+                    }
+                    if (typeof blockAccess.headerData[blockFolderPath] != "Object"){
+                        // We don't already have the headers in memory so must load them
+                        blockAccess._readHeadersToMemory(blockPath).then(() => {
+                            writeEntry();
+                        }).catch(reason => {reject(reason)});
+                    }
+                    else writeEntry();
                 }
-            })
+            });
             
         });
     }
