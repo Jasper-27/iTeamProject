@@ -102,38 +102,48 @@ class blockAccess{
     static addEntry(indexFilePath, blockFolderPath, entryTimestamp, entryData){
         // Add a new entry to the currently unfinished block (creating a new block if necessary)
         return new Promise((resolve, reject) => {
-            // First must find last block
-            indexAccess.getLastBlockNumber(indexFilePath).then(blockNumber => {
-                let blockPath = path.format({dir: blockFolderPath, base: `${blockNumber}.wki`});
-                // Define as function as needed in two places
-                let addEntryToBlock = () => {
-                    // Check that current block is not full
-                    if (0 < blockAccess.headerData[blockFolderPath][blockAccess.BLOCKFULLHEADER]){
-                        // Block is full, so we must create a new and add the entry to that
-                        blockAccess.createBlock(indexFilePath, blockFolderPath, entryTimestamp, entryData).then(value => {
-                            resolve(true);
-                        }).catch(reson => {
-                            reject(reason);
-                        });
-                    }
-                    else{
-                        // Block is not full, so write the entry to it
-                        blockAccess.writeEntryToBlock(blockPath, entryTimestamp, entryData).then(value => {
-                            // Now update the index
-                            indexAccess.changeLastBlockHighestTimestamp(indexFilePath, entryTimestamp);
-                            indexAccess.writeHeader(indexFilePath, [indexAccess.HIGHESTTIMESTAMPHEADER], [entryTimestamp]);
-                        });
-                    }
-                };
-                if (typeof blockAccess.headerData[blockFolderPath] != "Object"){
-                    // We don't have an in-memory copy of block headers yet, so must fetch one
-                    blockAccess._readHeadersToMemory(blockPath).then(value => {
-                        addEntryToBlock();
-                    }).catch(reason => {reject(reason)});
-
-                }
+            // Make sure timestamp of new entry is not lower than previous one, as searching relies on chronological ordering
+            // The index will have the timestamp as a header, and indexAccess will most likely have a copy in memory so it makes sense to get it from there
+            indexAccess.getHeader(indexFilePath, indexAccess.HIGHESTTIMESTAMPHEADER).then(returnedHeaders => {
+                if (entryTimestamp < returnedHeaders[0]) reject("The new entry's timestamp is smaller than the previous entry's one.  This would break the block (so the entry has not been added).  This likely indicates an error with timestamp generation");
                 else{
-                    addEntryToBlock();
+                    // First must find last block
+                    indexAccess.getLastBlockNumber(indexFilePath).then(blockNumber => {
+                        let blockPath = path.format({dir: blockFolderPath, base: `${blockNumber}.wki`});
+                        // Define as function as needed in two places
+                        let addEntryToBlock = () => {
+                            // Check that current block is not full
+                            if (0 < blockAccess.headerData[blockFolderPath][blockAccess.BLOCKFULLHEADER]){
+                                // Block is full, so we must create a new and add the entry to that
+                                blockAccess.createBlock(indexFilePath, blockFolderPath, entryTimestamp, entryData).then(value => {
+                                    resolve(true);
+                                }).catch(reason => {
+                                    reject(reason);
+                                });
+                            }
+                            else{
+                                // Block is not full, so write the entry to it
+                                blockAccess.writeEntryToBlock(blockPath, entryTimestamp, entryData).then(value => {
+                                    // Now update the index
+                                    indexAccess.changeLastBlockHighestTimestamp(indexFilePath, entryTimestamp);
+                                    indexAccess.writeHeader(indexFilePath, [indexAccess.HIGHESTTIMESTAMPHEADER], [entryTimestamp]);
+                                    resolve(true);
+                                }).catch(reason => {
+                                    reject(reason);
+                                });
+                            }
+                        };
+                        if (typeof blockAccess.headerData[blockFolderPath] != "Object"){
+                            // We don't have an in-memory copy of block headers yet, so must fetch one
+                            blockAccess._readHeadersToMemory(blockPath).then(value => {
+                                addEntryToBlock();
+                            }).catch(reason => {reject(reason)});
+
+                        }
+                        else{
+                            addEntryToBlock();
+                        }
+                    });
                 }
             });
         });
