@@ -298,10 +298,10 @@ class indexAccess{
         fs.open(filePath, "r", (err, descriptor) =>{
             // First compare with index headers to check the given timestamps are within the range of the file (if not then we already know the index does not have what we are looking for so there is no need to search)
             // There is no promise based implementation of fs.read so messy nested callbacks must be used instead
-            fs.read(descriptor, {length: 24, position: 0, buffer: Buffer.alloc(24)}, (err, bytesRead, data) =>{
-                let indexLength = Number(data.readBigInt64BE(0));
-                let lowestTimestamp = Number(data.readBigInt64BE(8));
-                let highestTimestamp = Number(data.readBigInt64BE(16));
+            let searchIndex = () => {
+                let indexLength = Number(indexAccess.headerData[filePath][indexAccess.INDEXLENGTHHEADER]);
+                let lowestTimestamp = Number(indexAccess.headerData[filePath][indexAccess.LOWESTTIMESTAMPHEADER]);
+                let highestTimestamp = Number(indexAccess.headerData[filePath][indexAccess.HIGHESTTIMESTAMPHEADER]);
                 if (indexLength === 0 || highestTimestamp < startTime || lowestTimestamp > endTime){
                     // Return empty list, as index does not contain what we are looking for
                     resolve([]);
@@ -318,6 +318,11 @@ class indexAccess{
                     let findNextSuitableBlocks = function(err, bytesRead, data){
                         for (let i = 0; i < bytesRead; i += 24){
                             currentEntry++;
+                            if (currentEntry > indexLength - 1){
+                                // The whole file has been searched so the rest of the data in the data buffer will be 0s
+                                resolve(blocks);
+                                return;
+                            }
                             let smallestTime = Number(data.readBigInt64BE(i));
                             if (smallestTime <= endTime){
                                 // This block can contain entries in the range we are looking for, so add it to blocks
@@ -329,7 +334,7 @@ class indexAccess{
                                 return;
                             }
                         }
-                        if (currentEntry === indexLength - 1){
+                        if (currentEntry >= indexLength - 1){
                             // The entire file has been searched
                             resolve(blocks);
                         }
@@ -393,7 +398,12 @@ class indexAccess{
                     fs.read(descriptor, {length: details[2] * 24, buffer: Buffer.alloc(details[2] * 24), position: details[3]}, findFirstSuitableBlock);        
                 }
 
-            })
+            };
+            if (typeof indexAccess.headerData[filePath] != "Object"){
+                // We don't already have a cached version of the headers so will first need to read them from the file
+                indexAccess._readHeadersToMemory(filePath).then(() => searchIndex()).catch(reason => reject(reason));
+            }
+            else searchIndex();
 
         });
     });
