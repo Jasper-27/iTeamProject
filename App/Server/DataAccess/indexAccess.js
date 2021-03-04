@@ -215,52 +215,54 @@ class indexAccess{
                     if (err) reject(err);
                     else{
                         // First read the index headers to find the end of the file
-                        fs.read(descriptor, {size: 24, buffer: Buffer.alloc(24), position: 0}, (err, bytesRead, data) => {
-                            if (err) reject(err);
+                        let writeFile = () => {
+                            let indexLength = Number(indexAccess.headerData[filePath][indexAccess.INDEXLENGTHHEADER]);
+                            let indexSmallestTime = Number(indexAccess.headerData[filePath][indexAccess.LOWESTTIMESTAMPHEADER]);
+                            let indexLargestTime = Number(indexAccess.headerData[filePath][indexAccess.HIGHESTTIMESTAMPHEADER]);
+                            if (smallestTimestamp < indexLargestTime) reject("This block's smallest timestamp is smaller than the previous block's largest one.  This would break the index (so the block has not been added).  This likely indicates an error with timestamp generation");
                             else{
-                                let indexLength = Number(data.readBigInt64BE(0));
-                                let indexSmallestTime = Number(data.readBigInt64BE(8));
-                                let indexLargestTime = Number(data.readBigInt64BE(16));
-                                if (smallestTimestamp < indexLargestTime) reject("This block's smallest timestamp is smaller than the previous block's largest one.  This would break the index (so the block has not been added).  This likely indicates an error with timestamp generation");
-                                else{
-                                    // Prepare data to be written to file
-                                    let newEntry = Buffer.alloc(24);
-                                    newEntry.writeBigInt64BE(BigInt(smallestTimestamp), 0);
-                                    newEntry.writeBigInt64BE(BigInt(largestTimestamp), 8);
-                                    newEntry.writeBigInt64BE(BigInt(blockNumber), 16);
-                                    /*
-                                    Write the new entry before rewriting the headers.  This has two advantages:
-                                    a) Searches won't notice the entry unless it is included in the indexLength header.  This means that there will be no issue if a search operation gets scheduled between writing the new entry and rewriting the headers
-                                    b) This function uses the indexLength header to work out where to write the new entry.  This means that if the operation to rewrite the headers fails but the operation to add the entry has already succeeded, the new entry will simply by overwritten the next time an entry is added
-                                    */
-                                    fs.write(descriptor, newEntry, 0, 24, (24 + (indexLength * 24)), (err) => {
-                                        if (err) reject(err);
-                                        else{
-                                            // Now rewrite the headers
-                                            if (smallestTimestamp < indexSmallestTime || indexSmallestTime === 0) indexSmallestTime = smallestTimestamp;  // indexSmallestTime being 0 indicates that this is the first entry
-                                            if (indexLargestTime < largestTimestamp) indexLargestTime = largestTimestamp;
-                                            indexLength++;
-                                            let newHeaders = Buffer.alloc(24);
-                                            newHeaders.writeBigInt64BE(BigInt(indexLength), 0);
-                                            newHeaders.writeBigInt64BE(BigInt(indexSmallestTime), 8);
-                                            newHeaders.writeBigInt64BE(BigInt(indexLargestTime), 16);
-                                            // Write
-                                            fs.write(descriptor, newHeaders, 0, 24, 0, (err) => {
-                                                if (err) reject(err);
-                                                else{
-                                                    // Write was successful
-                                                    resolve(true);
-                                                }
-                                            })
-                                        }
-                                    });
-                                }
+                                // Prepare data to be written to file
+                                let newEntry = Buffer.alloc(24);
+                                newEntry.writeBigInt64BE(BigInt(smallestTimestamp), 0);
+                                newEntry.writeBigInt64BE(BigInt(largestTimestamp), 8);
+                                newEntry.writeBigInt64BE(BigInt(blockNumber), 16);
+                                /*
+                                Write the new entry before rewriting the headers.  This has two advantages:
+                                a) Searches won't notice the entry unless it is included in the indexLength header.  This means that there will be no issue if a search operation gets scheduled between writing the new entry and rewriting the headers
+                                b) This function uses the indexLength header to work out where to write the new entry.  This means that if the operation to rewrite the headers fails but the operation to add the entry has already succeeded, the new entry will simply by overwritten the next time an entry is added
+                                */
+                                fs.write(descriptor, newEntry, 0, 24, (24 + (indexLength * 24)), (err) => {
+                                    if (err) reject(err);
+                                    else{
+                                        // Now rewrite the headers
+                                        if (smallestTimestamp < indexSmallestTime || indexSmallestTime === 0) indexSmallestTime = smallestTimestamp;  // indexSmallestTime being 0 indicates that this is the first entry
+                                        if (indexLargestTime < largestTimestamp) indexLargestTime = largestTimestamp;
+                                        indexLength++;
+                                        let newHeaders = Buffer.alloc(24);
+                                        newHeaders.writeBigInt64BE(BigInt(indexLength), 0);
+                                        newHeaders.writeBigInt64BE(BigInt(indexSmallestTime), 8);
+                                        newHeaders.writeBigInt64BE(BigInt(indexLargestTime), 16);
+                                        // Write
+                                        fs.write(descriptor, newHeaders, 0, 24, 0, (err) => {
+                                            if (err) reject(err);
+                                            else{
+                                                // Write was successful
+                                                resolve(true);
+                                            }
+                                        })
+                                    }
+                                });
                             }
-                        })
+                            
+                        };
+                        if (typeof indexAccess.headerData[filePath] != "Object"){
+                            // We don't already have a copy of index headers in memory so much read them from file
+                            indexAccess._readHeadersToMemory(filePath).then(() => writeFile()).catch(reason => reject(reason));
+                        }
+                        else writeFile();
                     }
                 });
-            }
-            
+            }   
         });
     }
 
@@ -271,22 +273,25 @@ class indexAccess{
                 if (err) reject(err);
                 else{
                     // Get number of entries in order to be able to find last entry
-                    fs.read(descriptor, {length: 8, buffer: Buffer.alloc(8), position: 0}, (err, bytesRead, data) => {
-                        if (err) reject(err);
-                        else{
-                            let indexLength = Number(data.readBigInt64BE(0));
-                            // Now jump to the last entry and read its block number
-                            fs.read(descriptor, {position: 24 + (24 * (indexLength - 1)) + 16, length: 8, buffer: Buffer.alloc(8)}, (err, bytesRead, data) =>{
-                                if (err) reject(err);
-                                else{
-                                    let blockNumber = Number(data.readBigInt64BE(0));
-                                    resolve(blockNumber);
-                                }
-                            });
-                        }
-                    });
+                    let findLastEntry = () => {
+                        let indexLength = Number(indexAccess.headerData[filePath][indexAccess.INDEXLENGTHHEADER]);
+                        // Now jump to the last entry and read its block number
+                        fs.read(descriptor, {position: 24 + (24 * (indexLength - 1)) + 16, length: 8, buffer: Buffer.alloc(8)}, (err, bytesRead, data) =>{
+                            if (err) reject(err);
+                            else{
+                                let blockNumber = Number(data.readBigInt64BE(0));
+                                resolve(blockNumber);
+                            }
+                        });
+                    };
+                    if (typeof indexAccess.headerData[filePath] != "Object"){
+                        // We don't already have a copy of the headers in memory so must fetch them
+                        indexAccess._readHeadersToMemory(filePath).then(() => findLastEntry()).catch(reason => reject(reason));
+                    }
+                    else findLastEntry();
                 }
             });
+            
         });
     }
 
