@@ -150,6 +150,17 @@ class AccountsAccess extends DataAccess{
         }
         return -1;
     }
+
+    getUserId(username){
+        //Jasper's getting the username function
+        this.getData(); 
+        let userId = this.userNames[username];
+        if (userId != undefined){
+            return(userId)
+        }else{
+            return -1;
+        }
+    }
 }
 
 class LogAccess extends DataAccess{

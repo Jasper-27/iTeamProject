@@ -1,6 +1,7 @@
-const socket = io('http://localhost:3000'); 
 
-        
+
+const socket = io('http://localhost:4500'); 
+
 
 // Tell the user when a registration has failed 
 socket.on('register-fail', data => {
