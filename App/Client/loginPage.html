@@ -29,73 +29,57 @@
         </div>
     </nav>
 
-    <!-- <div id="credentials" class="login-clean" style="height:100vh > -->
+    <section class="login-clean" >
 	
-	
-	
-	<section class="login-clean" >
-	
-
-      
         <div class="login-clean"  style="width: 35%; margin: auto;">
             <h2 class="sr-only">Login Form</h2>
-            
+    
             <div id="credentials" class="illustration"><img src="logo.png" height="220"></div>
             <div class="form-group"><input class="form-control" type="text" id="user" placeholder="Username" name="username"></div>
             <div class="form-group"><input class="form-control" type="password" id="pass" name="password" placeholder="Password"></div>
-			
-			      <div class="form-group"><button class="btn btn-primary btn-block"  onclick="login()" style="background: var(--right-msg-bg);">Log In</button></div>
-			
+    
+            <div class="form-group"><button class="btn btn-primary btn-block"  onclick="login()" style="background: var(--right-msg-bg);">Log In</button></div>
+                
         </div>
-            
-		
-
-
-		
-		
-		
-	</section>
+                    
+    </section>   
 	
 	
-	
-	</div>
-	
+    <script>
 
-        <script>
-
-            let API = "http://localhost:8080/login/"
+        let API = "http://localhost:8080/login/"
 
             
-            function login(){
+        // Posts the user details to the server so the server can check them 
+        function login(){
+            console.log("user " + document.getElementById("user").value)
+            console.log("password " + document.getElementById("user").value)
 
-                console.log("user " + document.getElementById("user").value)
-                console.log("password " + document.getElementById("user").value)
+            // POSTs the username and password to the server
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", API, true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.send(JSON.stringify({
+                "username" : document.getElementById("user").value, 
+                "password" : document.getElementById("pass").value
+            }));    
 
-                // POSTs the username and password to the server
-                var xhr = new XMLHttpRequest();
-                xhr.open("POST", API, true);
-                xhr.setRequestHeader('Content-Type', 'application/json');
-                xhr.send(JSON.stringify({
-                    "username" : document.getElementById("user").value, 
-	                "password" : document.getElementById("pass").value
-                }));    
+            // handles the response from the POST request
+            xhr.onload = function() {
+                console.log(this.responseText);
+                var data = JSON.parse(this.responseText);
 
-                // handles the response from the POST request
-                xhr.onload = function() {
-                    console.log(this.responseText);
-                    var data = JSON.parse(this.responseText);
-
-                    if (data.message === "Authentication success"){
-                        sessionStorage.setItem('token', data.token) // set's the token in session storage 
-                        sessionStorage.setItem('username',  document.getElementById("user").value)
-                        console.log("Login success")
-                        window.location.replace("./app.html"); //changes to the main app window 
-                    }else{
-                        alert("Login failed")
-                    }
+                if (data.message === "Authentication success"){
+                    sessionStorage.setItem('token', data.token) // set's the token in session storage 
+                    sessionStorage.setItem('username',  document.getElementById("user").value)
+                    console.log("Login success")
+                    window.location.replace("./app.html"); //changes to the main app window 
+                }else{
+                    alert("Login failed")
                 }
             }
-	</script>
+        }
+    </script>
 	
 	
     <script src="assets/js/jquery.min.js"></script>
