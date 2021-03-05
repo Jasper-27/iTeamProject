@@ -16,6 +16,7 @@ const fs = require('fs');
 const path = require('path');
 const indexAccess = require('./indexAccess');
 
+const idealBufferSize = 65536;  // The amount of data getEntries should try to read from the file at a time (unlike in indexAccess, this must be a number of bytes rather than number of entries as block entries vary in size (and can be very large))
 const blockSize = 3;  // The number of entries per block
 
 class blockAccess{
@@ -238,6 +239,115 @@ class blockAccess{
         });
     }
 
+    static getEntries(blockPath, startTime, endTime){
+        // Return promise containing all entries in the given block with timestamps between startTime and endTime (inclusive)
+        // Searching is primarily done with linear search, but we do have a header pointing to the middle entry so we can use that to narrow the search down to half of the file
+        return new Promise((resolve, reject) => {
+            fs.open(blockPath, "r", (err, descriptor) => {
+                if (err) reject(err);
+                else{
+                    // The only block whose headers are stored in memory is the currently non-full one, therefore we will have to read the headers for this block from disk
+                    fs.read(descriptor, {position: 1, buffer: Buffer.alloc(24), length: 24}, (err, bytesRead, data) => { // Read from byte 1 not 0 as the BLOCKFULLHEADER is irrelevant for searching
+                        let entryCount = Number(data.readBigInt64BE(0));
+                        let nextFreePosition = Number(data.readBigInt64BE(8));  // This is useful for knowing where the file ends
+                        let middleEntryPosition = Number(data.readBigInt64BE(16));  // This is needed to find the middle entry so we (ideally) only have to search half of the file
+
+                        let bufferStartPos, bufferEndPos, currentPos;
+                        let foundEntries = [];
+                        // Define function for linear search as it will to call itself "recursively" (not really recursive, but it will have to provide itself as a callback to fs.read)
+                        let findAllSuitableEntries = (err, bytesRead, data) => {
+                            if (err) reject(err);
+                            else{
+                                while (bufferStartPos <= currentPos && currentPos + 16 <= bufferEndPos){  // Make sure at least the length and timestamp headers of the current entry are inside the buffer
+                                    let positionWithinBuffer = currentPos - bufferStartPos;  // Translate the currentPos (which represents a position within the whole file) to a position within the current buffer
+                                    let currentEntrySize = data.readBigInt64BE(0);
+                                    let currentEntryTimestamp = data.readBigInt64BE(positionWithinBuffer + 8);
+                                    if (startTime <= currentEntryTimestamp && currentEntryTimestamp <= endTime){
+                                        // The current entry's timestamp fits within the requested range so add to foundEntries
+                                        if ((currentPos + currentEntrySize) - 1 <= bufferEndPos){
+                                            // The entire entry is contained within the buffer so simply read it into foundEntries
+                                            /* 
+                                            Need to use Buffer.from to create a copy of the buffer data, as subarray will just return a new buffer referencing the data in the old one.
+                                            While this may seem less efficient, it is actually more as the Javascript garbage collector will be unable to deallocate ANY of the memory in the current buffer if there are any references to it (even though only part of the buffer is referenced)
+                                            Doing it this way is therefore necessary to prevent a memory leak
+                                            */
+                                            let itemBuffer = Buffer.from(data.subarray(positionWithinBuffer, positionWithinBuffer + currentEntrySize));
+                                            foundEntries.push(itemBuffer);
+                                        }
+                                        else{
+                                            // Not all of the entry is contained within the buffer, so we will need to read the entire entry before we can add it to foundEntries
+                                            fs.read(descriptor, {position: currentPos, length: currentEntrySize, buffer: Buffer.alloc(currentEntrySize)}, (err, bytesRead, data) => {
+                                                if (err) reject(err);
+                                                else{
+                                                    foundEntries.push(data);
+                                                    // Now continue searching
+                                                    currentPos += currentEntrySize;
+                                                    bufferStartPos = currentPos;
+                                                    bufferEndPos = currentPos + currentEntrySize - 1;
+                                                    findAllSuitableEntries(null, bytesRead, data);  // Rerun the function with this buffer (it will refill it)
+                                                }
+                                            });
+                                            return;
+                                        } 
+                                    }
+                                    else if (endTime < currentEntryTimestamp){
+                                        // We have gone past the end of the range we want so can stop searching
+                                        resolve(foundEntries);
+                                        return;
+                                    }
+                                    // Check next entry
+                                    currentPos += currentEntrySize;  // Position of next entry is calculated by adding this entry's length to its position
+                                }
+                                if (nextFreePosition <= currentPos){
+                                    // We have reached the end of the file so stop searching
+                                    resolve(foundEntries);
+                                }
+                                else{
+                                    // Refill the buffer with new data starting from currentPos and continue the search
+                                    let bufferDetails = this._calculateBufferDetails(currentPos, nextFreePosition);
+                                    bufferStartPos = bufferDetails[0];
+                                    bufferEndPos = bufferDetails[1];
+                                    fs.read(descriptor, {position: currentPos, length: bufferDetails[2], buffer: Buffer.alloc(bufferDetails[2])}, findAllSuitableEntries);
+                                }
+                            }
+                        };
+                        // Get middle entry
+                        fs.read(descriptor, {position: middleEntryPosition + 8, length: 8, buffer: Buffer.alloc(8)}, (err, bytesRead, data) => {
+                            if (err) reject(err);
+                            else{
+                                let middleEntryTimestamp = data.readBigInt64BE(0);
+                                // If the timestamp of the middle entry is greater than startTime then start searching from the beginning of the block
+                                if (startTime < middleEntryTimestamp){
+                                    currentPos = 25;
+                                }
+                                else{
+                                    // If it is less than or equal to startTime then we know what we want is in the second half of the block so start searching from the middle entry
+                                    currentPos = middleEntryPosition;
+                                }
+                                let bufferDetails = blockAccess._calculateBufferDetails(currentPos, nextFreePosition);
+                                bufferStartPos = bufferDetails[0];
+                                bufferEndPos = bufferDetails[1];
+                                fs.read(descriptor, {position: bufferStartPos, length: bufferDetails[2], buffer: Buffer.alloc(bufferDetails[2])}, findAllSuitableEntries);
+                            }
+                            
+                        });
+                        
+                    });             
+                }
+            })
+        });
+
+    }
+
+    static _calculateBufferDetails(position, endOfFilePosition){
+        // Calculate values for fs.read to read idealBufferSize around the given position (or as close as possible if the file is not big enough)
+        // Return [<first position in buffer>, <last position in buffer>, <buffer size (bytes)>]
+        let firstPosition = position;
+        let lastPosition = Math.min(firstPosition + idealBufferSize, endOfFilePosition - 1);  // Do not read more than is in file
+        let bufferSize = lastPosition - firstPosition;
+        return [firstPosition, lastPosition, bufferSize];
+    }
+
     static _readHeadersToMemory(filePath){
         // Read headers from given block file into headerData
         return new Promise((resolve, reject) => {
@@ -286,4 +396,6 @@ let data = Buffer.from("This is a log entry");
 value => {
     console.log(value);
 }); */
-blockAccess.addEntry(__dirname + "/../data/index_test2.wdx",  __dirname + "/../data/logsTest2", timestonk, data).then(value => console.log(value)).catch(reason => console.log(reason));
+//blockAccess.createBlock(__dirname + "/../data/index_test3.wdx", __dirname + "/../data/logsTest3", timestonk, data).then(value => console.log(value)).catch(reason => console.log(reason));
+// blockAccess.addEntry(__dirname + "/../data/index_test3.wdx",  __dirname + "/../data/logsTest3", timestonk, data).then(value => console.log(value)).catch(reason => console.log(reason));
+blockAccess.getEntries(__dirname + "/../data/logsTest3/4.wki", 0, 2000000000000000).then(values => console.log(values)).catch(reason => console.log(reason));
