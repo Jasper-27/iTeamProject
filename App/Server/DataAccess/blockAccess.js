@@ -146,7 +146,7 @@ class blockAccess{
                                 });
                             }
                         };
-                        if (typeof blockAccess.headerData[blockFolderPath] != "Object"){
+                        if (typeof blockAccess.headerData[blockFolderPath] != "object"){
                             // We don't have an in-memory copy of block headers yet, so must fetch one
                             blockAccess._readHeadersToMemory(blockPath).then(value => {
                                 addEntryToBlock();
@@ -232,7 +232,7 @@ class blockAccess{
                             }
                         });
                     }
-                    if (typeof blockAccess.headerData[blockFolderPath] != "Object"){
+                    if (typeof blockAccess.headerData[blockFolderPath] != "object"){
                         // We don't already have the headers in memory so must load them
                         blockAccess._readHeadersToMemory(blockPath).then(() => {
                             writeEntry();
@@ -403,5 +403,5 @@ value => {
     console.log(value);
 }); */
 // blockAccess.createBlock(__dirname + "/../data/index_test4.wdx", __dirname + "/../data/logsTest4", timestonk, data).then(value => console.log(value)).catch(reason => console.log(reason));
-// blockAccess.addEntry(__dirname + "/../data/index_test4.wdx",  __dirname + "/../data/logsTest4", timestonk, data).then(value => console.log(value)).catch(reason => console.log(reason));
-blockAccess.getEntries(__dirname + "/../data/logsTest4/18.wki", 0, 2000000000000000).then(values => console.log(values)).catch(reason => console.log(reason));
+blockAccess.addEntry(__dirname + "/../data/index_test4.wdx",  __dirname + "/../data/logsTest4", timestonk, data).then(value => console.log(value)).catch(reason => console.log(reason));
+// blockAccess.getEntries(__dirname + "/../data/logsTest4/18.wki", 0, 2000000000000000).then(values => console.log(values)).catch(reason => console.log(reason));

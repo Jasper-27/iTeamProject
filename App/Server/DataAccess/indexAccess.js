@@ -108,7 +108,7 @@ class indexAccess{
                     }
                 });
             };
-            if (typeof indexAccess.headerData[indexFile] != "Object"){
+            if (typeof indexAccess.headerData[indexFile] != "object"){
                 // We don't have an in-memory copy of the index headers so must load them
                 this._readHeadersToMemory(indexFile).then(value => {
                     updateBlockEntry();
@@ -159,7 +159,7 @@ class indexAccess{
                 }
             });
         }
-        if (typeof indexAccess.headerData[filePath] != "Object"){
+        if (typeof indexAccess.headerData[filePath] != "object"){
             // If headerData has not yet been read for this file then do so now
             indexAccess._readHeadersToMemory(filePath).then(value => {
                 writeHeaders();
@@ -190,7 +190,7 @@ class indexAccess{
             }
             resolve(headerValues);
         };
-            if (typeof indexAccess.headerData[filePath] != "Object"){
+            if (typeof indexAccess.headerData[filePath] != "object"){
                 // Need to fetch headers from disk as we don't already have them in memory
                 indexAccess._readHeadersToMemory(filePath).then(value => {
                     getHeaderValues();
@@ -255,7 +255,7 @@ class indexAccess{
                             }
                             
                         };
-                        if (typeof indexAccess.headerData[filePath] != "Object"){
+                        if (typeof indexAccess.headerData[filePath] != "object"){
                             // We don't already have a copy of index headers in memory so much read them from file
                             indexAccess._readHeadersToMemory(filePath).then(() => writeFile()).catch(reason => reject(reason));
                         }
@@ -284,7 +284,7 @@ class indexAccess{
                             }
                         });
                     };
-                    if (typeof indexAccess.headerData[filePath] != "Object"){
+                    if (typeof indexAccess.headerData[filePath] != "object"){
                         // We don't already have a copy of the headers in memory so must fetch them
                         indexAccess._readHeadersToMemory(filePath).then(() => findLastEntry()).catch(reason => reject(reason));
                     }
@@ -404,7 +404,7 @@ class indexAccess{
                 }
 
             };
-            if (typeof indexAccess.headerData[filePath] != "Object"){
+            if (typeof indexAccess.headerData[filePath] != "object"){
                 // We don't already have a cached version of the headers so will first need to read them from the file
                 indexAccess._readHeadersToMemory(filePath).then(() => searchIndex()).catch(reason => reject(reason));
             }
