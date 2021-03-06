@@ -10,7 +10,6 @@ Lowest timestamp in block (8 bytes)|Highest timestamp in block (8 bytes)|block n
 */
 
 const fs = require('fs');
-const { resolve } = require('path');
 const path = require('path');
 
 const idealBufferSize = 2730;  // The number of entries that getBlocks should try to read from the file at a time
@@ -95,7 +94,7 @@ class indexAccess{
         // Update the highest timestamp header of the last block (used by blockAccess when a new item is added)
         return new Promise((resolve, reject) =>{
             let updateBlockEntry = () => {
-                let position = 24 + (indexAccess.headerData[indexFile][indexAccess.INDEXLENGTHHEADER] * 24) + 8;
+                let position = 24 + ((indexAccess.headerData[indexFile][indexAccess.INDEXLENGTHHEADER] - 1) * 24) + 8;
                 fs.open(indexFile, "r+", (err, descriptor) => {
                     if (err) reject(err);
                     else{
@@ -247,6 +246,9 @@ class indexAccess{
                                             if (err) reject(err);
                                             else{
                                                 // Write was successful
+                                                indexAccess.headerData[filePath][indexAccess.INDEXLENGTHHEADER] = indexLength;
+                                                indexAccess.headerData[filePath][indexAccess.LOWESTTIMESTAMPHEADER] = indexSmallestTime;
+                                                indexAccess.headerData[filePath][indexAccess.HIGHESTTIMESTAMPHEADER] = indexLargestTime;
                                                 resolve(true);
                                             }
                                         })
@@ -446,5 +448,4 @@ class indexAccess{
         });
     }
 }
-
 module.exports = indexAccess;
