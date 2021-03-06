@@ -59,7 +59,7 @@ class blockAccess{
                         // Create the folder if necessary
                         fs.mkdir(blockFolderPath, {recursive: true}, err => {
                             // Create the file
-                            fs.open(blockPath, "w", err => {
+                            fs.open(blockPath, "w", (err, descriptor) => {
                                 if (err) reject(err);
                                 else{
                                     let lastTimestamp;
@@ -67,18 +67,23 @@ class blockAccess{
                                     // This is done as a promise to allow us to iteratively chain .then()s for adding each entry
                                     let writeHeaders = new Promise((resolveHeaders, rejectHeaders) => {
                                         let headers = Buffer.alloc(25);
-                                        headers.writeInt8(0);  // 0 means block is not full
-                                        headers.writeBigInt64BE(0n);  // Entry count
-                                        headers.writeBigInt64BE(25n);  // Next free location is at byte 25, after the headers
-                                        headers.writeBigInt64BE(0n);  // There are no entries yet so there cannot be a middle entry
-                                        // Update the in-memory copy of the headers with those for the new block
-                                        let newHeaderData = {};
-                                        newHeaderData[blockAccess.BLOCKFULLHEADER] = 0;
-                                        newHeaderData[blockAccess.ENTRYCOUNTHEADER] = 0;
-                                        newHeaderData[blockAccess.NEXTFREEHEADER] = 25;
-                                        newHeaderData[blockAccess.MIDDLEHEADER] = 0;
-                                        blockAccess.headerData[blockFolderPath] = newHeaderData;
-                                        resolveHeaders();
+                                        headers.writeInt8(0, 0);  // 0 means block is not full
+                                        headers.writeBigInt64BE(0n, 1);  // Entry count
+                                        headers.writeBigInt64BE(25n, 9);  // Next free location is at byte 25, after the headers
+                                        headers.writeBigInt64BE(0n, 17);  // There are no entries yet so there cannot be a middle entry
+                                        fs.write(descriptor, headers, 0, 25, 0, err => {
+                                            if (err) reject(err);
+                                            else{
+                                                // Update the in-memory copy of the headers with those for the new block
+                                                let newHeaderData = {};
+                                                newHeaderData[blockAccess.BLOCKFULLHEADER] = 0;
+                                                newHeaderData[blockAccess.ENTRYCOUNTHEADER] = 0;
+                                                newHeaderData[blockAccess.NEXTFREEHEADER] = 25;
+                                                newHeaderData[blockAccess.MIDDLEHEADER] = 0;
+                                                blockAccess.headerData[blockFolderPath] = newHeaderData;
+                                                resolveHeaders();
+                                            }
+                                        });
                                     });
                                     // Now use a loop to chain operations for adding the entries in blocksBeingCreated
                                     while (blockAccess.blocksBeingCreated[blockFolderPath].length > 0){
@@ -173,7 +178,7 @@ class blockAccess{
                         let nextFreePosition = BigInt(blockAccess.headerData[blockFolderPath][blockAccess.NEXTFREEHEADER]);
                         let middleEntryPosition = BigInt(blockAccess.headerData[blockFolderPath][blockAccess.MIDDLEHEADER]);
                         // Write the new entry
-                        fs.write(descriptor, entry, 0, entryLength, nextFreePosition, err => {
+                        fs.write(descriptor, entry, 0, Number(entryLength), Number(nextFreePosition), (err, bytesWritten, written) => {
                             if (err) reject(err);
                             else{
                                 // Create function for modifying the headers (needs to be defined up here as it is needed in two places)
@@ -203,13 +208,14 @@ class blockAccess{
                                 nextFreePosition += BigInt(entryLength);
                                 entryCount++;
                                 // The middle entry only needs to be updated on every other addition
-                                if (entryCount === 1){
+                                if (entryCount == 1){
                                     // This is the first entry
                                     middleEntryPosition = 25;
+                                    updateHeaders();
                                 }
-                                else if(entryCount % 2n === 0){
+                                else if(entryCount % 2n == 0){
                                     // Change middle entry only when entryCount is even
-                                    fs.read(descriptor, {position:middleEntryPosition, length: 8, buffer: Buffer.alloc(8)}, (err, bytesRead, data) => {
+                                    fs.read(descriptor, {position: Number(middleEntryPosition), length: 8, buffer: Buffer.alloc(8)}, (err, bytesRead, data) => {
                                         // To update middle entry we need to find the length of the existing middle entry
                                         if (err) reject(err);
                                         else{
@@ -260,7 +266,7 @@ class blockAccess{
                             else{
                                 while (bufferStartPos <= currentPos && currentPos + 16 <= bufferEndPos){  // Make sure at least the length and timestamp headers of the current entry are inside the buffer
                                     let positionWithinBuffer = currentPos - bufferStartPos;  // Translate the currentPos (which represents a position within the whole file) to a position within the current buffer
-                                    let currentEntrySize = data.readBigInt64BE(0);
+                                    let currentEntrySize = data.readBigInt64BE(positionWithinBuffer);
                                     let currentEntryTimestamp = data.readBigInt64BE(positionWithinBuffer + 8);
                                     if (startTime <= currentEntryTimestamp && currentEntryTimestamp <= endTime){
                                         // The current entry's timestamp fits within the requested range so add to foundEntries
@@ -396,6 +402,6 @@ let data = Buffer.from("This is a log entry");
 value => {
     console.log(value);
 }); */
-//blockAccess.createBlock(__dirname + "/../data/index_test3.wdx", __dirname + "/../data/logsTest3", timestonk, data).then(value => console.log(value)).catch(reason => console.log(reason));
-// blockAccess.addEntry(__dirname + "/../data/index_test3.wdx",  __dirname + "/../data/logsTest3", timestonk, data).then(value => console.log(value)).catch(reason => console.log(reason));
-blockAccess.getEntries(__dirname + "/../data/logsTest3/4.wki", 0, 2000000000000000).then(values => console.log(values)).catch(reason => console.log(reason));
+// blockAccess.createBlock(__dirname + "/../data/index_test4.wdx", __dirname + "/../data/logsTest4", timestonk, data).then(value => console.log(value)).catch(reason => console.log(reason));
+// blockAccess.addEntry(__dirname + "/../data/index_test4.wdx",  __dirname + "/../data/logsTest4", timestonk, data).then(value => console.log(value)).catch(reason => console.log(reason));
+blockAccess.getEntries(__dirname + "/../data/logsTest4/18.wki", 0, 2000000000000000).then(values => console.log(values)).catch(reason => console.log(reason));
