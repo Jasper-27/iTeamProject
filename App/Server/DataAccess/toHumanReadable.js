@@ -55,5 +55,31 @@ function convertIndex(filePath, readablePath){
     });
 }
 
-convertBlock(__dirname + "/../data/logsTest7/6.wki", __dirname + "/../data/logsTest7/6Readable.wki");
-convertIndex(__dirname + "/../data/index_test7.wdx", __dirname + "/../data/index_readable7.wdx")
+function convertTree(filePath, readablePath){
+    fs.open(filePath, "r", (err, descriptor) => {
+        fs.read(descriptor, (err, bytesRead, data) => {
+            let newFile = "";
+            // Read header to newFile
+            newFile += data.readBigInt64BE(0);
+            newFile += "||";
+            let position = 8;
+            while (position < bytesRead){
+                newFile += "-"
+                newFile += data.subarray(position, position + 32).toString();
+                newFile += "|"
+                newFile += data.readBigInt64BE(position + 32);
+                newFile += "|";
+                newFile += data.readBigInt64BE(position + 40);
+                newFile += "|";
+                newFile += data.readBigInt64BE(position + 48);
+                position += 188;
+            }
+            fs.writeFileSync(readablePath, newFile);
+        });
+    });
+}
+
+
+// convertBlock(__dirname + "/../data/logsTest7/6.wki", __dirname + "/../data/logsTest7/6Readable.wki");
+// convertIndex(__dirname + "/../data/index_test7.wdx", __dirname + "/../data/index_readable7.wdx");
+convertTree(__dirname + "/../data/accounts.wat", __dirname + "/../data/accountsReadable.wat");
