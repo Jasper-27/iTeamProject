@@ -1,5 +1,10 @@
 .login-clean {
   background: #f1f7fc;
+  background-repeat: repeat;
+}
+
+.credentials {
+  background: #f1f7fc;
 }
 
 .login-clean form {
@@ -35,4 +40,6 @@
 .login-clean form .forgot:hover, .login-clean form .forgot:active {
   opacity: 1;
 }
+
+
 

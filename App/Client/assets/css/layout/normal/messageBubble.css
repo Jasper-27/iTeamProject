@@ -128,5 +128,17 @@ html {
   transition: background 0.23s;
 }
 
+.image-message{
+	/* for image message bubbles */
+	width: 90%;
+	height: 90%;
+	
+	/*centre */ 
+	margin-left: 5%; 
+	margin-right: 5%;
+	
+	/* rounded corners */
+	border-radius: 15px;
+
 
 
