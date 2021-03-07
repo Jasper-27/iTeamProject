@@ -291,19 +291,3 @@ class treeAccess {
         });
     }
 }
-
-let val;
-/*
-treeAccess.searchTree(__dirname + "/../data/accounts.wat", "Alex").then(value => {
-    val = value;
-    console.log(value);
-}, reason => {
-    val = reason;
-console.log(reason)});
-*/
-
-treeAccess.addNode(__dirname + "/../data/accounts.wat", "AnotherName", Buffer.alloc(132)).then(value => {
-    console.log(value);
-}).catch(reason => {
-    console.log(reason);
-});
