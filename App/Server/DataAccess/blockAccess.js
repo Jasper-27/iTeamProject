@@ -122,7 +122,6 @@ class blockAccess{
                 else{
                     // First must find last block
                     indexAccess.getLastBlockNumber(indexFilePath).then(blockNumber => {
-                        console.log(`Last block is ${blockNumber}`);
                         let blockPath = path.format({dir: blockFolderPath, base: `${blockNumber}.wki`});
                         // Define as function as needed in two places
                         let addEntryToBlock = () => {
@@ -169,7 +168,6 @@ class blockAccess{
     static async writeEntryToBlock(blockPath, entryTimestamp, entryData){
         // Write an entry to the block (this does not handle updating the index)
         return new Promise((resolve, reject) => {
-            console.log(`Starting ${entryTimestamp}`);
             // Create entry to be written
             let entryLength = 16 + entryData.length;  // 16 for length and timestamp fields
             let entry = Buffer.concat([bigIntToBuffer(BigInt(entryLength)), bigIntToBuffer(BigInt(entryTimestamp)), entryData]);
@@ -206,7 +204,6 @@ class blockAccess{
                                             blockAccess.headerData[blockFolderPath][blockAccess.MIDDLEHEADER] = middleEntryPosition;
                                             // The item and headers have been written, so we are done
                                             resolve(true);
-                                            console.log(`Written ${entryTimestamp}`);
                                         }
                                     });
                                 }
@@ -293,9 +290,9 @@ class blockAccess{
                                                 else{
                                                     foundEntries.push(data);
                                                     // Now continue searching
-                                                    currentPos += currentEntrySize;
                                                     bufferStartPos = currentPos;
                                                     bufferEndPos = currentPos + currentEntrySize - 1;
+                                                    currentPos += currentEntrySize;
                                                     findAllSuitableEntries(null, bytesRead, data);  // Rerun the function with this buffer (it will refill it)
                                                 }
                                             });
@@ -396,31 +393,4 @@ function intToBuffer(int){
     buffer.writeInt8(int);
     return buffer;
 }
-
-let timestonk = Date.now();
-let data = Buffer.from("This is a log entry");
-/* blockAccess.createBlock(__dirname + "/../data/index_test2.wdx", __dirname + "/../data/logsTest2", timestonk, data).then(value => {
-    console.log(value);
-    indexAccess.getBlocks(__dirname + "/../data/index_test2.wdx", 0, 2000000000000000).then(value => {
-        console.log(value);
-    });
-},
-value => {
-    console.log(value);
-}); */
-// blockAccess.createBlock(__dirname + "/../data/index_test7.wdx", __dirname + "/../data/logsTest7", timestonk, data).then(value => console.log(value)).catch(reason => console.log(reason));
-
-
-
-
-let prom = blockAccess.addEntry(__dirname + "/../data/index_test7.wdx",  __dirname + "/../data/logsTest7", Date.now(), data).then(value => console.log(value)).catch(reason => console.log(reason));
-for (let i = 0; i < 199; i++){
-    prom = prom.then(value => {return blockAccess.addEntry(__dirname + "/../data/index_test7.wdx",  __dirname + "/../data/logsTest7", Date.now(), data)}).then(
-        value => console.log(value),
-         reason => console.log(reason));
-}
-
-
-
-//blockAccess.getEntries(__dirname + "/../data/logsTest4/21.wki", 0, 2000000000000000).then(values => 
-//     console.log(values)).catch(reason => console.log(reason));
+module.exports = blockAccess;
