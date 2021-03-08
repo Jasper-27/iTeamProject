@@ -62,8 +62,8 @@ class usersAccess{
                     let lastName = treeAccess.bufferToString(accountInfo["data"].subarray(88, 120));
                     let password = treeAccess.bufferToString(accountInfo["data"].subarray(120, 180));
                     // The actual profile picture is not stored in the tree, this will just be the position of the profile picture in the profile pictures file
-                    let profilePictureLocation = accountInfo["data"].readBigInt64BE(80);
-                    let userAccount = new account(0, username, firstName, lastName, password);
+                    let profilePictureLocation = Number(accountInfo["data"].readBigInt64BE(80));
+                    let userAccount = new account(username, firstName, lastName, password, profilePictureLocation);
                     // The profile picture may not be needed, so it will be fetched later when it is needed
                     resolve(userAccount);
                 }

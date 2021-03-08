@@ -1,15 +1,19 @@
 // Class for containing account data
 class Account{
+    userId;
     userName;
     firstName;
     lastName;
     password;
-    /* To avoid wasting memory and disk reads, only load the actual profile picture data when it is needed.
-    The profilePictureLocation field contains the address of the profile picture in the profile pictures file
-    */
-    profilePictureLocation;
 
-    constructor(userName, firstName, lastName, password, profilePictureLocation=0){
+    constructor(userId, userName, firstName, lastName, password){
+        if (typeof userId == "number"){
+            this.userId = userId;
+        }
+        else{
+            let dataType = typeof userId;
+            throw "userId expected a number but " + dataType + " was given";
+        }
         if (typeof userName == "string"){
             this.userName = userName;
         }
@@ -37,12 +41,6 @@ class Account{
         else{
             let dataType = typeof password;
             throw "password expected a string but " + dataType + "was given";
-        }
-        if (typeof profilePictureLocation == "number"){
-            this.profilePictureLocation = profilePictureLocation;
-        }
-        else{
-            throw "profilePictureLocation expected a number but " + typeof profilePictureLocation + " was given";
         }
     }
 }
