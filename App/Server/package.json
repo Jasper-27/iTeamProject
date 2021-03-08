@@ -1,6 +1,18 @@
 {
   "dependencies": {
     "bcrypt": "^5.0.0",
+    "cors": "^2.8.5",
+    "express": "^4.17.1",
     "socket.io": "^3.1.0"
-  }
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "name": "WinkiServer",
+  "version": "0.0.0",
+  "description": "The winki message server",
+  "main": "server.js",
+  "devDependencies": {},
+  "author": "iTeam",
+  "license": ""
 }

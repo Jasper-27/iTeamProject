@@ -1,0 +1,38 @@
+.login-clean {
+  background: #000000;
+}
+
+.login-clean form {
+  background-color: #5a5a5a;
+  color: #ffffff;
+  box-shadow: 1px 1px 5px rgba(0,0,0,0.1);
+}
+
+.login-clean .illustration {
+  color: rgb(244, 71, 107);
+}
+
+.login-clean form .form-control {
+  background: #030303;
+  border-bottom: 1px solid #000000;
+  color: inherit;
+}
+
+.login-clean form .btn-primary {
+  background: #ffffff;
+}
+
+.login-clean form .btn-primary:hover, .login-clean form .btn-primary:active {
+  background: #ffffff;
+}
+
+
+.login-clean form .forgot {
+  color: #c3c8cd;
+  opacity: 0.9;
+}
+
+.login-clean form .forgot:hover, .login-clean form .forgot:active {
+  opacity: 1;
+}
+

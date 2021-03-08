@@ -1,0 +1,91 @@
+.navigation-clean-button {
+  padding-top: .75rem;
+  padding-bottom: .75rem;
+  border-radius: 0;
+  box-shadow: none;
+  border: none;
+  margin-bottom: 0;
+}
+
+@media (min-width:768px) {
+  .navigation-clean-button {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+  }
+}
+
+.navigation-clean-button .navbar-brand {
+  font-weight: bold;
+}
+
+
+.navigation-clean-button .navbar-brand img {
+  height: 100%;
+  display: inline-block;
+  margin-right: 10px;
+  width: auto;
+}
+
+
+.navigation-clean-button.navbar-light .navbar-nav a.active, .navigation-clean-button.navbar-light .navbar-nav a.active:focus, .navigation-clean-button.navbar-light .navbar-nav a.active:hover {
+  background: none;
+  pointer-events: none;
+}
+
+.navigation-clean-button.navbar .navbar-nav .nav-link {
+  padding-left: 18px;
+  padding-right: 18px;
+}
+
+
+.navigation-clean-button .navbar-nav > li > .dropdown-menu {
+  margin-top: -5px;
+  border-radius: 2px;
+}
+
+.navigation-clean-button .dropdown-menu .dropdown-item:focus, .navigation-clean-button .dropdown-menu .dropdown-item {
+  line-height: 2;
+  font-size: 14px;
+}
+
+.navigation-clean-button .dropdown-menu .dropdown-item:focus, .navigation-clean-button .dropdown-menu .dropdown-item:hover {
+  background: #eee;
+  color: inherit;
+}
+
+@media (max-width:767px) {
+  .navigation-clean-button .navbar-nav .show .dropdown-menu {
+    box-shadow: none;
+  }
+}
+
+@media (max-width:767px) {
+  .navigation-clean-button .navbar-nav .show .dropdown-menu .dropdown-item {
+    padding-top: 12px;
+    padding-bottom: 12px;
+    line-height: 1;
+  }
+}
+
+
+.navigation-clean-button.navbar-dark .navbar-nav a.active, .navigation-clean-button.navbar-dark .navbar-nav a.active:focus, .navigation-clean-button.navbar-dark .navbar-nav a.active:hover {
+  pointer-events: none;
+}
+
+
+.navigation-clean-button .actions .login {
+  margin-right: 1rem;
+  text-decoration: none;
+}
+
+.navigation-clean-button .navbar-text .action-button, .navigation-clean-button .navbar-text .action-button:active, .navigation-clean-button .navbar-text .action-button:hover {
+  border-radius: 20px;
+  font-size: inherit;
+  border: none;
+  text-shadow: none;
+  padding: .5rem 1rem;
+  transition: background-color 0.25s;
+  font-size: inherit;
+}
+
+
