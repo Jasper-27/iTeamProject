@@ -85,6 +85,13 @@ function sendText(){
   messageInput.value = ''; 
 }
 
+// function which creates an alert that doesn't pause JS
+function msgAlert(TITLE,MESSAGE) {
+  "use strict";   
+  document.getElementById("msg").innerHTML = `<span class='closebtn' onclick="this.parentElement.style.visibility='hidden';"'>&times;</span><strong>   ${TITLE}  </strong>  ${MESSAGE}`;
+  msg.style.visibility = 'visible';
+}
+
 function sendFile(){
 
   // Only proceed if a file has been selected
@@ -125,7 +132,8 @@ function sendFile(){
       // ISSUE: Disconnection issue occurs here when sending large files.  The client gets disconnected if the file is larger than the servers io.engine.maxHttpBufferSize
       // TEMPORARY SOLUTION:
       if (999900 < JSON.stringify(message).length){  // Limit is 1,000,000 but use 999,000 here to be safe
-        alert("The file is too big to be sent");
+        // alert("The file is too big to be sent");
+        msgAlert('Alert:', ' File is too big.')
         return;
       }
 
@@ -137,6 +145,8 @@ function sendFile(){
     exitSendFileMode();
   }
 }
+
+
 
 // Send text is the default
 sendMessage = sendText;
