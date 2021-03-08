@@ -40,7 +40,7 @@ socket.on('chat-message', data => {  // Messages will be recieved in format: {na
 //This code runs if the user gets mentioned in a message
 socket.on('mentioned', data => {
   if (data.target == myUsername){
-    alert("You got mentioned by " + data.sender)
+    msgAlert('You got mentioned by:', data.sender)
   }
 })
 
@@ -76,7 +76,7 @@ function sendText(){
 
   if (message.length > settings.messageLimit){  //Makes sure the message is not longer than the message limit 
     console.log("message is too long");
-    alert("Message is too long");
+    msgAlert('Alert:', 'Message is too long.')
     return; 
   }
 
@@ -109,7 +109,8 @@ function sendFile(){
       if (file.name.search(i) != -1) {
 
         console.log("Invalid File Type");
-        alert("File type not allowed! Please chose another file.");
+        msgAlert('Alert:', 'File type not allowed! Please chose another file.')
+        
         
         // User-friendliness
         exitSendFileMode();
@@ -132,7 +133,6 @@ function sendFile(){
       // ISSUE: Disconnection issue occurs here when sending large files.  The client gets disconnected if the file is larger than the servers io.engine.maxHttpBufferSize
       // TEMPORARY SOLUTION:
       if (999900 < JSON.stringify(message).length){  // Limit is 1,000,000 but use 999,000 here to be safe
-        // alert("The file is too big to be sent");
         msgAlert('Alert:', ' File is too big.')
         return;
       }
