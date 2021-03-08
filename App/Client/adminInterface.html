@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html>
 
 <head>
@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="assets/css/messageBubble.css">
     <link rel="stylesheet" href="assets/css/Navigation-with-Button.css">
     <link rel="stylesheet" href="assets/css/styles.css">
-<script defer src="http://localhost:3000/socket.io/socket.io.js"></script>
+<script defer src="http://localhost:3001/socket.io/socket.io.js"></script>
 <script defer src="script.js"></script>
 </head>
 
@@ -66,6 +66,13 @@
                 <div class="col" id="right" style="border-width: 1.5px;border-style: solid;border-radius: 5px;padding-top: 10px;">
                     <div id="RightItems"></div>
                     <h3>Banned Words</h3>
+                    <form>
+                        <button onclick="bannedWordsDefault()" class="btn btn-dark" type="button">Default</button>
+                        <button onclick="bannedWordsCustom()" class="btn btn-light" type="button">Custom</button><br>
+
+                        <textarea rows = "15" cols = "50" name="profanityListCustom" id="profanityListCustom"></textarea>
+                        <button onclick="submitWordsCustom()" class="btn btn-dark" type="button">Submit</button>
+                    </form>
                 </div>
             </div>
         </div>

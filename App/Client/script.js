@@ -1,21 +1,27 @@
-const socket = io('http://localhost:3000'); 
+const socket = io('http://localhost:3001');
 const messageContainer = document.getElementById('message-container'); 
 const messageForm = document.getElementById('send-container');
-const messageInput = document.getElementById('message-input'); 
+const messageInput = document.getElementById('message-input');
+
+const profFilter = document.getElementById('profText');
+var profanitySettings = 0;
+
 var currentSendingUser;
 
 var myUsername = ""; 
 
 
 // settings 
-var settings 
+var settings ;
 
 var connectedUsersList = document.getElementById('users');  // The HTML list that contains the connected users 
 
 login();
+loadProfanity();
 appendUserJoinOrDisconnect('You joined'); 
 // socket.emit('new-user', name)
 getUsers();
+
 
 // gets a username sent from the server
 socket.on('send-username', data => {
@@ -58,6 +64,14 @@ socket.on('user-disconnected', name => {
 })
 
 
+socket.on('send-prof', data =>{
+    console.log("call to recieve ban list")
+    let gay = data.banlist;
+    console.log(gay);
+    console.log("on prof " + gay)
+    profFilter.textContent = gay;
+})
+
 //When the client is sent a list of users, update the display with that list
 socket.on('send-users', connectedUsers => {
   console.log(connectedUsers); 
@@ -72,6 +86,9 @@ socket.on('register-fail', register);
 
 // If register success, notify user
 socket.on('register-success', () => {alert('Account created')});
+
+socket.on('toggle-update',()=>{alert('profanity filter changed')});
+
 
 
 //When the send button is pressed 
@@ -277,4 +294,42 @@ function register(){
   
   //login the user once the account is created with the given credentials
   socket.emit('login', {"username": username, "password": password});
+}
+
+
+
+function bannedWordsDefault(){
+
+  profanitySettings = 0;
+  socket.emit('profanityToggle', {"profanitySettings": profanitySettings});
+console.log(profanitySettings);
+document.getElementById('profanityListCustom').readOnly = true;
+
+
+}
+
+function submitWordsCustom(){
+
+  let wordsCustom = document.getElementById('profanityListCustom').value;
+  console.log(wordsCustom);
+  socket.emit('profanityCustomWords',{'wordsCustom': wordsCustom});
+
+
+  let profanitySettings = 1;
+  socket.emit('profanityToggle', {"profanitySettings": profanitySettings});
+
+}
+function loadProfanity(){
+    socket.on('get-Profanity', (words) => {
+      console.log(words);
+      document.getElementById('profanityListCustom').value = words.words;
+    })
+}
+
+function bannedWordsCustom(){
+  document.getElementById("profanityListCustom").readOnly = false;
+  profanitySettings = 1;
+  socket.emit('profanityToggle', {"profanitySettings": profanitySettings});
+  console.log("profanity settings = " + profanitySettings);
+
 }
