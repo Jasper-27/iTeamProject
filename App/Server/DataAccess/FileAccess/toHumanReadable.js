@@ -65,13 +65,29 @@ function convertTree(filePath, readablePath){
             let position = 8;
             while (position < bytesRead){
                 newFile += "-"
+                // Read username
                 newFile += data.subarray(position, position + 32).toString();
                 newFile += "|"
+                // Read numerical value of username
                 newFile += data.readBigInt64BE(position + 32);
                 newFile += "|";
+                // Read left child pointer
                 newFile += data.readBigInt64BE(position + 40);
                 newFile += "|";
+                // Right child pointer
                 newFile += data.readBigInt64BE(position + 48);
+                newFile += "|";
+                // Read first name
+                newFile += data.subarray(position + 56, position + 88).toString();
+                newFile += "|";
+                // Read last name
+                newFile += data.subarray(position + 88, position + 120).toString();
+                newFile += "|";
+                // Read password
+                newFile += data.subarray(position + 120, position + 180).toString();
+                newFile += "|";
+                // Read profile picture position
+                newFile += data.readBigInt64BE(position + 180);
                 position += 188;
             }
             fs.writeFileSync(readablePath, newFile);
@@ -82,4 +98,4 @@ function convertTree(filePath, readablePath){
 
 // convertBlock(__dirname + "/../data/logsTest7/6.wki", __dirname + "/../data/logsTest7/6Readable.wki");
 // convertIndex(__dirname + "/../data/index_test7.wdx", __dirname + "/../data/index_readable7.wdx");
-convertTree(__dirname + "/../data/accounts.wat", __dirname + "/../data/accountsReadable.wat");
+convertTree(__dirname + "/../../data/accessTest/accounts/accounts.wat", __dirname + "/../../data/accessTest/accounts/accountsReadable.wat");

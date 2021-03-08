@@ -13,12 +13,36 @@ All these fields are fixed length (as this allows values to be changed without t
 */
 
 const fs = require('fs');
+const path = require('path');
 
 const idealBufferSize = 348;  // The number of nodes that searchTree should try to read from the file at a time
 
 class treeAccess {
 
     static lengthHeader = {};  // Format: {<filePath>: <number of nodes>}
+
+    static createTree(filePath, overwrite=false){  // If there is already a file at the location and overwrite is false, it won't be overwritten
+        // Create a new file at given path  (WARNING:  This method is not asycnchronous)
+        let fileMustBeCreated = overwrite;
+        try{
+            fs.accessSync(filePath, fs.constants.R_OK | fs.constants.W_OK);
+            // If there was no error, then the file exists and is accessible so we don't need to do anything unless overwite is true
+        }
+        catch{
+            // The file does not exist or cannot be accessed, so must be created
+            fileMustBeCreated = true;
+        }
+        if (fileMustBeCreated === true){
+            // Create directory
+            try{
+                // If the path given directly in a root directory, this will throw an error.  But the error won't matter as the directory does not need to be created anyway
+                fs.mkdirSync(path.dirname(filePath), {recursive: true});
+            }
+            catch{}
+            // Create the file with the header containing 0
+            fs.writeFileSync(filePath, new Uint8Array(8));
+        }
+    }
 
     static searchTree(filePath, username){
         // Return a promise containing the position and data of the node with the given value or, if it does not exist, the position of what would be the parent node if it did exist.  Also provide info as to whether this is the actual node or the parent
@@ -291,3 +315,4 @@ class treeAccess {
         });
     }
 }
+module.exports = treeAccess;
