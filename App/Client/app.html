@@ -25,6 +25,29 @@
     <!-- For the PWA -->
     <link rel="manifest" href="manifest.json"> 
 
+    <style>
+        .alert {
+                padding: 10px;
+                background-color: #f44336;
+                color: white;
+            }
+
+        .closebtn {
+            margin-left: 15px;
+            color: white;
+            font-weight: bold;
+            float: right;
+            font-size: 22px;
+            line-height: 20px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .closebtn:hover {
+           color: black;
+        }
+    </style>
+
 </head>
 
 
@@ -74,7 +97,7 @@
 						
                         <ul id="users"></ul>
 
-                        <div id="msg"></div>
+                        <div class="alert" id="msg"></div>
 						
 						<h2>Colour Picker</h2>
 						
