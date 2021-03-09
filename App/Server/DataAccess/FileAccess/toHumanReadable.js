@@ -94,8 +94,3 @@ function convertTree(filePath, readablePath){
         });
     });
 }
-
-
-// convertBlock(__dirname + "/../data/logsTest7/6.wki", __dirname + "/../data/logsTest7/6Readable.wki");
-// convertIndex(__dirname + "/../data/index_test7.wdx", __dirname + "/../data/index_readable7.wdx");
-convertTree(__dirname + "/../../data/accessTest/accounts/accounts.wat", __dirname + "/../../data/accessTest/accounts/accountsReadable.wat");

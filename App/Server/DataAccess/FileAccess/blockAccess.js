@@ -16,8 +16,8 @@ const fs = require('fs');
 const path = require('path');
 const indexAccess = require('./indexAccess');
 
-const idealBufferSize = 65;  // The amount of data getEntries should try to read from the file at a time (unlike in indexAccess, this must be a number of bytes rather than number of entries as block entries vary in size (and can be very large))
-const blockSize = 100;  // The number of entries per block
+const idealBufferSize = 65536;  // The amount of data getEntries should try to read from the file at a time (unlike in indexAccess, this must be a number of bytes rather than number of entries as block entries vary in size (and can be very large))
+const blockSize = 1000;  // The number of entries per block
 
 class blockAccess{
     static BLOCKFULLHEADER = 0;
@@ -122,12 +122,21 @@ class blockAccess{
                 else{
                     // First must find last block
                     indexAccess.getLastBlockNumber(indexFilePath).then(blockNumber => {
+                        if (blockNumber === 0){
+                            // If the last block number is 0, there are no blocks yet so we must create one
+                            blockAccess.createBlock(indexFilePath, blockFolderPath, entryTimestamp, entryData).then(value => {
+                                resolve(true);
+                            }).catch(reason => {
+                                reject(reason);
+                            });
+                            return;
+                        }
                         let blockPath = path.format({dir: blockFolderPath, base: `${blockNumber}.wki`});
                         // Define as function as needed in two places
                         let addEntryToBlock = () => {
                             // Check that current block is not full
                             if (0 < blockAccess.headerData[blockFolderPath][blockAccess.BLOCKFULLHEADER]){
-                                // Block is full, so we must create a new block and add the entry to that
+                                // Either there are no blocks yet, or the last block is full, so we must create a new block and add the entry to that
                                 blockAccess.createBlock(indexFilePath, blockFolderPath, entryTimestamp, entryData).then(value => {
                                     resolve(true);
                                 }).catch(reason => {

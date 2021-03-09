@@ -1,9 +1,11 @@
 /*
 Main interface for accessing DataAccess functionality
+Allows one class to be used for all storage operations
 */
 const path = require('path');
 
 const usersAccess = require('./usersAccess');
+const messagesAccess = require('./messagesAccess');
 
 class DataAccess{
     // File and folder paths
@@ -35,6 +37,7 @@ class DataAccess{
 
         // Instatiate lower level classes
         this.users = new usersAccess(this.accountsTreePath, this.profilePicturesPath);
+        this.messages = new messagesAccess(this.messagesFolderPath, this.messagesIndexPath);
     }
 
     createAccount(username, firstName, lastName, password){
@@ -50,6 +53,18 @@ class DataAccess{
     getAccount(username){
         // Everything is handled by usersAccess, so just return its promise
         return this.users.getAccount(username);
+    }
+
+    addMessage(messageObject){
+        // Takes in an instance of the Message class and writes it to disk
+        // All handled by messagesAccess, so just return its promise
+        return this.messages.addMessage(messageObject);
+    }
+
+    getMessages(startTime, endTime){
+        // Returns all messages startTime and endTime, the times should be provided as unix timestamps
+        // All handled by messagesAccess, so just return its promise
+        return this.messages.getMessages(startTime, endTime);
     }
 
     _isValidPath(pathString, directory=false){
@@ -76,3 +91,4 @@ class DataAccess{
         }
     }
 }
+module.exports = DataAccess;
