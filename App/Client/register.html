@@ -1,82 +1,62 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <title>Jasper's fun registration page!!!!</title>
-        <link rel="shortcut icon" type="image/png" href="./logo.png"/>
-        
-        <script defer src="http://localhost:3000/socket.io/socket.io.js"></script>
+    		<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+    <title>New Wiki Design</title>
+    <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css">
+	
+	    	<!-- Links for the style sheets Colour -->
+	<link rel="stylesheet" href="assets/css/colour/light/styles-Colour.css">
+	
+	    	<!-- Links for the style sheets Layout -->
+	<link rel="stylesheet" href="assets/css/layout/normal/styles.css">
+
+
+		<script defer src="http://localhost:4500/socket.io/socket.io.js"></script>
         <script defer src="register.js"></script>
-        <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css">  
+</head>
 
 
-
-        <style>
-            .container {
-                background-color: rgba(233, 124, 0, 0.685);
-                /* padding: 50px; */
-                padding-left: 50px;
-                padding-right: 50px;
-                padding-top: 20px;
-                width: 400px;
-                height: 700px;
-            }
-
-            .registerButton {  
-                padding: 3px;
-                background-color:rgba(255, 255, 255, 0.99);
-                /* float: right; */
-                width: 100%;
-                float: center;
-                border: 0.1px solid rgb(20, 20, 20);
-
-            }
-
-            .field {
-                border: 0.1px solid rgb(20, 20, 20);
-            }
-        </style>
-
-
-
-    </head>
     <body>
-        <div class="container">
-
-            <h1> Jasper's awesome registration form</h1>
-            <br>
-            <br>
-
-            <form>
-                <label for="username">Username:</label>
-                <input class="field" type="text" id="username" name="username" required><br><br>
-    
-                <label for="password1">Password: </label>
-                <input class="field" type="text" id="password1" name="password1" required><br><br>
-    
-                <label for="password2">Password: </label>
-                <input class="field" type="text" id="password2" name="password2" required><br><br>
-                
-                <br> <p><b>These are optional</b> </p>
-    
-                <label for="firstName">FirstName:</label>
-                <input class="field" type="text" id="firstName" name="firstName"><br><br>
-    
-                <label for="lastName">LastName:</label>
-                <input class="field" type="text" id="lastName" name="lastName"><br><br>
-                
-                <br>
-    
-                <button class="registerButton" type="submit" onclick="register()">register user</button>           
-            </form>
-            
-
+	
+	    <nav class="navbar navbar-light navbar-expand-md">
+        <div class="container-fluid"><a class="navbar-brand" href="index.html">WinkiMessenger</a><button data-toggle="collapse" class="navbar-toggler" data-target="#navcol-1"><span class="sr-only">Toggle navigation</span><span class="navbar-toggler-icon"></span></button>
+            <div class="collapse navbar-collapse" id="navcol-1">
+                <ul class="nav navbar-nav">
+                    <li class="nav-item"><a class="nav-link" href="index.html">home</a></li>
+                    <li class="nav-item"><a class="nav-link" href="loginPage.html">Login</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="register.html">register</a></li>
+                </ul>
+            </div>
         </div>
+    </nav>
+	
+	    <div></div>
+    <div id="credentials">
+	
+	<section class="login-clean">
+	
+        <form method="post" onsubmit = "register()">
+            <h2>Register Form</h2>
+            <div id="credentials" class="illustration"><img src="logo.png" height="220"></div>
+            <div class="form-group"><input class="form-control" type="text" id="usernameEntry" placeholder="Username" name="username"></div>
+            <div class="form-group"><input class="form-control" type="password" id="password1Entry" name="password1" placeholder="Password"></div>
+			<div class="form-group"><input class="form-control" type="password" id="password2Entry" name="password2" placeholder="Repeat Password"></div>
+			
+			<h3>Optional Data</h3>
+			<div class="form-group"><input class="form-control" type="text" id="firstName" name="firstName" placeholder="First Name"></div>
+			<div class="form-group"><input class="form-control" type="text" id="lastName" name="lastName" placeholder="Last Name"></div>
+			
+			<div class="form-group"><button class="btn btn-primary btn-block" id="submit"  type="submit" style="background: var(--right-msg-bg);">Register</button></div>
+			
+        </form>
+		
+		
+		
+		
+    </section>
 
-        <script>
-            
-            
-        
-        </script>
 
 
     </body>

@@ -11,7 +11,6 @@ const logsIndexPath = __dirname + "/not/implemented.yet";
 const accountsFilePath = __dirname + "/data/accounts/accounts.wac";
 const profilePicturesFilePath = __dirname + "/not/implemented.yet";
 
-
 var Storage = new DataAccess(messagesFolderPath, messagesIndexPath, logsFolderPath, logsIndexPath, accountsFilePath, profilePicturesFilePath);
 // The new storage system does not yet provide logging, so old one must still be used for now
 var logger = new dataAccess_old.LogAccess(); 
@@ -42,6 +41,7 @@ app.post('/login', async (req, res) => {  // Function must be async to allow use
   let user = await Storage.checkAccountCredentials(username, password);   // Returns an account object if credentials match 
   if (user instanceof Account){
     let name = user.userName;
+
 
     // generate the users token
     let token = require('crypto').randomBytes(64).toString('hex'); 
@@ -206,6 +206,7 @@ io.on('connection', socket => {
       // Only filter text based messages for profanity
       if (message.type === "text") filteredMessage = profanityFilter.filter(filteredMessage);
       if (name == null || name == undefined || name == "") name = "unknown";
+
       // Although async, this should not be awaited as we don't need to know the result.  This means we can just run addMessage in the background and move on
       Storage.addMessage(new Message(name, message.type, filteredMessage, message.fileName));
 

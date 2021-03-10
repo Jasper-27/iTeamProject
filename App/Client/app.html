@@ -7,21 +7,46 @@
     
     <title>Winki - App</title>
     <link rel="shortcut icon" type="image/png" href="./logo.png"/>
+	
+	    	<!-- Links for the style sheets Colour -->
+	<link rel="stylesheet" href="assets/css/colour/light/styles-Colour.css">
+	
+	    	<!-- Links for the style sheets Layout -->
+	<link rel="stylesheet" href="assets/css/layout/normal/styles.css">
 
     <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css">
     <link rel="stylesheet" href="assets/fonts/ionicons.min.css">
-    <link rel="stylesheet" href="assets/css/Footer-Basic.css">
-    <link rel="stylesheet" href="assets/css/Navigation-with-Button.css">
-    <link rel="stylesheet" href="assets/css/styles.css">
-	<link rel="stylesheet" href="assets/css/messageBubble.css">
 	
-	
-    <script defer src="http://localhost:3000/socket.io/socket.io.js"></script>
+		
+    <script defer src="http://localhost:4500/socket.io/socket.io.js"></script>
     <script defer src="script.js"></script>
     
     
     <!-- For the PWA -->
     <link rel="manifest" href="manifest.json"> 
+
+    <style>
+        .alert {
+                padding: 10px;
+                background-color: #f44336;
+                color: white;
+            }
+
+        .closebtn {
+            margin-left: 15px;
+            color: white;
+            font-weight: bold;
+            float: right;
+            font-size: 22px;
+            line-height: 20px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .closebtn:hover {
+           color: black;
+        }
+    </style>
 
 </head>
 
@@ -31,20 +56,23 @@
         <div class="container-fluid"><a class="navbar-brand" href="index.html">WinkiMessenger</a><button data-toggle="collapse" class="navbar-toggler" data-target="#navcol-1"><span class="sr-only">Toggle navigation</span><span class="navbar-toggler-icon"></span></button>
             <div class="collapse navbar-collapse" id="navcol-1">
                 <ul class="nav navbar-nav">
-                    <li class="nav-item"><a class="nav-link active" href="app.html">Messages</a></li>
-                    <li class="nav-item"></li>
-                    <li class="nav-item"></li>
+                    <li class="nav-item"><a class="nav-link" href="index.html">home</a></li>
+                    <li class="nav-item"><a class="nav-link" href="loginPage.html">Login</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="app.html">App</a></li>
                 </ul>
             </div>
         </div>
     </nav>
     <div></div>
+	
+	
+	
     <div id="allItems" style="min-height: 100%;">
         <div class="container">
             <div class="row" style="height: 80%;min-height: 80%;">
                 <div class="col" id="left">
 
-                    <div id="LeftItems">
+                    <div class="item" id="LeftItems">
 					
                         <h1>Message Area</h1>
                         
@@ -60,12 +88,22 @@
                     </div>
 
                 </div>
-                <div class="col d-none d-lg-inline d-xl-inline" id="right">
+                <div class="col d-none d-lg-inline d-xl-inline box" id="right">
                     <div id="rightItems">
                         <input class="form-control-plaintext" type="text" value="Extra Item Desktop Area" readonly="">
 
                         <h2>Connected users</h2>
+						
+						
                         <ul id="users"></ul>
+
+                        <div class="alert" id="msg" style="visibility: hidden;"></div>
+						
+						<h2>Colour Picker</h2>
+						
+						<input type="text" id="cssSheet" name="css"><br><br>
+
+						<button id="colourInput" type="submit" onclick="changeCSS();">Change</button>
 
 
 
@@ -75,6 +113,7 @@
             </div>
         </div>
     </div>
+
     <div class="btn-toolbar"></div>
     <div class="footer-basic">
         <footer>
@@ -93,6 +132,7 @@
     <!-- Scripts -->
     <script src="assets/js/jquery.min.js"></script>
     <script src="assets/bootstrap/js/bootstrap.min.js"></script>
+	<script src="assets/js/changeCss.js"></script>
 
 
 

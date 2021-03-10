@@ -1,4 +1,4 @@
-const socket = io('http://localhost:3000');
+const socket = io('http://localhost:4500');
 const messageContainer = document.getElementById('message-container'); 
 const messageForm = document.getElementById('send-container');
 const messageInput = document.getElementById('message-input'); 
@@ -16,10 +16,9 @@ var settings
 
 var connectedUsersList = document.getElementById('users');  // The HTML list that contains the connected users 
 
-login();
-// appendUserJoinOrDisconnect('You joined'); 
-// socket.emit('new-user', name)
 getUsers();
+
+attemptAuth()
 
 // gets a username sent from the server
 socket.on('send-username', data => {
@@ -41,9 +40,7 @@ socket.on('chat-message', data => {  // Messages will be recieved in format: {na
 //This code runs if the user gets mentioned in a message
 socket.on('mentioned', data => {
   if (data.target == myUsername){
-    alert("You got mentioned by " + data.sender)
-	
-	
+    msgAlert('You got mentioned by:', data.sender)
   }
 })
 
@@ -68,14 +65,8 @@ socket.on('send-users', connectedUsers => {
   generateUserList(connectedUsers); 
 })
 
-// If login fails, force user to try again
-socket.on('login-fail', () => {
-  alert("Login failed"); 
-  window.location.replace("./loginPage.html");
-});
 
 // Functions for sending messages
-
 function sendText(){
   let message = messageInput.value;
 
@@ -85,20 +76,52 @@ function sendText(){
 
   if (message.length > settings.messageLimit){  //Makes sure the message is not longer than the message limit 
     console.log("message is too long");
-    alert("Message is too long");
+    msgAlert('Alert:', 'Message is too long.')
     return; 
   }
 
   socket.emit('send-chat-message', {type: "text", content: message});
-  messageInput.value = '';
+  // console.log("Message sent: " + message)
+  messageInput.value = ''; 
+}
+
+// function which creates an alert that doesn't pause JS
+function msgAlert(TITLE,MESSAGE) {
+  "use strict";   
+  document.getElementById("msg").innerHTML = `<span class='closebtn' onclick="this.parentElement.style.visibility='hidden';"'>&times;</span><strong>   ${TITLE}  </strong>  ${MESSAGE}`;
+  msg.style.visibility = 'visible';
 }
 
 function sendFile(){
+
   // Only proceed if a file has been selected
   if (0 < messageFileSelector.files.length){
     file = messageFileSelector.files[0];
     message = {type: "", content: "", fileName: file.name};  // File messages also have a filename field
-    // Set message type
+
+
+    var restrictedFiles = settings.restrictedFiles;
+    console.log(restrictedFiles);
+
+    for (var i of restrictedFiles) {
+      
+      // Checks filename for the blacklisted file extensions
+      if (file.name.search(i) != -1) {
+
+        console.log("Invalid File Type");
+        msgAlert('Alert:', 'File type not allowed! Please chose another file.')
+        
+        
+        // User-friendliness
+        exitSendFileMode();
+        showFileSelector();
+
+        return;
+      }
+    }
+
+
+    // Set message type 
     if (file.type.split("/")[0] === "image") message.type = "image";
     else message.type = "file";
     // Convert file to base64 and send.  This should be done asyncronously to avoid large files blocking the UI thread
@@ -110,7 +133,7 @@ function sendFile(){
       // ISSUE: Disconnection issue occurs here when sending large files.  The client gets disconnected if the file is larger than the servers io.engine.maxHttpBufferSize
       // TEMPORARY SOLUTION:
       if (999900 < JSON.stringify(message).length){  // Limit is 1,000,000 but use 999,000 here to be safe
-        alert("The file is too big to be sent");
+        msgAlert('Alert:', ' File is too big.')
         return;
       }
 
@@ -123,13 +146,14 @@ function sendFile(){
   }
 }
 
+
+
 // Send text is the default
 sendMessage = sendText;
 
 //When the send button is pressed 
 messageForm.addEventListener('submit', e => {
-  e.preventDefault();
-  // Call function for sending messages
+  e.preventDefault(); 
   sendMessage();
 })
 
@@ -292,8 +316,6 @@ function appendMessageRecieve(message, inName) {
     // However, for other types of messages do the scrolling here, as div elements fo not have an onload event
     messageContainer.scrollTop = messageContainer.scrollHeight;
   }
-
- 
 }
 
 function appendUserJoinOrDisconnect(message){
@@ -386,13 +408,7 @@ function showFileSelector(){
   messageFileSelector.click();
 }
 
-// gets the login details from session storage, then connects with those
-function login(){
 
-  //Gets the username and password from the session storage
-  let username = sessionStorage.session_user; 
-  let password = sessionStorage.session_pass; 
-  socket.emit('login', {"username": username, "password": password});
-  
+function attemptAuth(){
+  socket.emit('attempt-auth', {"token": sessionStorage.token, "username" : sessionStorage.username})
 }
-
