@@ -514,13 +514,52 @@ function getUsers(){
 
 // Fills up the connected users list on the client interface 
 function generateUserList(list){
-  connectedUsersList.innerHTML = ""; 
+	
+  connectedUsersList.innerHTML = " ";
+
   list.forEach((item, index) => {
     // Add entry to profilePictures using default image
     if (profilePictures[item] === undefined) profilePictures[item] = defaultProfilePicture;
     var entry = document.createElement('li');
-    entry.appendChild(document.createTextNode(item));
-    connectedUsersList.appendChild(entry);
+	
+	connectedUsersList.appendChild(entry);
+	
+	var chatList = document.createElement('div');
+	chatList.className = "chatList";
+	
+	entry.appendChild(chatList);
+	
+	var img = document.createElement('div');
+	img.className = "img";
+	
+	chatList.appendChild(img);
+	
+	var icon = document.createElement('i');
+	icon.className ="fa fa-circle";
+	var image1 = document.createElement('img');
+	image1.src ="https://image.flaticon.com/icons/svg/145/145867.svg";
+	
+	img.appendChild(icon);
+	img.appendChild(image1);
+	
+	
+	var desc = document.createElement('div');
+	desc.className = "desc";
+	
+	var name = document.createElement('h5')
+	name.innerText = item;
+	
+	desc.appendChild(name);
+	
+	var small = document.createElement('small');
+	small.innerText = "CurrentTime";
+	
+	desc.appendChild(small);
+		
+	chatList.appendChild(desc);
+	
+    //entry.appendChild(document.createTextNode(item));
+    //connectedUsersList.appendChild(entry);
   });
 }
 

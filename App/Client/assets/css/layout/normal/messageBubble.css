@@ -58,18 +58,19 @@ html {
 .msg-img {
   width: 50px;
   height: 50px;
-  margin-right: 10px;
   background-repeat: no-repeat;
   background-position: center;
   background-size: cover;
   border-radius: 50%;
+
 }
 
 .msg-bubble {
   max-width: 450px;
-  padding: 15px;
+  margin: 10px;
   border-radius: 15px;
-  margin-bottom: 10px;
+  padding: 10px;
+
 }
 
 .msg-info {
@@ -77,6 +78,7 @@ html {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 10px;
+
 }
 
 .msg-info-name {
@@ -88,8 +90,13 @@ html {
   font-size: 0.85em;
 }
 
+.left-msg .msg-img {
+  margin-left: 5%;
+}
+
 .left-msg .msg-bubble {
   border-bottom-left-radius: 0;
+
 }
 
 .right-msg {
@@ -101,7 +108,7 @@ html {
 }
 
 .right-msg .msg-img {
-  margin: 0 0 0 10px;
+  margin-right: 5%;
 }
 
 .msger-inputarea {
@@ -115,10 +122,13 @@ html {
   border: none;
   border-radius: 3px;
   font-size: 1em;
+  position: absolute;
+  bottom: 0;
 }
 
 .msger-input {
   flex: 1;
+  border-radius: 10px;
 }
 
 .msger-send-btn {
