@@ -280,6 +280,11 @@ io.on('connection', socket => {
   socket.on('get-users', out => {
     socket.to('authorised').emit('send-users', connected); 
   })
+
+  // Broadcast to other users when someone is typing
+  socket.on('user_typing', myUsername => {
+    socket.to('authorised').emit('user_typing', myUsername);
+  })
 })
 
 
