@@ -1,4 +1,4 @@
 {
     "messageLimit" : 200,
-    "restrictedFiles" : [".docx", ".pdf"]
+    "restrictedFiles": []
 }
