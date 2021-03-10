@@ -1,20 +1,25 @@
 // Class for filtering out profanity
 const fs = require("fs");
-const banListPath = __dirname + "/bannedWords.txt"
+let banListPath = "";
 var preset;
 let rawData;
 
-filterSymbol;  // The symbol to replace banned words with
-wholeWords;  // Only filter out whole words
+replacementSymbol = "*";  // The symbol to replace banned words with
+wholeWordsOnly = "";  // Only filter out whole words
 bannedStrings = [];
 
-class ProfanityFilter{
+class ProfanityFilter {
 
 
     toggleCustom()
     {
-        banListPath = __dirname + "/bannedWordsCustom.txt";
-        console.log("🤬 Using Customised Profanity List!")
+        try {
+            banListPath = __dirname + "/bannedWordsCustom.txt";
+            console.log("🤬 Using Customised Profanity List!")
+        }
+        catch {
+            console.log(err + " your nan")
+        }
     }
 
     toggleDefault(){
@@ -28,33 +33,33 @@ class ProfanityFilter{
     }
     load() {
 
-        if (preset == 1){
+        if (preset == 1) {
             this.toggleCustom();
         }
-        if (preset == 0){
+        if (preset == 0) {
             this.toggleDefault();
         }
 
 
-
-    constructor(replacementSymbol, wholeWordsOnly){
-        // Can use this to configure options for the filter later
-        if (replacementSymbol == undefined){
-            this.replacementSymbol = "*";
+        constructor(replacementSymbol, wholeWordsOnly)
+        {
+            // Can use this to configure options for the filter later
+            if (replacementSymbol == undefined) {
+                this.replacementSymbol = "*";
+            } else {
+                this.replacementSymbol = replacementSymbol;
+            }
+            if (typeof wholeWordsOnly != "boolean") {
+                this.wholeWords = false;
+            } else {
+                this.wholeWords = wholeWordsOnly;
+            }
+            this.readBanlistFromFile();
         }
-        else{
-            this.replacementSymbol = replacementSymbol;
-        }
-        if (typeof wholeWordsOnly != "boolean"){
-            this.wholeWords = false;
-        }
-        else{
-            this.wholeWords = wholeWordsOnly;
-        }
-        this.readBanlistFromFile();
     }
 
-    filter(text){
+    filter(text)
+    {
         // Replace any profanity with the given symbol
         for (let i = 0; i < this.bannedStrings.length; i++){
             let badString;
@@ -83,9 +88,11 @@ class ProfanityFilter{
             return rawData;
         } catch (e) {
 
-            banListPath = __dirname + "/bannedWords.txt";
+            fs.writeFile('bannedWordsCustom.txt', "" ,function (err) {
+                if (err) return console.log(err);
+            });
             bannedStrings = [];
-            return false;
+            return "";
         }
     }
 }

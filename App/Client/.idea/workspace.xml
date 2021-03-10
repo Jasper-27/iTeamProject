@@ -2,7 +2,9 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="ea582561-f92e-492a-ad69-09463ae7af17" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/adminInterface.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Admin/adminInterface.html" beforeDir="false" afterPath="$PROJECT_DIR$/../Admin/adminInterface.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Server/ProfanityFilter.js" beforeDir="false" afterPath="$PROJECT_DIR$/../Server/ProfanityFilter.js" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -63,7 +65,8 @@
       <workItem from="1615370941182" duration="4000" />
       <workItem from="1615370981318" duration="650000" />
       <workItem from="1615378600008" duration="121000" />
-      <workItem from="1615378987002" duration="1804000" />
+      <workItem from="1615378987002" duration="2364000" />
+      <workItem from="1615381423280" duration="1349000" />
     </task>
     <servers />
   </component>
