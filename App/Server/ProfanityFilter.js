@@ -1,11 +1,42 @@
 // Class for filtering out profanity
 const fs = require("fs");
 const banListPath = __dirname + "/bannedWords.txt"
+var preset;
+let rawData;
+
+filterSymbol;  // The symbol to replace banned words with
+wholeWords;  // Only filter out whole words
+bannedStrings = [];
 
 class ProfanityFilter{
-    filterSymbol;  // The symbol to replace banned words with
-    wholeWords;  // Only filter out whole words
-    bannedStrings = [];
+
+
+    toggleCustom()
+    {
+        banListPath = __dirname + "/bannedWordsCustom.txt";
+        console.log("🤬 Using Customised Profanity List!")
+    }
+
+    toggleDefault(){
+        banListPath = __dirname + "/bannedWords.txt";
+        console.log("🤬 Using Default Profanity List!");
+
+    }
+
+    savePreset(toggle){
+        preset = toggle;
+    }
+    load() {
+
+        if (preset == 1){
+            this.toggleCustom();
+        }
+        if (preset == 0){
+            this.toggleDefault();
+        }
+
+
+
     constructor(replacementSymbol, wholeWordsOnly){
         // Can use this to configure options for the filter later
         if (replacementSymbol == undefined){
@@ -48,11 +79,13 @@ class ProfanityFilter{
     readBanlistFromFile(){
         try{
             // Each banned word of phrase should be on a new line
-            let rawData = fs.readFileSync(banListPath).toString();
-            this.bannedStrings = rawData.split(/\r?\n/);
-        }
-        catch (e){
-            this.bannedStrings = [];
+            rawData = fs.readFileSync(banListPath, 'utf8');
+            return rawData;
+        } catch (e) {
+
+            banListPath = __dirname + "/bannedWords.txt";
+            bannedStrings = [];
+            return false;
         }
     }
 }
