@@ -16,6 +16,10 @@ var settings
 
 var connectedUsersList = document.getElementById('users');  // The HTML list that contains the connected users 
 
+// Used for detecting spam
+var spamCounter = 0;
+var spam = false;
+
 getUsers();
 
 attemptAuth()
@@ -79,6 +83,11 @@ function sendText(){
     msgAlert('Alert:', 'Message is too long.')
     return; 
   }
+
+  // if (spam == true) {
+  //   alert("Your message was detected as spam!");
+  //   return;
+  // }
 
   socket.emit('send-chat-message', {type: "text", content: message});
   // console.log("Message sent: " + message)
@@ -234,6 +243,13 @@ function appendMessage(message) {
     // However, for other types of messages do the scrolling here, as div elements fo not have an onload event
     messageContainer.scrollTop = messageContainer.scrollHeight;
   }
+
+  spamCounter++;
+
+  if (spamCounter > 9) {
+
+    spam = true;
+  }
 }
                                               
 //Adds a message someone else sent to the chat 
@@ -315,6 +331,18 @@ function appendMessageRecieve(message, inName) {
   else{
     // However, for other types of messages do the scrolling here, as div elements fo not have an onload event
     messageContainer.scrollTop = messageContainer.scrollHeight;
+  }
+
+  spamCounter--;
+
+  if (spamCounter < 10) {
+
+    spam = false;
+  }
+
+  if (spamCounter < 0) {
+
+    spamCounter = 0;
   }
 }
 

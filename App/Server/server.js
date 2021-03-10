@@ -85,6 +85,12 @@ let settings = Settings.readSettings();
 //for getting the connected users 
 var connected = []; 
 
+// Used for detecting spam
+var clients = [];
+var spamTracker;
+//var spamCounter;
+var spam;
+
 console.log("*****************************************");
 console.log("*          😉 WINKI SERVER 😉           *");      
 console.log("*****************************************");
@@ -133,6 +139,9 @@ io.on('connection', socket => {
       if (connected.indexOf(username) < 0){
         connected.push(username); 
         socket.to('authorised').emit('send-users', connected);  
+
+        spamTracker = {client: username, spamCounter: 0};
+        clients.push(spamTracker);
       }
 
       io.to(socket.id).emit('settings', settings); //Sends settings to the client 
@@ -216,7 +225,7 @@ io.on('connection', socket => {
         return;
       }
 
-      // Testing
+      // Block blacklisted files
       if (message.type == "file") {
 
         var extension = message.fileName;
@@ -253,6 +262,62 @@ io.on('connection', socket => {
           });
         }
       }
+
+
+      for (var i of clients) {
+
+        if (i.client == name) {
+
+          i.spamCounter = i.spamCounter + 1;
+
+          detectSpam(i.spamCounter);
+        }
+      }
+
+      if (spam == true) {
+
+        console.log("A message from " + name + " has been detected as spam.");
+        return;
+
+      }
+
+      console.log(clients);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
     }
   })
 
@@ -291,5 +356,13 @@ function sendPreviousMessages(socket){
       let msg = messagesFile.messagesBuffer[i];
       socket.emit("chat-message", {message: msg.content, name: msg.senderId});
     }
+  }
+}
+
+function detectSpam(spamCounter) {
+
+  if (spamCounter > 9) {
+
+    spam == true;
   }
 }
