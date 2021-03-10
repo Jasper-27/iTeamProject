@@ -155,6 +155,8 @@ body{
     font-family: sans-serif;
     overflow-y: scroll;
 }
+
+
 .message ul{
     padding: 0px;
     list-style: none;
@@ -315,3 +317,4 @@ body{
     }
 
 }
+
