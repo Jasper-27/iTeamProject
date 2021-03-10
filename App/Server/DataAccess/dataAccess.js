@@ -46,7 +46,7 @@ class DataAccess{
     }
 
     checkAccountCredentials(username, password){
-        // Everything is handled by usersAccess, so just return its promise
+        // Everything is handled by usersAccess, so just return its promise  // Will contain the account object if credentials match, or false if not
         return this.users.checkCredentials(username, password);
     }
 

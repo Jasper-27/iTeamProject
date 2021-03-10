@@ -1,30 +1,91 @@
-const sendAllPreviousMessages = false;  // When a user connects, send them all previous messages
 const Message = require("./Message");
-const dataAccess = require("./dataAccess");
+const dataAccess_old = require("./dataAccess");  // Old system still used for logging, will move over in future
+const DataAccess = require("./DataAccess/dataAccess");
 const profanity = require("./ProfanityFilter");
-const loggingSystem = require("./Log"); 
 const Settings = require("./Settings.js"); 
 
+const messagesFolderPath = __dirname + "/data/messages";
+const messagesIndexPath = __dirname + "/data/messages/messages_index.wdx";
+const logsFolderPath = __dirname + "/not/implemented/yet";
+const logsIndexPath = __dirname + "/not/implemented.yet";
+const accountsFilePath = __dirname + "/data/accounts/accounts.wac";
+const profilePicturesFilePath = __dirname + "/not/implemented.yet";
 
-const io = require('socket.io')(3000, {
+
+var Storage = new DataAccess(messagesFolderPath, messagesIndexPath, logsFolderPath, logsIndexPath, accountsFilePath, profilePicturesFilePath);
+// The new storage system does not yet provide logging, so old one must still be used for now
+var logger = new dataAccess_old.LogAccess(); 
+
+const users = {}  // Maps socket ids to usernames
+let loggedInUsers = {}  // Contains access token for user, uses usernames as keys
+
+
+//-----------------------------------------------------------------------------------------------------------------
+//// Login API 
+
+const cors = require('cors')
+const express = require('express');
+const Account = require("./Account");
+
+const app = express()
+const APIport = 8080
+
+app.use ( express.json() )
+app.use( cors() ) 
+
+app.post('/login', async (req, res) => {  // Function must be async to allow use of await
+    
+  const { password } = req.body; 
+  const { username } = req.body;
+
+  // Checks to see if the user is in the file. 
+  let user = await Storage.checkAccountCredentials(username, password);   // Returns an account object if credentials match 
+  if (user instanceof Account){
+    let name = user.userName;
+
+    // generate the users token
+    let token = require('crypto').randomBytes(64).toString('hex'); 
+
+    loggedInUsers[name] = {
+      "token" : token
+    }
+
+    res.send({
+      message: `Authentication success`,
+      token: `${ token }`,    // the response 
+    })
+
+    console.log("🔑 User: " + username + " has logged in")
+    logger.log("User: " + username + " has logged in")
+
+  }else{
+    res.status(406).send({message: 'Incorrect credentials'})
+  }
+})
+
+//Start the API listening on PORT
+app.listen( 
+  APIport, 
+  () => console.log(`🔐 Login API online: http://localhost:${APIport}`)
+)
+
+//-----------------------------------------------------------------------------------------------------------------
+
+socketPort = 4500
+
+const io = require('socket.io')(socketPort, {
   cors: {
     // Must allow cross origin resource sharing (otherwise server won't accept traffic from localhost)
     origin: "*"
   }
 });
 
-const users = {}; 
-var messagesFile = new dataAccess.MessagesAccess();
-var accountsFile = new dataAccess.AccountsAccess();
-var logger = new dataAccess.LogAccess(); 
+logger.log("Server started")
 
-messagesFile.getData();  // Load all previous messages
 var profanityFilter = new profanity("*", true);
 
 //reading settings from settings file 
- let settings = Settings.readSettings();
-
-
+let settings = Settings.readSettings();
 
 //for getting the connected users 
 var connected = []; 
@@ -32,66 +93,66 @@ var connected = [];
 console.log("*****************************************");
 console.log("*          😉 WINKI SERVER 😉           *");      
 console.log("*****************************************");
-console.log();
+console.log(); 
 
+console.log(`📧 Message socket online: http://localhost:${socketPort}`)
 
 io.on('connection', socket => {
 
-  //when new user is added to the server
-  socket.on('new-user', name => {
-    if (name == null || name == undefined || name == "") name = "unknown";
-    users[socket.id] = name;
-    socket.broadcast.emit('user-connected', name);
-    sendPreviousMessages(socket);
+  socket.on('attempt-auth', async data =>{
+    let username = data.username
+    let token = data.token
 
-    // hang on, isn't this done twice?  // This bit never runs Hmmmmmm
-    console.log("User " + name + " Connected");
-    logger.log("User " + name + " Connected"); 
-  })
-
-  // When user tries to login
-  socket.on('login', credentials => {
-    // Check if credentials are valid
-    if (typeof credentials.username == "string" && typeof credentials.password == "string"){
-      let userId = accountsFile.checkCredentials(credentials.username, credentials.password);
-      if (userId != -1){
-        // The details are correct, store the userId in users dictionary
-        users[socket.id] = userId;
-        let name = accountsFile.getAccount(userId).userName;
-        // Tell client that login was successful
-        io.to(socket.id).emit('login-success');
-        // Add socket to the "authorised" room so they can receive messages
-        socket.join('authorised');
-        socket.to('authorised').emit('user-connected', name); // Announce that the user has connected
-        io.to(socket.id).emit("send-username", name); // tells the new user what their name is
-        // Send all previous messages (if that setting is enabled)
-        
-        sendPreviousMessages(socket);  // doesn't do anything atm. 
-        
-        //Log that the user connected 
-        console.log("👋 User " + name + " logged in");
-        logger.log(name + " logged in"); 
-
-        // adds the username to list of connected users (provided it isn't there already)
-        if (connected.indexOf(name) < 0){
-          connected.push(name); 
-          socket.to('authorised').emit('send-users', connected); 
-        }
-
-        //Sends settings to the client 
-        io.to(socket.id).emit('settings', settings);
-
-        return;
-      }
+    if (username == null){
+      return
     }
-      // Tell client that login failed
-      socket.emit('login-fail');
-      logger.log("Failed login attempt"); //This may get a bit much 
-      console.log("⚠️ Failed login attempt!") ;
+    if (token == null){
+      return
+    }
+
+    let user = await Storage.getAccount(username)  // If an account is returned, we know the user exists.  Otherwise they don't
+
+    if (!(user instanceof Account)){
+      console.log("User not found")
+      return
+    }
+    
+    if (loggedInUsers[user.userName] == null){
+      console.log("User error")
+      return
+    }
+
+    if (loggedInUsers[user.userName].token === token){
+      // Tell client that login was successful
+      io.to(socket.id).emit('login-success');
+
+      // Add socket to the "authorised" room so they can receive messages
+      socket.join('authorised');
+      socket.to('authorised').emit('user-connected', username); // Announce that the user has connected
+      io.to(socket.id).emit("send-username", username); // tells the new user what their name is
+
+      users[socket.id] = username;
+      
+      // adds the username to list of connected users (provided it isn't there already)
+      if (connected.indexOf(username) < 0){
+        connected.push(username); 
+        socket.to('authorised').emit('send-users', connected);  
+      }
+
+      io.to(socket.id).emit('settings', settings); //Sends settings to the client 
+
+      console.log("👋 User " + username + " connected");
+
+    }else{
+      socket.emit('authentication-failed')
+      console.log("😭 "+ username + " Had a failed authentication")
+    }
+    
   })
+
 
   // When user tries to create account
-  socket.on('create-account', details => {
+  socket.on('create-account', async details => {
     // Make sure given values are valid
     if (typeof details.username != "string"){
       socket.emit('register-fail', 'Invalid username');
@@ -107,34 +168,56 @@ io.on('connection', socket => {
     }
     else{
       // Details are valid
-      if (accountsFile.createAccount(details.username, details.firstName, details.lastName, details.password) == dataAccess.AccountsAccess.USERNAMETAKEN){
-        socket.emit('register-fail', 'Username taken');
+      try{
+        let creationSuccessful = await Storage.createAccount(details.username, details.firstName, details.lastName, details.password);
+        if (creationSuccessful === true){
+          socket.emit('register-success');
+          logger.log("New account created: " + details.username);
+          console.log("👍 New account created: " + details.username); 
+        }
+        else{
+          socket.emit('register-fail', 'Unable to create account');
+        }
       }
-      else{
-        socket.emit('register-success');
-        logger.log("New account created: " + details.username);
-        console.log("👍 New account created: " + details.username); 
+      catch (reason){
+        if (reason === "Username taken"){
+          socket.emit('register-fail', 'Username taken');
+        }
+        else{
+          socket.emit('register-fail', 'Unable to create account');
+        }
       }
     }
   })
 
   socket.on('send-chat-message', message => {
     // Check that the client is logged in, and discard their messages otherwise
-    if (typeof users[socket.id] == "number"){
+    if (typeof users[socket.id] == "string"){
       // Make sure message has a suitable type value
       if (!(typeof message.type == "string" && (message.type === "text" || message.type === "image" || message.type === "file"))){
         // Ignore the message
         console.log("🚨 An message with an invalid type was received");
         return;
       }
-      let name = accountsFile.getAccount(users[socket.id]).userName;
+      let name = users[socket.id];
+
       // Write the new message to file
       let filteredMessage = message.content;
       // Only filter text based messages for profanity
       if (message.type === "text") filteredMessage = profanityFilter.filter(filteredMessage);
       if (name == null || name == undefined || name == "") name = "unknown";
-      messagesFile.appendData(new Message(name, message.type, filteredMessage, message.fileName));
-      socket.to('authorised').emit('chat-message', { message: {type: message.type, content: filteredMessage, fileName: message.fileName}, name: name });
+      // Although async, this should not be awaited as we don't need to know the result.  This means we can just run addMessage in the background and move on
+      Storage.addMessage(new Message(name, message.type, filteredMessage, message.fileName));
+
+      socket.to('authorised').emit('chat-message', {
+        message: {
+          type: message.type, 
+          content: filteredMessage, 
+          fileName: message.fileName
+        }, 
+        name: name 
+      });
+
       // console.log("🟢 " + name + ": " + message); 
 
       //If message is blank. don't spam people 
@@ -149,9 +232,32 @@ io.on('connection', socket => {
         return;
       }
 
-      // Must also send message to user that sent it
-      socket.emit('chat-message', {message: {type: message.type, content: filteredMessage, fileName: message.fileName}, name: name});
+      // Testing
+      if (message.type == "file") {
 
+        var extension = message.fileName;
+        var blacklist = settings.restrictedFiles;
+
+        for (var i of blacklist) {
+          
+          if (extension.includes(i)) {
+
+            console.log("Bad file trying to be sent!");
+
+            return;
+          }
+        }
+      }
+      
+      // Must also send message to user that sent it
+      socket.emit('chat-message', {
+        message:{
+          type: message.type, 
+          content: filteredMessage, 
+          fileName: message.fileName
+        }, 
+        name: name
+      });
 
       // Checks to see if the message was @ing anyone 
       if (message.type === "text"){
@@ -167,7 +273,7 @@ io.on('connection', socket => {
   })
 
   socket.on('disconnect', () => {
-    let name = accountsFile.getAccount(users[socket.id]).userName;
+    let name = users[socket.id];
     // Only continue if name exists (meaning user was properly connected and logged in)
     if (typeof name == "string"){
       socket.to('authorised').emit('user-disconnected', name);
@@ -186,22 +292,8 @@ io.on('connection', socket => {
     }
   })
 
-
   // allows the client to request a list of new users. tried to remove this but everything broke
   socket.on('get-users', out => {
-    // console.log("➡️  sending the connected users")
     socket.to('authorised').emit('send-users', connected); 
   })
 })
-
-
-// This part of the application isn't actually doing anything. It worked for a bit then got turned off. 
-function sendPreviousMessages(socket){
-  // Send all previous messages to the newly connected user
-  if (sendAllPreviousMessages){
-    for (let i = 0; i < messagesFile.messagesBuffer.length; i++){
-      let msg = messagesFile.messagesBuffer[i];
-      socket.emit("chat-message", {message: msg.content, name: msg.senderId});
-    }
-  }
-}

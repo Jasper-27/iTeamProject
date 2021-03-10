@@ -14512,6 +14512,81 @@ It is therefore important that the data is stored in a way that can be searched 
 </div>
 <div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
+<h2 id="Blocks">Blocks<a class="anchor-link" href="#Blocks">&#182;</a></h2><p>As the file is no longer loaded into memory, the new system cannot use hash maps for accessing the data.  When reading it therefore has to search the file to find what it is looking for.  To prevent search time increasing as the number of items in storage grows, messages and log entries are broken into separate files called <strong>blocks</strong>. All new items are added to the currently unfinshed block until the block reaches <strong>1000</strong> items, at which point the block is marked as finished and a new block is created.</p>
+<p>When searching for items, rather than searching every item, the system only has to search the blocks whose largest and smallest timestamps match what it is looking for.</p>
+<h3 id="Format">Format<a class="anchor-link" href="#Format">&#182;</a></h3><h4 id="Headers">Headers<a class="anchor-link" href="#Headers">&#182;</a></h4><p>To make searching a block quicker, the first 25 bytes of a block contain the following "headers":</p>
+<ul>
+<li>Block is full?<ul>
+<li>1 byte</li>
+<li>Any value other than 0 indicates that the block is full<ul>
+<li>This tells the <code>blockAccess.addEntry</code> method that this block is full and so it needs to create another one before adding the new entry</li>
+</ul>
+</li>
+<li>The <code>addEntry</code> method sets this to 1 once it has written the 1000th item to a block</li>
+</ul>
+</li>
+<li>Number of entries in block<ul>
+<li>8 bytes</li>
+<li>Used by <code>addEntry</code> to know when 1000 items have been reached</li>
+</ul>
+</li>
+<li>Next free space<ul>
+<li>8 bytes</li>
+<li>The position (specified in bytes) of the next empty space in the file (the position right after the end of the last entry)</li>
+<li>Used by <code>addEntry</code> to skip straight to the end of the file when writing new items, rather than first needing to search for the end</li>
+</ul>
+</li>
+<li>Middle entry position<ul>
+<li>8 bytes</li>
+<li>The position of the start of the middle entry in the file</li>
+<li>Used by <code>getEntries</code> so that it only has to search half of the file<ul>
+<li>Jumps to the middle- if the items it is looking for have timestamps less than the middle entry then it only has to search first half, if greater it only has to search second half</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h4 id="Entries">Entries<a class="anchor-link" href="#Entries">&#182;</a></h4><p>Each entry contains the following fields:</p>
+<table><tr>
+    <td>Entry length (8 bytes)</td>
+    <td>Timestamp (8 bytes)</td>
+    <td>Data (variable length)</td>
+    </tr></table>
+- The entry length field is needed during searching to skip to the next item, as each item is variable length
+
+The data field is simply written and read by `blockAccess`, but it is created and processed by either `messagesAccess` or `logsAccess` and its contents are different for messages and logs.
+
+Logs format:
+<table><tr>
+    <td>Log message (variable length)</td>
+    </tr></table><p>Messages format:</p>
+<p><table><tr>
+    <td>Sender username (32 bytes)</td>
+    <td>Message type (1 byte)</td>
+    <td>Content length (8 bytes)</td>
+    <td>Content(variable length)</td>
+    <td>Filename length (8 bytes)</td>
+    <td>Filename (variable length)</td>
+    </tr></table>
+The message type is converted to an 8 bit integer before being stored:</p>
+<ul>
+<li>Text = 1</li>
+<li>File = 2</li>
+<li>Image = 3</li>
+</ul>
+<h3 id="Searching">Searching<a class="anchor-link" href="#Searching">&#182;</a></h3><p>Blocks are searched mainly using linear search, however the middle entry header allows the system to only need to search up to half the file</p>
+<ul>
+<li>Although this is only true if range of timestamps being searched for does not contain the middle entry</li>
+<li>As disk reads are very slow 64kb of the file is loaded at a time to allow much faster in-memory searching<ul>
+<li>When testing, loading 64kb took the same amount of time as loading a single entry</li>
+</ul>
+</li>
+</ul>
+
+</div>
+</div>
+<div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
 <h2 id="Indexes">Indexes<a class="anchor-link" href="#Indexes">&#182;</a></h2><p>The index files are used during searching to find out which block contains the item we are looking for.</p>
 <h3 id="Format">Format<a class="anchor-link" href="#Format">&#182;</a></h3><h4 id="Headers">Headers<a class="anchor-link" href="#Headers">&#182;</a></h4><p>To make searching quicker, index files contain three 8 byte "headers" containing information about the index:</p>
 <ul>
@@ -14609,6 +14684,64 @@ It is therefore important that the data is stored in a way that can be searched 
 </li>
 </ul>
 <h3 id="Adding">Adding<a class="anchor-link" href="#Adding">&#182;</a></h3><p>The <code>indexAccess.addBlock</code> method adds a new entry to the end of the index file</p>
+
+</div>
+</div>
+<div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
+<h2 id="Trees">Trees<a class="anchor-link" href="#Trees">&#182;</a></h2><p>As users are searched by username rather than timestamp, blocks and indeces are not an effective way to store them.  Instead, a binary search tree is used.  This allows the users to be stored in a (partially) ordered way without needing reorganise the file everytime a new user is added.</p>
+<h3 id="Format:">Format:<a class="anchor-link" href="#Format:">&#182;</a></h3><p>Each user is a node in the tree, and has up to two child nodes:</p>
+<table><tr>
+    <td>Username (32 bytes)</td>
+    <td>Username value (8 bytes)</td>
+    <td>Left child node pointer (8 bytes)</td>
+    <td>Right child node pointer (8 bytes)</td>
+    <td>First name (32 bytes)</td>
+    <td>Last name (32 bytes)</td>
+    <td>Password (60 bytes)</td>
+    <td>Profile picture location (8 bytes)</td>
+    </tr></table><p>The username value is the sum of all unicode characters in the username, and is used to order the items</p>
+<ul>
+<li>Any usernames, first names, or last names less than 32 bytes are padded with the unicode padding character (code 128)<ul>
+<li>However this is not included when calculating the username value
+The profile picture location is the position within the profile pictures file that the picture for this user can be found</li>
+</ul>
+</li>
+</ul>
+<h3 id="Searching">Searching<a class="anchor-link" href="#Searching">&#182;</a></h3><ul>
+<li>Start from the root node</li>
+<li>Is this node the user we are looking for?<ul>
+<li>If yes then stop</li>
+<li>If no:<ul>
+<li>If the username value that we are looking for is less than or equal to this node's username value, then jump to the node pointed to by the left child pointer and repeat</li>
+<li>If it is greater then do the same but with the right child node</li>
+<li>If the child node pointer is empty, then the node we are looking for isn't in the tree</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h3 id="Adding">Adding<a class="anchor-link" href="#Adding">&#182;</a></h3><ul>
+<li>Append the new node to the end of the file</li>
+<li>Then find its parent<ul>
+<li>Same procedure as searching, except when we find the node without a child pointer we place the address of the new node in the pointer</li>
+</ul>
+</li>
+</ul>
+<p>This way of adding does not create a fully ordered tree, as the position of the node in the tree is not entirely decided by username value, but also by the time that it was added
+However, as we are simply using pointers we could create a fully ordered tree (as we would just have to adjust a few pointers when adding a new item, we wouldn't have to physically move any data)</p>
+<ul>
+<li>While all things being equal this would make searching much faster, in reality the partially ordered system is likely faster (though this has not put to the test)<ul>
+<li>This is because disk reads are <strong>much</strong> slower than in-memory access<ul>
+<li>So the system uses a buffer to read in 64kb from the file at a time and then searches that</li>
+</ul>
+</li>
+<li>If the tree was fully ordered, there would be no connection between position in the tree and physical position in the file (as tree position would purely be decided by username value)
+`- We would therefore be frequently jumping to completely different parts of the file when moving from a parent to its child, so the buffer wouldn't be of much use (at least once the files get quite large)</li>
+<li>The partially ordered system however means that it is likely that similar layers of the tree are in similar parts of the file, so we will likely have to refill the buffer far less often</li>
+</ul>
+</li>
+</ul>
 
 </div>
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
