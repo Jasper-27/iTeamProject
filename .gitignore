@@ -8,4 +8,4 @@ App/Server/data/messages.json
 *.DS_Store
 App/Server/data/Log.json
 App/Server/data/accounts.json
-App/data/**
+App/Server/data/**
