@@ -13,7 +13,8 @@ let loggedInUsers = {}
 //// Login API 
 
 const cors = require('cors')
-const express = require('express')
+const express = require('express');
+const { Console } = require("console");
 
 const app = express()
 const APIport = 8080
@@ -100,29 +101,57 @@ console.log(`📧 Message socket online: http://localhost:${socketPort}`)
 
 io.on('connection', socket => {
 
+
+  //checking the user is still who they are during
+  socket.on('renew-auth', data => {
+    let username = data.username
+    let token = data.token
+
+    id = checkData(username, token)
+
+    if (id == null){
+      return
+    }
+
+    if (loggedInUsers[id].token === token){ //if the token is valid
+      io.to(socket.id).emit('auth-maintained');
+
+    }else{ // if it isn't 
+
+      socket.leave('authorised');
+      console.log("🚨 " + username + " has used an invalid token" )
+      logger.log(username + " token invalid")
+      socket.to(socket.id).emit('renew-failed')
+ 
+      delete users[socket.id]; // remove the user from the connected users (but doesn't delete them, sets to null i think)
+
+      //removes the users name from the client list when they log out
+      var index = connected.indexOf(username);
+      if (index > -1) {
+          connected.splice(index, 1);
+      }
+      socket.to('authorised').emit('send-users', connected); 
+
+    }
+
+  })
+
+  //checking the user credentials when signing in
   socket.on('attempt-auth', data =>{
     let username = data.username
     let token = data.token
 
-    if (username == null){
-      return
-    }
-    if (token == null){
+    //Checks the username and token are valid. Returns null if they are not
+    id = checkData(username, token)
+
+    if (id == null){
+      socket.emit('authentication-failed')
+      console.log("😭 "+ username + " Had a failed authentication")
       return
     }
 
-    let id = accountsFile.getUserId(username)  // If the ID comes back as anything but -1 we know the user exists 
 
-    if (id == -1){
-      console.log("User not found")
-      return
-    }
-    
-    if (loggedInUsers[id] == null){
-      console.log("User error")
-      return
-    }
-
+    //Checks the username and token are for the user in question
     if (loggedInUsers[id].token === token){
       // Tell client that login was successful
       io.to(socket.id).emit('login-success');
@@ -134,7 +163,6 @@ io.on('connection', socket => {
 
       users[socket.id] = id; // The old uses array still needs the userId in it
 
-      
       // adds the username to list of connected users (provided it isn't there already)
       if (connected.indexOf(username) < 0){
         connected.push(username); 
@@ -185,6 +213,18 @@ io.on('connection', socket => {
   })
 
   socket.on('send-chat-message', message => {
+
+    ///Area for testing 
+
+    if (message.content == "test"){
+      socket.emit("req-renew-auth")
+    }
+
+
+
+    ///
+
+
     // Check that the client is logged in, and discard their messages otherwise
     if (typeof users[socket.id] == "number"){
       // Make sure message has a suitable type value
@@ -307,30 +347,51 @@ io.on('connection', socket => {
   })
 
   socket.on('disconnect', () => {
-    let name = accountsFile.getAccount(users[socket.id]).userName;
-    // Only continue if name exists (meaning user was properly connected and logged in)
-    if (typeof name == "string"){
-      socket.to('authorised').emit('user-disconnected', name);
-      //logs that the user disconnected at this time
-      logger.log(name + " disconnected"); 
-      console.log("💔 " + name + " disconnected"); 
-
-      delete users[socket.id]; // remove the user from the connected users (but doesn't delete them, sets to null i think)
-
-      //removes the users name from the client list when they log out
-      var index = connected.indexOf(name);
-      if (index > -1) {
-          connected.splice(index, 1);
+    try{
+      let name = accountsFile.getAccount(users[socket.id]).userName;
+      // Only continue if name exists (meaning user was properly connected and logged in)
+      if (typeof name == "string"){
+        socket.to('authorised').emit('user-disconnected', name);
+        //logs that the user disconnected at this time
+        logger.log(name + " disconnected"); 
+        console.log("💔 " + name + " disconnected"); 
+  
+        delete users[socket.id]; // remove the user from the connected users (but doesn't delete them, sets to null i think)
+  
+        //removes the users name from the client list when they log out
+        var index = connected.indexOf(name);
+        if (index > -1) {
+            connected.splice(index, 1);
+        }
+        socket.to('authorised').emit('send-users', connected); 
       }
-      socket.to('authorised').emit('send-users', connected); 
+    }catch{
+      console.log("error removing user, could have been kicked")
     }
+   
   })
 
   // allows the client to request a list of new users. tried to remove this but everything broke
   socket.on('get-users', out => {
     socket.to('authorised').emit('send-users', connected); 
   })
+
+
+  socket.on('send-token', data => {
+    console.log(socket.id + " : " + data)
+
+    if (loggedInUsers[socket.id].token == data){
+      console.log("Match")
+    }
+  })
+
 })
+
+
+function renewToken(socket){
+  socket.emit('renew-token')
+}
+
 
 
 // This part of the application isn't actually doing anything. It worked for a bit then got turned off. 
@@ -344,3 +405,30 @@ function sendPreviousMessages(socket){
   }
 }
 
+
+
+
+
+function checkData(username, token) {
+  if (username == null){
+    return
+  }
+  if (token == null){
+    return
+  }
+
+  let id = accountsFile.getUserId(username)
+
+  if (id == -1){
+    console.log("User not found")
+    return
+  }
+  
+  if (loggedInUsers[id] == null){
+    console.log("User error")
+    return
+  }
+
+  return id
+
+}
