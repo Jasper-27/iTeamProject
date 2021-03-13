@@ -66,6 +66,15 @@ socket.on('send-users', connectedUsers => {
 })
 
 
+// Renewing the token 
+socket.on('req-renew-auth', data => {
+  socket.emit('renew-auth', {"token": sessionStorage.token, "username" : sessionStorage.username})
+})
+
+socket.on('auth-maintained', data => {
+  alert("woopwoop")
+})
+
 // Functions for sending messages
 function sendText(){
   let message = messageInput.value;
@@ -411,4 +420,9 @@ function showFileSelector(){
 
 function attemptAuth(){
   socket.emit('attempt-auth', {"token": sessionStorage.token, "username" : sessionStorage.username})
+}
+
+function renewAuth(){
+  socket.emit('renew-auth', {"token": sessionStorage.token, "username" : sessionStorage.username})
+ 
 }
