@@ -295,6 +295,6 @@ io.on('connection', socket => {
 
   // allows the client to request a list of new users. tried to remove this but everything broke
   socket.on('get-users', out => {
-    socket.to('authorised').emit('send-users', connected); 
+    socket.to('authorised').emit('send-users', connected);
   })
 })

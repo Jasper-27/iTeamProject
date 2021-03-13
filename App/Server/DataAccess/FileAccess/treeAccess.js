@@ -57,15 +57,21 @@ class treeAccess {
                         try{
                             await treeAccess._readHeadersToMemory(filePath);
                         }
-                        catch(e){
-                            reject(e);
+                        catch(err){
+                            fs.close(descriptor, e =>{
+                                if (e) reject(e);
+                                else reject(err);
+                            });
                             return;
                         }
                     }
                     if (treeAccess.lengthHeader[filePath] == 0){
                         // There are no nodes in the tree
                         returnData.fileEmpty = true;
-                        resolve(returnData);
+                        fs.close(descriptor, e => {
+                            if (e) reject(e);
+                            else resolve(returnData);
+                        });
                     }
                     else{
                         // Define variables for use in searching
@@ -75,14 +81,19 @@ class treeAccess {
 
                         // Define function for searching tree
                         let search = (err, bytesRead, data) => {
-                            if (err) reject(err);
+                            if (err){
+                                fs.close(descriptor, e =>{
+                                    if (e) reject(e);
+                                    else reject(err);
+                                });
+                            }
                             else{
-                                while (bufferStartPos <= currentPos && currentPos <= bufferEndPos){
+                                while (bufferStartPos <= currentPos && BigInt(currentPos) + 188n <= bufferEndPos){  // Make sure entire node is in buffer
                                     let positionWithinBuffer = Number(currentPos) - bufferStartPos;
                                     // Compare value rather than username first as comparing numbers is faster than comparing strings
                                     let nodeValue = data.readBigInt64BE(positionWithinBuffer + 32);
                                     if (nodeValue == usernameValue){
-                                        // Multiple usernames could have the same value, so we must now also comapre the name itself
+                                        // Multiple usernames could have the same value, so we must now also compare the name itself
                                         let nodeUsername = treeAccess.bufferToString(data.subarray(positionWithinBuffer, positionWithinBuffer + 32));
                                         if (nodeUsername == username){
                                             // This is the node we are looking for
@@ -90,7 +101,10 @@ class treeAccess {
                                             returnData["position"] = Number(currentPos);
                                             // Must copy to a new buffer rather than just using Buffer.subarray, as subarray uses references to the orginial buffer- which will mean the garbage collector is unable to deallocate the entire buffer potentially causing a memory leak
                                             returnData["data"] = Buffer.from(data.subarray(positionWithinBuffer, positionWithinBuffer + 188));
-                                            resolve(returnData);
+                                            fs.close(descriptor, e => {
+                                                if (e) reject(e);
+                                                else resolve(returnData);
+                                            });
                                             return;
                                         }
                                     }
@@ -103,7 +117,10 @@ class treeAccess {
                                             returnData["nodeExists"] = false;
                                             returnData["position"] = Number(currentPos);
                                             returnData["data"] = Buffer.from(data.subarray(positionWithinBuffer, positionWithinBuffer + 188));
-                                            resolve(returnData);
+                                            fs.close(descriptor, e => {
+                                                if (e) reject(e);
+                                                else resolve(returnData);
+                                            });
                                             return;
                                         }
                                         else{
@@ -119,7 +136,10 @@ class treeAccess {
                                             returnData["nodeExists"] = false;
                                             returnData["position"] = Number(currentPos);
                                             returnData["data"] = Buffer.from(data.subarray(positionWithinBuffer, positionWithinBuffer + 188));
-                                            resolve(returnData);
+                                            fs.close(descriptor, e => {
+                                                if (e) reject(e);
+                                                else resolve(returnData);
+                                            });
                                             return;
                                         }
                                         else{
@@ -179,8 +199,18 @@ class treeAccess {
                         nodeData.copy(newNode, 56, 0);
                         // Write newNode to end of file
                         fs.write(descriptor, newNode, 0, 188, 8 + treeAccess.lengthHeader[filePath] * 188, err => {
-                            if (err) rejectAppend(err);
-                            else resolveAppend(8 + treeAccess.lengthHeader[filePath] * 188);
+                            if (err){
+                                fs.close(descriptor, e =>{
+                                    if (e) rejectAppend(e);
+                                    else rejectAppend(err);
+                                });
+                            }
+                            else{
+                                fs.close(descriptor, e => {
+                                    if (e) rejectAppend(e);
+                                    else resolveAppend(8 + treeAccess.lengthHeader[filePath] * 188);
+                                });
+                            }
                         });
                     }
                 });
@@ -193,11 +223,19 @@ class treeAccess {
                     let headerBuffer = Buffer.alloc(8);
                     headerBuffer.writeBigInt64BE(BigInt(lengthHeader));
                     fs.write(descriptor, headerBuffer, 0, 8, 0, err => {
-                        if (err) reject(err);
+                        if (err){
+                            fs.close(descriptor, e =>{
+                                if (e) reject(e);
+                                else reject(err);
+                            });
+                        }
                         else{
                             // Update the in-memory version
                             treeAccess.lengthHeader[filePath] = lengthHeader;
-                            resolve(true);
+                            fs.close(descriptor, e => {
+                                if (e) reject(e);
+                                else resolve(true);
+                            });
                         }
                     });
                 });
@@ -232,8 +270,18 @@ class treeAccess {
                                     let newPointer = Buffer.alloc(8);
                                     newPointer.writeBigInt64BE(BigInt(newNodePos));
                                     fs.write(descriptor, newPointer, 0, 8, pointerPos, err => {
-                                        if (err) rejectUpdateParent(err);
-                                        else resolveUpdateParent(pointerPos);
+                                        if (err){
+                                            fs.close(descriptor, e =>{
+                                                if (e) rejectUpdateParent(e);
+                                                else rejectUpdateParent(err);
+                                            });
+                                        }
+                                        else{
+                                            fs.close(descriptor, e => {
+                                                if (e) rejectUpdateParent(e);
+                                                else resolveUpdateParent(true);
+                                            });
+                                        }
                                     });
                                 }
                             });
@@ -304,10 +352,18 @@ class treeAccess {
                 if (err) reject(err);
                 else{
                     fs.read(descriptor, {position: 0, length: 8, buffer: Buffer.alloc(8)}, (err, bytesRead, data) => {
-                        if (err) reject(err);
+                        if (err){
+                            fs.close(descriptor, e => {
+                                if (e) reject(e);
+                                else reject(err);
+                            });
+                        }
                         else{
                             treeAccess.lengthHeader[filePath] = Number(data.readBigInt64BE(0));
-                            resolve(true);
+                            fs.close(descriptor, e => {
+                                if (e) reject(e);
+                                else resolve(true);
+                            });
                         }
                     });
                 }

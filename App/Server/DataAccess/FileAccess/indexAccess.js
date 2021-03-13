@@ -101,8 +101,19 @@ class indexAccess{
                         let data = Buffer.alloc(8);
                         data.writeBigInt64BE(BigInt(newTimestamp));
                         fs.write(descriptor, data, 0, 8, position, err => {
-                            if (err) reject(err);
-                            else resolve(true);
+                            if (err){
+                                fs.close(descriptor, e =>{
+                                    // If error occured when closing file, report that error
+                                    if (e) reject(e);
+                                    else reject(err);  // Otherwise report the other error
+                                });
+                            }
+                            else{
+                                fs.close(descriptor, e => {
+                                    if (e) reject(e);  // If there was an error closing the file, then report it
+                                    else resolve(true);  // Otherwise operation was successful so resolve the promise
+                                });
+                            }
                         });
                     }
                 });
@@ -129,35 +140,44 @@ class indexAccess{
                 newHeaderData[indexAccess.INDEXLENGTHHEADER] = indexAccess.headerData[filePath][indexAccess.INDEXLENGTHHEADER];
                 newHeaderData[indexAccess.LOWESTTIMESTAMPHEADER] = indexAccess.headerData[filePath][indexAccess.LOWESTTIMESTAMPHEADER];
                 newHeaderData[indexAccess.HIGHESTTIMESTAMPHEADER] = indexAccess.headerData[filePath][indexAccess.HIGHESTTIMESTAMPHEADER];
-            for (let i = 0; i < headers.length; i++){
-                if (headers[i] === indexAccess.INDEXLENGTHHEADER){
-                    newHeaderData[indexAccess.INDEXLENGTHHEADER] = values[i];     
+                for (let i = 0; i < headers.length; i++){
+                    if (headers[i] === indexAccess.INDEXLENGTHHEADER){
+                        newHeaderData[indexAccess.INDEXLENGTHHEADER] = values[i];     
+                    }
+                    else if (headers[i] === indexAccess.LOWESTTIMESTAMPHEADER){
+                        newHeaderData[indexAccess.LOWESTTIMESTAMPHEADER] = values[i];
+                    }
+                    else if (headers[i] === indexAccess.HIGHESTTIMESTAMPHEADER){
+                        newHeaderData[indexAccess.HIGHESTTIMESTAMPHEADER] = values[i];
+                    }
                 }
-                else if (headers[i] === indexAccess.LOWESTTIMESTAMPHEADER){
-                    newHeaderData[indexAccess.LOWESTTIMESTAMPHEADER] = values[i];
-                }
-                else if (headers[i] === indexAccess.HIGHESTTIMESTAMPHEADER){
-                    newHeaderData[indexAccess.HIGHESTTIMESTAMPHEADER] = values[i];
-                }
+                newHeaders.writeBigInt64BE(BigInt(newHeaderData[indexAccess.INDEXLENGTHHEADER]), 0);
+                newHeaders.writeBigInt64BE(BigInt(newHeaderData[indexAccess.LOWESTTIMESTAMPHEADER]), 8);
+                newHeaders.writeBigInt64BE(BigInt(newHeaderData[indexAccess.HIGHESTTIMESTAMPHEADER]), 16);
+                // Write data
+                fs.open(filePath, "r+", (err, descriptor) => {
+                    if (err) reject(err);
+                    else{
+                        fs.write(descriptor, newHeaders, 0, 24, 0, err => {
+                            if (err){
+                                fs.close(descriptor, e =>{
+                                    // If error occured when closing file, report that error
+                                    if (e) reject(e);
+                                    else reject(err);  // Otherwise report the other error
+                                });
+                            }
+                            else{
+                                // Update headerData
+                                indexAccess.headerData[filePath] = newHeaderData;
+                                fs.close(descriptor, e => {
+                                    if (e) reject(e);
+                                    else resolve(true);
+                                });
+                            }
+                        });
+                    }
+                });
             }
-            newHeaders.writeBigInt64BE(BigInt(newHeaderData[indexAccess.INDEXLENGTHHEADER]), 0);
-            newHeaders.writeBigInt64BE(BigInt(newHeaderData[indexAccess.LOWESTTIMESTAMPHEADER]), 8);
-            newHeaders.writeBigInt64BE(BigInt(newHeaderData[indexAccess.HIGHESTTIMESTAMPHEADER]), 16);
-            // Write data
-            fs.open(filePath, "r+", (err, descriptor) => {
-                if (err) reject(err);
-                else{
-                    fs.write(descriptor, newHeaders, 0, 24, 0, err => {
-                        if (err) reject(err);
-                        else{
-                            // Update headerData
-                            indexAccess.headerData[filePath] = newHeaderData;
-                            resolve(true);
-                        }
-                    });
-                }
-            });
-        }
         if (typeof indexAccess.headerData[filePath] != "object"){
             // If headerData has not yet been read for this file then do so now
             indexAccess._readHeadersToMemory(filePath).then(value => {
@@ -218,7 +238,12 @@ class indexAccess{
                             let indexLength = Number(indexAccess.headerData[filePath][indexAccess.INDEXLENGTHHEADER]);
                             let indexSmallestTime = Number(indexAccess.headerData[filePath][indexAccess.LOWESTTIMESTAMPHEADER]);
                             let indexLargestTime = Number(indexAccess.headerData[filePath][indexAccess.HIGHESTTIMESTAMPHEADER]);
-                            if (smallestTimestamp < indexLargestTime) reject("This block's smallest timestamp is smaller than the previous block's largest one.  This would break the index (so the block has not been added).  This likely indicates an error with timestamp generation");
+                            if (smallestTimestamp < indexLargestTime){
+                                fs.close(descriptor, e => {
+                                    if (e) reject(e);
+                                    else reject("This block's smallest timestamp is smaller than the previous block's largest one.  This would break the index (so the block has not been added).  This likely indicates an error with timestamp generation");
+                                });
+                            }
                             else{
                                 // Prepare data to be written to file
                                 let newEntry = Buffer.alloc(24);
@@ -231,7 +256,12 @@ class indexAccess{
                                 b) This function uses the indexLength header to work out where to write the new entry.  This means that if the operation to rewrite the headers fails but the operation to add the entry has already succeeded, the new entry will simply by overwritten the next time an entry is added
                                 */
                                 fs.write(descriptor, newEntry, 0, 24, (24 + (indexLength * 24)), (err) => {
-                                    if (err) reject(err);
+                                    if (err){
+                                        fs.close(descriptor, e =>{
+                                            if (e) reject(e);
+                                            else reject(err);
+                                        });
+                                    }
                                     else{
                                         // Now rewrite the headers
                                         if (smallestTimestamp < indexSmallestTime || indexSmallestTime === 0) indexSmallestTime = smallestTimestamp;  // indexSmallestTime being 0 indicates that this is the first entry
@@ -243,13 +273,21 @@ class indexAccess{
                                         newHeaders.writeBigInt64BE(BigInt(indexLargestTime), 16);
                                         // Write
                                         fs.write(descriptor, newHeaders, 0, 24, 0, (err) => {
-                                            if (err) reject(err);
+                                            if (err){ 
+                                                fs.close(descriptor, e =>{
+                                                    if (e) reject(e);
+                                                    else reject(err);
+                                                });
+                                            }
                                             else{
                                                 // Write was successful
                                                 indexAccess.headerData[filePath][indexAccess.INDEXLENGTHHEADER] = indexLength;
                                                 indexAccess.headerData[filePath][indexAccess.LOWESTTIMESTAMPHEADER] = indexSmallestTime;
                                                 indexAccess.headerData[filePath][indexAccess.HIGHESTTIMESTAMPHEADER] = indexLargestTime;
-                                                resolve(true);
+                                                fs.close(descriptor, e => {
+                                                    if (e) reject(e);
+                                                    else resolve(true);
+                                                });
                                             }
                                         })
                                     }
@@ -279,10 +317,18 @@ class indexAccess{
                         let indexLength = Number(indexAccess.headerData[filePath][indexAccess.INDEXLENGTHHEADER]);
                         // Now jump to the last entry and read its block number
                         fs.read(descriptor, {position: 24 + (24 * (indexLength - 1)) + 16, length: 8, buffer: Buffer.alloc(8)}, (err, bytesRead, data) =>{
-                            if (err) reject(err);
+                            if (err){
+                                fs.close(descriptor, e =>{
+                                    if (e) reject(e);
+                                    else reject(err);
+                                });
+                            }
                             else{
                                 let blockNumber = Number(data.readBigInt64BE(0));
-                                resolve(blockNumber);
+                                fs.close(descriptor, e => {
+                                    if (e) reject(e);
+                                    else resolve(blockNumber);
+                                });
                             }
                         });
                     };
@@ -311,7 +357,10 @@ class indexAccess{
                 let highestTimestamp = Number(indexAccess.headerData[filePath][indexAccess.HIGHESTTIMESTAMPHEADER]);
                 if (indexLength === 0 || highestTimestamp < startTime || lowestTimestamp > endTime){
                     // Return empty list, as index does not contain what we are looking for
-                    resolve([]);
+                    fs.close(descriptor, e => {
+                        if (e) reject(e);
+                        else resolve([]);
+                    });
                 }
                 else{
                     if (startTime < lowestTimestamp) startTime = lowestTimestamp;  // Search will only work if startTime fits within the range of timestamps in the index
@@ -327,7 +376,10 @@ class indexAccess{
                             currentEntry++;
                             if (currentEntry > indexLength - 1){
                                 // The whole file has been searched so the rest of the data in the data buffer will be 0s
-                                resolve(blocks);
+                                fs.close(descriptor, e => {
+                                    if (e) reject(e);
+                                    else resolve(blocks);
+                                });
                                 return;
                             }
                             let smallestTime = Number(data.readBigInt64BE(i));
@@ -337,13 +389,19 @@ class indexAccess{
                             }
                             else{
                                 // This block cannot contain entries in the range we are looking for, so no following ones can either.  So we can stop searching
-                                resolve(blocks);
+                                fs.close(descriptor, e => {
+                                    if (e) reject(e);
+                                    else resolve(blocks);
+                                });
                                 return;
                             }
                         }
                         if (currentEntry >= indexLength - 1){
                             // The entire file has been searched
-                            resolve(blocks);
+                            fs.close(descriptor, e => {
+                                if (e) reject(e);
+                                else resolve(blocks);
+                            });
                         }
                         else{
                             // We still haven't found all suitable blocks, and we have also not reached the end of the index.  So rerun on the next cluster
@@ -373,7 +431,10 @@ class indexAccess{
                                 currentEntry = Math.floor((firstEntry + lastEntry) / 2);
                                 if (currentEntry === lastEntry){
                                     // The entry is not in the index
-                                    resolve([]);
+                                    fs.close(descriptor, e => {
+                                        if (e) reject(e);
+                                        else resolve([]);
+                                    });
                                     return;
                                 }
                             }
@@ -383,7 +444,10 @@ class indexAccess{
                                 currentEntry = Math.floor((firstEntry + lastEntry) / 2);
                                 if (currentEntry === firstEntry){
                                     // The entry is not in the index
-                                    resolve([]);
+                                    fs.close(descriptor, e => {
+                                        if (e) reject(e);
+                                        else resolve([]);
+                                    });
                                     return;
                                 }
                             }
@@ -434,16 +498,27 @@ class indexAccess{
         // Read headers from given index file into headerData
         return new Promise((resolve, reject) => {
             fs.open(filePath, "r", (err, descriptor) => {
-                fs.read(descriptor, {position: 0, buffer: Buffer.alloc(24), length: 24}, (err, bytesRead, data) =>{
-                    if (err) reject(err);
-                    else{
-                        indexAccess.headerData[filePath] = {};
-                        indexAccess.headerData[filePath][indexAccess.INDEXLENGTHHEADER] = Number(data.readBigInt64BE(0));
-                        indexAccess.headerData[filePath][indexAccess.LOWESTTIMESTAMPHEADER] = Number(data.readBigInt64BE(8));
-                        indexAccess.headerData[filePath][indexAccess.HIGHESTTIMESTAMPHEADER] = Number(data.readBigInt64BE(16));
-                        resolve(true);
-                    }
-                });
+                if (err) reject(err);
+                else{
+                    fs.read(descriptor, {position: 0, buffer: Buffer.alloc(24), length: 24}, (err, bytesRead, data) =>{
+                        if (err){
+                            fs.close(descriptor, e =>{
+                                if (e) reject(e);
+                                else reject(err);
+                            });
+                        }
+                        else{
+                            indexAccess.headerData[filePath] = {};
+                            indexAccess.headerData[filePath][indexAccess.INDEXLENGTHHEADER] = Number(data.readBigInt64BE(0));
+                            indexAccess.headerData[filePath][indexAccess.LOWESTTIMESTAMPHEADER] = Number(data.readBigInt64BE(8));
+                            indexAccess.headerData[filePath][indexAccess.HIGHESTTIMESTAMPHEADER] = Number(data.readBigInt64BE(16));
+                            fs.close(descriptor, e => {
+                                if (e) reject(e);
+                                else resolve(true);
+                            });
+                        }
+                    });
+                }   
             });
         });
     }

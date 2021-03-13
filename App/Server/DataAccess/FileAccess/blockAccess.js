@@ -72,7 +72,12 @@ class blockAccess{
                                         headers.writeBigInt64BE(25n, 9);  // Next free location is at byte 25, after the headers
                                         headers.writeBigInt64BE(0n, 17);  // There are no entries yet so there cannot be a middle entry
                                         fs.write(descriptor, headers, 0, 25, 0, err => {
-                                            if (err) reject(err);
+                                            if (err){ 
+                                                fs.close(descriptor, e =>{
+                                                    if (e) rejectHeaders(e);
+                                                    else rejectHeaders(err);
+                                                });
+                                            }
                                             else{
                                                 // Update the in-memory copy of the headers with those for the new block
                                                 let newHeaderData = {};
@@ -81,7 +86,11 @@ class blockAccess{
                                                 newHeaderData[blockAccess.NEXTFREEHEADER] = 25;
                                                 newHeaderData[blockAccess.MIDDLEHEADER] = 0;
                                                 blockAccess.headerData[blockFolderPath] = newHeaderData;
-                                                resolveHeaders();
+                                                // Close file and resolve promise
+                                                fs.close(descriptor, e => {
+                                                    if (e) rejectHeaders(e);
+                                                    else resolveHeaders(true);
+                                                });
                                             }
                                         });
                                     });
@@ -204,7 +213,12 @@ class blockAccess{
                                         bigIntToBuffer(BigInt(middleEntryPosition))
                                     ]);
                                     fs.write(descriptor, headers, 0, 25, 0, (err) => {
-                                        if (err) reject(err);
+                                        if (err){ 
+                                            fs.close(descriptor, e =>{
+                                                if (e) reject(e);
+                                                else reject(err);
+                                            });
+                                        }
                                         else{
                                             // Update the in-memory versions of the headers
                                             blockAccess.headerData[blockFolderPath][blockAccess.BLOCKFULLHEADER] = blockIsFull;
@@ -212,7 +226,10 @@ class blockAccess{
                                             blockAccess.headerData[blockFolderPath][blockAccess.NEXTFREEHEADER] = nextFreePosition;
                                             blockAccess.headerData[blockFolderPath][blockAccess.MIDDLEHEADER] = middleEntryPosition;
                                             // The item and headers have been written, so we are done
-                                            resolve(true);
+                                            fs.close(descriptor, e => {
+                                                if (e) reject(e);
+                                                else resolve(true);
+                                            });
                                         }
                                     });
                                 }
@@ -310,7 +327,10 @@ class blockAccess{
                                     }
                                     else if (endTime < currentEntryTimestamp){
                                         // We have gone past the end of the range we want so can stop searching
-                                        resolve(foundEntries);
+                                        fs.close(descriptor, e => {
+                                            if (e) reject(e);
+                                            else resolve(foundEntries);
+                                        });
                                         return;
                                     }
                                     // Check next entry
@@ -318,7 +338,10 @@ class blockAccess{
                                 }
                                 if (nextFreePosition <= currentPos){
                                     // We have reached the end of the file so stop searching
-                                    resolve(foundEntries);
+                                    fs.close(descriptor, e => {
+                                        if (e) reject(e);
+                                        else resolve(foundEntries);
+                                    });
                                 }
                                 else{
                                     // Refill the buffer with new data starting from currentPos and continue the search
@@ -373,7 +396,12 @@ class blockAccess{
                 if (err) reject(err);
                 else{
                     fs.read(descriptor, {position: 0, buffer: Buffer.alloc(25), length: 25}, (err, bytesRead, data) =>{
-                        if (err) reject(err);
+                        if (err){
+                            fs.close(descriptor, e =>{
+                                if (e) reject(e);
+                                else reject(err);
+                            });
+                        }
                         else{
                             let blockFolderPath = path.dirname(filePath);
                             // Must declare each key separately due to Javascript's silly syntax rules, which don't allow dots in a key definition
@@ -382,7 +410,10 @@ class blockAccess{
                             blockAccess.headerData[blockFolderPath][blockAccess.ENTRYCOUNTHEADER] = Number(data.readBigInt64BE(1));
                             blockAccess.headerData[blockFolderPath][blockAccess.NEXTFREEHEADER] = Number(data.readBigInt64BE(9));
                             blockAccess.headerData[blockFolderPath][blockAccess.MIDDLEHEADER] = Number(data.readBigInt64BE(17));
-                            resolve(true);
+                            fs.close(descriptor, e => {
+                                if (e) reject(e);
+                                else resolve(true);
+                            });
                         }
                     });
                 }
