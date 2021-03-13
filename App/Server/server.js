@@ -37,7 +37,8 @@ app.post('/login', (req, res) => {
 
     loggedInUsers[userId] = {
       "username" : username, 
-      "token" : token
+      "token" : token 
+      ,"WFA" : null //Waiting For Authentication
     }
 
     res.send({
@@ -95,47 +96,30 @@ console.log(`📧 Message socket online: http://localhost:${socketPort}`)
 
 io.on('connection', socket => {
 
+  // setInterval(function() { reauth(socket) }, 30000) // reauthorises connection every 30s
 
   //checking the user is still who they are during
   socket.on('renew-auth', data => {
+
     let username = data.username
     let token = data.token
-
     id = checkData(username, token)
+    if (id == null){ return }
 
-    if (id == null){
-      return
-    }
 
     if (loggedInUsers[id].token === token){ //if the token is valid
 
-      
-      let newtoken = require('crypto').randomBytes(64).toString('hex'); //Generate new token
+      io.to(socket.id).emit('auth-maintained', loggedInUsers[id].token)  // sends the user their new token
 
-      loggedInUsers[id].token = newtoken
-
-      io.to(socket.id).emit('auth-maintained', loggedInUsers[id].token);
+      loggedInUsers[id].WFA = 0
 
     }else{ // if it isn't 
-
       socket.emit('auth-renew-failed')
-
-
       console.log("🚨 " + username + " has used an invalid token" )
-      logger.log(username + " token invalid")
-
-      delete users[socket.id]; // remove the user from the connected users (but doesn't delete them, sets to null i think)
-
-      //removes the users name from the client list when they log out
-      var index = connected.indexOf(username);
-      if (index > -1) {
-          connected.splice(index, 1);
-      }
-      socket.to('authorised').emit('send-users', connected); 
-
     }
 
   })
+
 
   //checking the user credentials when signing in
   socket.on('attempt-auth', data =>{
@@ -147,7 +131,6 @@ io.on('connection', socket => {
 
     if (id == null){
       socket.emit('auth-failed')
-      console.log("😭 "+ username + " Had a failed authentication")
       return
     }
 
@@ -215,13 +198,10 @@ io.on('connection', socket => {
     ///Area for testing 
 
     if (message.content == "test"){
-      socket.emit("req-renew-auth")
+
+      reauth(socket)
+     
     }
-
-
-
-    ///
-
 
     // Check that the client is logged in, and discard their messages otherwise
     if (typeof users[socket.id] == "number"){
@@ -333,22 +313,7 @@ io.on('connection', socket => {
     socket.to('authorised').emit('send-users', connected); 
   })
 
-
-  socket.on('send-token', data => {
-    console.log(socket.id + " : " + data)
-
-    if (loggedInUsers[socket.id].token == data){
-      console.log("Match")
-    }
-  })
-
 })
-
-
-function renewToken(socket){
-  socket.emit('renew-token')
-}
-
 
 
 // This part of the application isn't actually doing anything. It worked for a bit then got turned off. 
@@ -388,3 +353,50 @@ function checkData(username, token) {
   return id
 
 }
+
+
+function disconnectUser(socket, username){
+  
+
+  console.log("🚨 " + username + " failed authentication" )
+  logger.log("🚨 " + username + " failed authentication ")
+
+  delete users[socket.id]; // remove the user from the connected users (but doesn't delete them, sets to null i think)
+
+  //removes the users name from the client list when they log out
+  var index = connected.indexOf(username);
+  if (index > -1) {
+      connected.splice(index, 1);
+  }
+  socket.to('authorised').emit('send-users', connected); 
+}
+
+
+
+function reauth(socket){
+  socket.to('authorised').emit("req-renew-auth")
+
+  if (users[socket.id] == null) {
+    return
+  };
+
+  
+  let id = accountsFile.getAccount(users[socket.id]).userId;
+  let username = accountsFile.getAccount(users[socket.id]).userName; 
+
+  loggedInUsers[id].WFA = 1
+
+
+  setTimeout(() => {
+
+    if( loggedInUsers[id].WFA == 1){
+      socket.emit('auth-renew-failed')
+      disconnectUser(socket, username)
+      console.log("❌ " + username + " failed authentication")
+    }else{
+      console.log("✔ " + username + " authenticated correctly")
+    }
+
+  }, 20000); // this just tunes the amount of time needed for a response 
+}
+
