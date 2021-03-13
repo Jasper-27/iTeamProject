@@ -76,8 +76,16 @@ socket.on('req-renew-auth', data => {
 })
 
 socket.on('auth-maintained', data => {
-  alert("woopwoop")
+  console.log("😊 Authentication successful")
+  sessionStorage.token = data
 })
+
+socket.on('auth-renew-failed', data => {
+  alert("⚠ Authentication failed! ⚠")
+
+})
+
+
 
 // Functions for sending messages
 function sendText(){

@@ -30,7 +30,7 @@ app.post('/login', (req, res) => {
   // Checks to see if the userID is in the file. The array is a primary key (not username)
   let userId = accountsFile.checkCredentials(username, password);  
   if (userId != -1){
-    let name = accountsFile.getAccount(userId).userName;
+    // let name = accountsFile.getAccount(userId).userName;   // Don't think this is needed 
 
     // generate the users token
     let token = require('crypto').randomBytes(64).toString('hex'); 
@@ -114,15 +114,22 @@ io.on('connection', socket => {
     }
 
     if (loggedInUsers[id].token === token){ //if the token is valid
-      io.to(socket.id).emit('auth-maintained');
+
+      
+      let newtoken = require('crypto').randomBytes(64).toString('hex'); //Generate new token
+
+      loggedInUsers[id].token = newtoken
+
+      io.to(socket.id).emit('auth-maintained', loggedInUsers[id].token);
 
     }else{ // if it isn't 
 
-      socket.leave('authorised');
+      socket.emit('auth-renew-failed')
+
+
       console.log("🚨 " + username + " has used an invalid token" )
       logger.log(username + " token invalid")
-      socket.to(socket.id).emit('renew-failed')
- 
+
       delete users[socket.id]; // remove the user from the connected users (but doesn't delete them, sets to null i think)
 
       //removes the users name from the client list when they log out
@@ -145,7 +152,7 @@ io.on('connection', socket => {
     id = checkData(username, token)
 
     if (id == null){
-      socket.emit('authentication-failed')
+      socket.emit('auth-failed')
       console.log("😭 "+ username + " Had a failed authentication")
       return
     }
