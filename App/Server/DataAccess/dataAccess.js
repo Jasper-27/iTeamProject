@@ -7,6 +7,14 @@ const path = require('path');
 const usersAccess = require('./usersAccess');
 const messagesAccess = require('./messagesAccess');
 
+/* 
+System can handle asynchronous read operations (unlike writes)
+But eventually we will hit a limit on how many files can be open at once (multiple operations opening the same file counts as having multiple files open)
+We also don't want reads using too many system resources, especially as a malicious user could otherwise slow down / crash the server by causing too many read operations
+Therefore we have a maximum limit to the number of asynchronous reads.
+ */
+const asyncReadLimit = 20;
+
 class DataAccess{
     // File and folder paths
     messagesFolderPath;
@@ -19,6 +27,16 @@ class DataAccess{
     users;
     messages;
     logs;
+
+    /*
+    asyncReadCount and readBacklog are used to enforce asyncReadLimit
+    asyncReadCount will be incremented whenever a new read operation begins, and decremented when it ends
+    When a read method is called:
+        - If asyncReadCount is less than asyncReadLimit, the operation is called immediately
+        - Otherwise the operation is chained to the readBacklog promise using .then() (chained operations run one at a time)
+    */
+   asyncReadCount;
+   readBacklog;
 
     constructor(messagesFolderPath, messagesIndexPath, logsFolderPath, logsIndexPath, accountsTreePath, profilePicturesPath){
         // Validate paths
@@ -38,6 +56,10 @@ class DataAccess{
         // Instatiate lower level classes
         this.users = new usersAccess(this.accountsTreePath, this.profilePicturesPath);
         this.messages = new messagesAccess(this.messagesFolderPath, this.messagesIndexPath);
+
+        // Setup readBacklog
+        this.asyncReadCount = 0;
+        this.readBacklog = Promise.resolve("The value of this first promise is irrelevant");
     }
 
     createAccount(username, firstName, lastName, password){
@@ -46,13 +68,54 @@ class DataAccess{
     }
 
     checkAccountCredentials(username, password){
-        // Everything is handled by usersAccess, so just return its promise  // Will contain the account object if credentials match, or false if not
-        return this.users.checkCredentials(username, password);
+        // Will contain the account object if credentials match, or false if not
+        return new Promise((resolve, reject) => {
+            // Must declare as function, as it will be used in different places depending on whether asyncReadLimit has been met
+            let checkCredentials = async () => {
+                this.asyncReadCount++;
+                try{
+                    let result = await this.users.checkCredentials(username, password);
+                    this.asyncReadCount--;
+                    resolve(result);
+                }
+                catch(reason){
+                    this.asyncReadCount--;
+                    reject(reason);
+                }
+            };
+            // If asyncReadCount is less than asyncReadLimit then run the code immediately, otherwise chain it to readBacklog
+            if (this.asyncReadCount < asyncReadLimit){
+                checkCredentials();
+            }
+            else{
+                this.readBacklog = this.readBacklog.then(checkCredentials);
+            }
+        });
     }
 
     getAccount(username){
-        // Everything is handled by usersAccess, so just return its promise
-        return this.users.getAccount(username);
+        return new Promise((resolve, reject) => {
+            // Must declare as function, as it will be used in different places depending on whether asyncReadLimit has been met
+            let fetchAccount = async () => {
+                this.asyncReadCount++;
+                try{
+                    let result = await this.users.getAccount(username);
+                    this.asyncReadCount--;
+                    resolve(result);
+                }
+                catch(reason){
+                    this.asyncReadCount--;
+                    reject(reason);
+                }
+            };
+            // If asyncReadCount is less than asyncReadLimit then run the code immediately, otherwise chain it to readBacklog
+            if (this.asyncReadCount < asyncReadLimit){
+                fetchAccount();
+            }
+            else{
+                this.readBacklog = this.readBacklog.then(fetchAccount);
+            }
+        });
     }
 
     addMessage(messageObject){
@@ -63,8 +126,28 @@ class DataAccess{
 
     getMessages(startTime, endTime){
         // Returns all messages startTime and endTime, the times should be provided as unix timestamps
-        // All handled by messagesAccess, so just return its promise
-        return this.messages.getMessages(startTime, endTime);
+        return new Promise((resolve, reject) => {
+            // Must declare as function, as it will be used in different places depending on whether asyncReadLimit has been met
+            let fetchMessages = async () => {
+                this.asyncReadCount++;
+                try{
+                    let result = await this.messages.getMessages(startTime, endTime);
+                    this.asyncReadCount--;
+                    resolve(result);
+                }
+                catch(reason){
+                    this.asyncReadCount--;
+                    reject(reason);
+                }
+            };
+            // If asyncReadCount is less than asyncReadLimit then run the code immediately, otherwise chain it to readBacklog
+            if (this.asyncReadCount < asyncReadLimit){
+                fetchMessages();
+            }
+            else{
+                this.readBacklog = this.readBacklog.then(fetchMessages);
+            }
+        });
     }
 
     _isValidPath(pathString, directory=false){
