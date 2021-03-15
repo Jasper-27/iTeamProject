@@ -89,7 +89,7 @@ var connected = [];
 var clients = [];
 var spamTracker;
 //var spamCounter;
-var spam;
+//var spam = false;
 
 console.log("*****************************************");
 console.log("*          😉 WINKI SERVER 😉           *");      
@@ -140,7 +140,7 @@ io.on('connection', socket => {
         connected.push(username); 
         socket.to('authorised').emit('send-users', connected);  
 
-        spamTracker = {client: username, spamCounter: 0};
+        spamTracker = {client: username, spamCounter: 0, spam: false};
         clients.push(spamTracker);
       }
 
@@ -241,6 +241,15 @@ io.on('connection', socket => {
           }
         }
       }
+
+      for (var j of clients) {
+
+        if (j.client == name && j.spam == true) {
+
+          console.log("A message from " + j.client + " was detected as spam!");
+          return;
+        }
+      }
       
       // Must also send message to user that sent it
       socket.emit('chat-message', {
@@ -270,54 +279,25 @@ io.on('connection', socket => {
 
           i.spamCounter = i.spamCounter + 1;
 
-          detectSpam(i.spamCounter);
+          if (i.spamCounter > 9) {
+
+            i.spam = true;
+          }
+        }
+        else {
+
+          i.spamCounter = i.spamCounter - 1;
+
+          if (i.spamCounter < 0) {
+
+            i.spamCounter = 0;
+          }
+          if (i.spamCounter < 10) {
+
+            i.spam = false;
+          }
         }
       }
-
-      if (spam == true) {
-
-        console.log("A message from " + name + " has been detected as spam.");
-        return;
-
-      }
-
-      console.log(clients);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
     }
   })
 
@@ -359,10 +339,3 @@ function sendPreviousMessages(socket){
   }
 }
 
-function detectSpam(spamCounter) {
-
-  if (spamCounter > 9) {
-
-    spam == true;
-  }
-}

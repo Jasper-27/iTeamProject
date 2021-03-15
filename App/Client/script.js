@@ -84,10 +84,10 @@ function sendText(){
     return; 
   }
 
-  // if (spam == true) {
-  //   alert("Your message was detected as spam!");
-  //   return;
-  // }
+  if (spam == true) {
+    alert("Your message was detected as spam!");
+    return;
+  }
 
   socket.emit('send-chat-message', {type: "text", content: message});
   // console.log("Message sent: " + message)
