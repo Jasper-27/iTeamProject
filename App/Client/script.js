@@ -84,6 +84,7 @@ function sendText(){
     return; 
   }
 
+  // Blocks message if client has exceeded spam limit
   if (spam == true) {
     alert("Your message was detected as spam!");
     return;
@@ -109,8 +110,8 @@ function sendFile(){
     message = {type: "", content: "", fileName: file.name};  // File messages also have a filename field
 
 
+    // Client-side file extension blocking
     var restrictedFiles = settings.restrictedFiles;
-    console.log(restrictedFiles);
 
     for (var i of restrictedFiles) {
       

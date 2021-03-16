@@ -242,6 +242,7 @@ io.on('connection', socket => {
         }
       }
 
+      // Checks if user sending message has spam flag
       for (var j of clients) {
 
         if (j.client == name && j.spam == true) {
@@ -272,22 +273,26 @@ io.on('connection', socket => {
         }
       }
 
-
+      // Finds the client who has just sent a message
       for (var i of clients) {
 
         if (i.client == name) {
 
+          // Increments spam counter
           i.spamCounter = i.spamCounter + 1;
 
+          // Applies spam flag to user if counter exceeds 9
           if (i.spamCounter > 9) {
 
             i.spam = true;
           }
         }
+        // Decrements user counter when someone else sends a message
         else {
 
           i.spamCounter = i.spamCounter - 1;
 
+          // Doesn't allow counter to go below 0
           if (i.spamCounter < 0) {
 
             i.spamCounter = 0;
