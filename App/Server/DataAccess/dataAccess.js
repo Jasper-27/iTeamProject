@@ -67,6 +67,11 @@ class DataAccess{
         return this.users.createAccount(username, firstName, lastName, password);
     }
 
+    deleteAccount(username){
+        // Everything is handled by usersAccess, so just return its promise
+        return this.users.deleteAccount(username);
+    }
+
     checkAccountCredentials(username, password){
         // Will contain the account object if credentials match, or false if not
         return new Promise((resolve, reject) => {

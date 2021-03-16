@@ -44,7 +44,7 @@ class treeAccess {
         }
     }
 
-    static searchTree(filePath, username){
+    static searchTree(filePath, username, getParent=false, startPoint){  // If getParent is set to true, it will return the parent of the node we are looking for, not the node itself (useful for deletion)  // If startPoint is provided, the search will begin from that node rather than the root (useful for rearranging on deletion)
         // Return a promise containing the position and data of the node with the given value or, if it does not exist, the position of what would be the parent node if it did exist.  Also provide info as to whether this is the actual node or the parent
         // Format: {fileEmpty: <true|false> (if there are no nodes in file, all other fields will be left blank), nodeExists: <true|false>, position: <position in file> (if nodeExists = true this will be the first byte of the actual node, if false it will be the first byte of what would be the parent node), data: <buffer containing node> (will contain parent node if nodeExists=false)}
         return new Promise((resolve, reject) => {
@@ -76,11 +76,12 @@ class treeAccess {
                     else{
                         // Define variables for use in searching
                         let usernameValue = treeAccess.calculateUsernameValue(username);
-                        let currentPos = 8;
+                        let currentPos;
+                        let oldPos = 0;
                         let bufferStartPos, bufferEndPos;
 
                         // Define function for searching tree
-                        let search = (err, bytesRead, data) => {
+                        let search = async (err, bytesRead, data) => {
                             if (err){
                                 fs.close(descriptor, e =>{
                                     if (e) reject(e);
@@ -97,10 +98,40 @@ class treeAccess {
                                         let nodeUsername = treeAccess.bufferToString(data.subarray(positionWithinBuffer, positionWithinBuffer + 32));
                                         if (nodeUsername == username){
                                             // This is the node we are looking for
-                                            returnData["nodeExists"] = true;
-                                            returnData["position"] = Number(currentPos);
-                                            // Must copy to a new buffer rather than just using Buffer.subarray, as subarray uses references to the orginial buffer- which will mean the garbage collector is unable to deallocate the entire buffer potentially causing a memory leak
-                                            returnData["data"] = Buffer.from(data.subarray(positionWithinBuffer, positionWithinBuffer + 188));
+                                            if (getParent === true){
+                                                // We want the parent node, not the node itself
+                                                if (oldPos == 0){
+                                                    // The node is the root node, so there is no parent
+                                                    returnData["nodeExists"] = false;
+                                                }
+                                                else{
+                                                    returnData["nodeExists"] = true;
+                                                    returnData["position"] = Number(oldPos);
+                                                    // The parent entry may not be in the buffer, so just read it from disk (checking if it is in buffer isn't worth the extra logic, as operations using getParent do not need to be particularly quick and we know this will only add a single read)
+                                                    try{
+                                                        returnData["data"] = await new Promise((resolveParentData, rejectParentData) => {
+                                                            fs.read(descriptor, {position: Number(oldPos), length: 188, buffer: Buffer.alloc(188)}, (e, bytesRead, parentData) => {
+                                                                if (e) rejectParentData(e);
+                                                                else resolveParentData(parentData);
+                                                            });
+                                                        });
+                                                    }
+                                                    catch (reason){
+                                                        fs.close(descriptor, e =>{
+                                                            if (e) reject(e);
+                                                            else reject(reason);
+                                                        });
+                                                        return;
+                                                    }
+
+                                                }
+                                            }
+                                            else{
+                                                returnData["nodeExists"] = true;
+                                                returnData["position"] = Number(currentPos);
+                                                // Must copy to a new buffer rather than just using Buffer.subarray, as subarray uses references to the orginial buffer- which will mean the garbage collector is unable to deallocate the entire buffer potentially causing a memory leak
+                                                returnData["data"] = Buffer.from(data.subarray(positionWithinBuffer, positionWithinBuffer + 188));
+                                            }
                                             fs.close(descriptor, e => {
                                                 if (e) reject(e);
                                                 else resolve(returnData);
@@ -125,6 +156,7 @@ class treeAccess {
                                         }
                                         else{
                                             // Continue the search from the child node
+                                            oldPos = currentPos;
                                             currentPos = childPos;
                                         }
                                     }
@@ -143,6 +175,7 @@ class treeAccess {
                                             return;
                                         }
                                         else{
+                                            oldPos = currentPos;
                                             currentPos = childPos;
                                         }
                                     }
@@ -155,8 +188,10 @@ class treeAccess {
                             }
                         };
                         
-                        // Start search from root node
-                        let bufferDetails = treeAccess._calculateBufferDetails(treeAccess.lengthHeader[filePath], 8);
+                        // Start search from root node (or startPoint if it has been provided)
+                        if (typeof startPoint != "number") startPoint = 8;
+                        currentPos = startPoint;
+                        let bufferDetails = treeAccess._calculateBufferDetails(treeAccess.lengthHeader[filePath], startPoint);
                         bufferStartPos = bufferDetails[0];
                         bufferEndPos = bufferDetails[1];
                         fs.read(descriptor, {position: bufferStartPos, length: bufferDetails[2], buffer: Buffer.alloc(bufferDetails[2])}, search);
@@ -297,6 +332,173 @@ class treeAccess {
             }
             catch(e){
                 reject(e);
+            }
+        });
+    }
+
+    static removeNode(filePath, username){
+        // Find the node with the given username and delete it if it exists
+        return new Promise(async (resolve, reject) => {
+            try{
+                // Find the parent node
+                let parentDetails = await treeAccess.searchTree(filePath, username, true);
+                if (parentDetails["fileEmpty"] === false){
+                    if (parentDetails["nodeExists"] === true){
+                        // The parent has been found
+                        let parentValue = parentDetails["data"].readBigInt64BE(32);
+                        let parentLeftChild = Number(parentDetails["data"].readBigInt64BE(40));
+                        let parentRightChild = Number(parentDetails["data"].readBigInt64BE(48));
+                        // We need to rearrange the node to be deleted's children to link them directly to the parent node
+                        // First get the node to be deleted
+                        let nodeToDelete;
+                        let parentChildOffset;
+                        if (treeAccess.calculateUsernameValue(username) <= parentValue){
+                            // If its value is smaller or equal to its parent, it will be on the left
+                            parentChildOffset = 40;
+                            // Just using searchTree to avoid duplicating code.  It won't really have to do much searching, as we have provided it with the position of the node we want
+                            nodeToDelete = await treeAccess.searchTree(filePath, username, false, parentLeftChild);
+                        }
+                        else{
+                            // If larger, then it is on the right
+                            parentChildOffset = 48;
+                            nodeToDelete = await treeAccess.searchTree(filePath, username, false, parentRightChild);
+                        }
+                        let nodeToDeleteLeftChild = nodeToDelete["data"].readBigInt64BE(40);
+                        let nodeToDeleteRightChild = nodeToDelete["data"].readBigInt64BE(48);
+                        // If the node to be deleted has only 0 or 1 children then we can simply replace the parent pointer with the child node's address
+                        if (nodeToDeleteLeftChild == 0 || nodeToDeleteRightChild == 0){
+                            // Replace parent node pointer to this node with this node's child pointer
+                            // Can get pointer with nodeToDeleteLeftChild + nodeToDeleteRightChild
+                            fs.open(filePath, "r+", (err, descriptor) => {
+                                if (err) reject(err);
+                                else{
+                                    // If both are 0 this will give 0, if only one is 0 it will give the one that isn't 0
+                                    let newPointer = Buffer.alloc(8);
+                                    newPointer.writeBigInt64BE(nodeToDeleteLeftChild + nodeToDeleteRightChild);
+                                    // Overwrite pointer in parent
+                                    fs.write(descriptor, newPointer, 0, 8, parentDetails["position"] + parentChildOffset, err => {
+                                        if (err){
+                                            fs.close(descriptor, e => {
+                                                if (e) reject(e);
+                                                else reject(err);
+                                            });
+                                        }
+                                        // Parent pointer now written, so we can delete the node
+                                        fs.write(descriptor, Buffer.alloc(188), 0, 188, nodeToDelete["position"], err => {
+                                            if (err){
+                                                fs.close(descriptor, e => {
+                                                    if (e) reject(e);
+                                                    else reject(e);
+                                                });
+                                            }
+                                            else{
+                                                // The node has been overwritten with 0's
+                                                fs.close(descriptor, e => {
+                                                    if (e) reject(e);
+                                                    else resolve(true);
+                                                });
+                                            }
+                                        });
+                                    });
+                                }   
+                            });
+                        }
+                        else{
+                            // It has two children.  So use the right one (this choice is arbitrary), and use searchTree with startPos option to point next suitable leaf node on right to the left child node
+                            // Find next suitable node on the right that we can attach the left subtree to
+                            // Get username of left child node
+                            fs.open(filePath, "r+", (err, descriptor) => {
+                                if (err) reject(err);
+                                else{
+                                    fs.read(descriptor, {position: Number(nodeToDeleteLeftChild), length: 32, buffer: Buffer.alloc(32)}, async (err, bytesRead, data) => {
+                                        // Get username of left child node
+                                        let leftChildUsername = treeAccess.bufferToString(data);
+                                        // Now use the username and searchTree to find the next node in the right subtree that we can attach the left subtree to
+                                        let suitableNode = await treeAccess.searchTree(filePath, leftChildUsername, false, Number(nodeToDeleteRightChild));
+                                        // Now add the left tree as the left child of that node
+                                        let newPointer = Buffer.alloc(8);
+                                        newPointer.writeBigInt64BE(nodeToDeleteLeftChild);
+                                        fs.write(descriptor, newPointer, 0, 8, suitableNode["position"] + 40, err => {
+                                            if (err){
+                                                fs.close(descriptor, e => {
+                                                    if (e) reject(e);
+                                                    else reject(err);
+                                                });
+                                            }
+                                            else{
+                                                // Now point parent to right child
+                                                newPointer.writeBigInt64BE(nodeToDeleteRightChild);
+                                                fs.write(descriptor, newPointer, 0, 8, parentDetails["position"] + 48, err => {
+                                                    if (err){
+                                                        fs.close(descriptor, e => {
+                                                            if (e) reject(e);
+                                                            else reject(err);
+                                                        });
+                                                    }
+                                                    else{
+                                                        // With all necessary pointers now adjusted, the node to be deleted no longer exists in the tree.  So we can delete it from the file
+                                                        fs.write(descriptor, Buffer.alloc(188), 0, 188, nodeToDelete["position"], err => {
+                                                            if (err){
+                                                                fs.close(descriptor, e => {
+                                                                    if (e) reject(e);
+                                                                    else reject(e);
+                                                                });
+                                                            }
+                                                            else{
+                                                                // The node has been overwritten with 0's
+                                                                fs.close(descriptor, e => {
+                                                                    if (e) reject(e);
+                                                                    else resolve(true);
+                                                                });
+                                                            }
+                                                        });
+                                                    }
+
+                                                });
+                                            }
+                                        });
+                                    });
+                                }
+                            });
+                        }
+
+
+                    }
+                    else if (parentDetails["position"] == null){  // If nodeExists is false and position is null, it means there is no parent.
+                        // There was no parent, this can only happen if the node to be deleted is the root.  In which case we already know its position
+                        fs.open(filePath, "r+", (err, descriptor) => {
+                            if (err) reject(err);
+                            else{
+                                fs.write(descriptor, Buffer.alloc(188), 0, 188, 0, err => {
+                                    if (err){
+                                        fs.close(descriptor, e => {
+                                            if (e) reject(e);
+                                            else reject(e);
+                                        });
+                                    }
+                                    else{
+                                        // The node has been overwritten with 0's
+                                        fs.close(descriptor, e => {
+                                            if (e) reject(e);
+                                            else resolve(true);
+                                        });
+                                    }
+                                });
+                            }
+                        });
+                    }
+                    else{
+                        // If nodeExists = false but position is not null, it means the node we want does not exist
+                        reject("Node does not exist");
+                    }
+
+                }
+                else{
+                    reject("Node does not exist");
+                }
+            }
+            catch (reason){
+                reject(reason);
             }
         });
     }

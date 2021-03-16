@@ -121,5 +121,18 @@ class usersAccess{
             });
         });
     }
+
+    deleteAccount(username){
+        return new Promise((resolve, reject) => {
+            this.pendingWrites = this.pendingWrites.then(async () => {
+                try{
+                    resolve(await treeAccess.removeNode(this.accountsTreePath, username));
+                }
+                catch (reason){
+                    reject(reason);
+                }
+            });
+        });
+    }
 }
 module.exports = usersAccess;
