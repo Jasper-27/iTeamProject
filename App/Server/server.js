@@ -19,6 +19,9 @@ const { Console } = require("console");
 const app = express()
 const APIport = 8080
 
+
+const reauthInterval = 60000
+
 app.use ( express.json() )
 app.use( cors() ) 
 
@@ -96,11 +99,16 @@ console.log(`📧 Message socket online: http://localhost:${socketPort}`)
 
 io.on('connection', socket => {
 
-  // setInterval(function() { reauth(socket) }, 30000) // reauthorises connection every 30s
+  // Every min re-authenticate the clients. 
+  const heartBeatReauth = setInterval(function() { 
+    reauth(socket)
+  }, reauthInterval)
 
   //checking the user is still who they are during
   socket.on('renew-auth', data => {
 
+    console.log("The token they sent: " + data.token)
+    
     let username = data.username
     let token = data.token
     id = checkData(username, token)
@@ -108,9 +116,13 @@ io.on('connection', socket => {
 
 
     if (loggedInUsers[id].token === token){ //if the token is valid
+      console.log("they sent the right token")
 
-      io.to(socket.id).emit('auth-maintained', loggedInUsers[id].token)  // sends the user their new token
+      let newtoken = require('crypto').randomBytes(64).toString('hex');
+      io.to(socket.id).emit('auth-maintained', newtoken)  // sends the user their new token
+      loggedInUsers[id].token = newtoken
 
+  
       loggedInUsers[id].WFA = 0
 
     }else{ // if it isn't 
@@ -376,6 +388,7 @@ function disconnectUser(socket, username){
 function reauth(socket){
   socket.to('authorised').emit("req-renew-auth")
 
+
   if (users[socket.id] == null) {
     return
   };
@@ -383,17 +396,20 @@ function reauth(socket){
   
   let id = accountsFile.getAccount(users[socket.id]).userId;
   let username = accountsFile.getAccount(users[socket.id]).userName; 
+  console.log(username + " Before Token: " + loggedInUsers[id].token)
 
   loggedInUsers[id].WFA = 1
 
 
   setTimeout(() => {
 
-    if( loggedInUsers[id].WFA == 1){
+    if( loggedInUsers[id].WFA === 1 ){
+      console.log("The token they had: " + loggedInUsers[id].token)
       socket.emit('auth-renew-failed')
       disconnectUser(socket, username)
       console.log("❌ " + username + " failed authentication")
     }else{
+      console.log(username + " After Token: " + loggedInUsers[id].token)
       console.log("✔ " + username + " authenticated correctly")
     }
 

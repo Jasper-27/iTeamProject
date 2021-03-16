@@ -74,6 +74,8 @@ socket.on('req-renew-auth', data => {
 socket.on('auth-maintained', data => {
   console.log("😊 Authentication successful")
   sessionStorage.token = data
+
+  console.log("new Token: " + sessionStorage.token)
 })
 
 socket.on('auth-renew-failed', data => {
@@ -392,8 +394,7 @@ function generateUserList(list){
 messageFileSelector.onchange = () => {
   if (0 < messageFileSelector.files.length){
     // A file has been selected, display the name of the file in the message input area
-    // Disable the input box
-    messageInput.disabled = true;
+    messageInput.disabled = true;     // Disable the input box
     // Add filename to input box
     messageInput.value = messageFileSelector.files[0].name;
     // Change "choose file" button to cancel file sending
