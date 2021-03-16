@@ -86,7 +86,7 @@ function sendText(){
 
   // Blocks message if client has exceeded spam limit
   if (spam == true) {
-    alert("Your message was detected as spam!");
+    msgAlert('Alert:', 'Your message was detected as spam!')
     return;
   }
 
