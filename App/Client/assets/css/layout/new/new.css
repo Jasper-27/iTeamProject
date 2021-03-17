@@ -151,7 +151,7 @@ body{
     border-left: 1px solid #E6E6E6 ;
 }
 .message{
-    height: 73vh;
+    height: calc(92vh - 140px);
     font-family: sans-serif;
     overflow-y: scroll;
 }
@@ -305,4 +305,13 @@ body{
         background-color: #F6F6F6;
         position: relative;
     }
+}
+@media only screen and (max-height: 600px) {
+
+    .message{
+        height: calc(92vh - 150px);
+        font-family: sans-serif;
+        overflow-y: scroll;
+    }
+
 }
