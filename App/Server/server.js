@@ -85,6 +85,12 @@ let settings = Settings.readSettings();
 //for getting the connected users 
 var connected = []; 
 
+// Used for detecting spam
+var clients = [];
+var spamTracker;
+//var spamCounter;
+//var spam = false;
+
 console.log("*****************************************");
 console.log("*          😉 WINKI SERVER 😉           *");      
 console.log("*****************************************");
@@ -133,6 +139,9 @@ io.on('connection', socket => {
       if (connected.indexOf(username) < 0){
         connected.push(username); 
         socket.to('authorised').emit('send-users', connected);  
+
+        spamTracker = {client: username, spamCounter: 0, spam: false};
+        clients.push(spamTracker);
       }
 
       io.to(socket.id).emit('settings', settings); //Sends settings to the client 
@@ -216,7 +225,7 @@ io.on('connection', socket => {
         return;
       }
 
-      // Testing
+      // Block blacklisted files
       if (message.type == "file") {
 
         var extension = message.fileName;
@@ -230,6 +239,16 @@ io.on('connection', socket => {
 
             return;
           }
+        }
+      }
+
+      // Checks if user sending message has spam flag
+      for (var j of clients) {
+
+        if (j.client == name && j.spam == true) {
+
+          console.log("A message from " + j.client + " was detected as spam!");
+          return;
         }
       }
       
@@ -251,6 +270,37 @@ io.on('connection', socket => {
               socket.to('authorised').emit('mentioned', { target: item.substring(1), sender: name} );
             }
           });
+        }
+      }
+
+      // Finds the client who has just sent a message
+      for (var i of clients) {
+
+        if (i.client == name) {
+
+          // Increments spam counter
+          i.spamCounter = i.spamCounter + 1;
+
+          // Applies spam flag to user if counter exceeds 9
+          if (i.spamCounter > 9) {
+
+            i.spam = true;
+          }
+        }
+        // Decrements user counter when someone else sends a message
+        else {
+
+          i.spamCounter = i.spamCounter - 1;
+
+          // Doesn't allow counter to go below 0
+          if (i.spamCounter < 0) {
+
+            i.spamCounter = 0;
+          }
+          if (i.spamCounter < 10) {
+
+            i.spam = false;
+          }
         }
       }
     }
@@ -293,3 +343,4 @@ function sendPreviousMessages(socket){
     }
   }
 }
+

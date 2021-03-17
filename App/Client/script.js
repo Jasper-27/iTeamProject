@@ -16,6 +16,10 @@ var settings
 
 var connectedUsersList = document.getElementById('users');  // The HTML list that contains the connected users 
 
+// Used for detecting spam
+var spamCounter = 0;
+var spam = false;
+
 getUsers();
 
 attemptAuth()
@@ -80,6 +84,12 @@ function sendText(){
     return; 
   }
 
+  // Blocks message if client has exceeded spam limit
+  if (spam == true) {
+    msgAlert('Alert:', 'Your message was detected as spam!')
+    return;
+  }
+
   socket.emit('send-chat-message', {type: "text", content: message});
   // console.log("Message sent: " + message)
   messageInput.value = ''; 
@@ -100,8 +110,8 @@ function sendFile(){
     message = {type: "", content: "", fileName: file.name};  // File messages also have a filename field
 
 
+    // Client-side file extension blocking
     var restrictedFiles = settings.restrictedFiles;
-    console.log(restrictedFiles);
 
     for (var i of restrictedFiles) {
       
@@ -234,6 +244,13 @@ function appendMessage(message) {
     // However, for other types of messages do the scrolling here, as div elements fo not have an onload event
     messageContainer.scrollTop = messageContainer.scrollHeight;
   }
+
+  spamCounter++;
+
+  if (spamCounter > 9) {
+
+    spam = true;
+  }
 }
                                               
 //Adds a message someone else sent to the chat 
@@ -315,6 +332,18 @@ function appendMessageRecieve(message, inName) {
   else{
     // However, for other types of messages do the scrolling here, as div elements fo not have an onload event
     messageContainer.scrollTop = messageContainer.scrollHeight;
+  }
+
+  spamCounter--;
+
+  if (spamCounter < 10) {
+
+    spam = false;
+  }
+
+  if (spamCounter < 0) {
+
+    spamCounter = 0;
   }
 }
 
