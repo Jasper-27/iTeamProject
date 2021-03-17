@@ -24,6 +24,26 @@ getUsers();
 
 attemptAuth()
 
+
+// Checking in with the server ============================
+
+
+const heartBeatReauth = setInterval(function() { 
+
+  renewAuth()
+
+}, 100000)
+
+//=========================================================
+
+
+
+
+
+
+
+
+
 // gets a username sent from the server
 socket.on('send-username', data => {
   myUsername = data; 
@@ -80,8 +100,7 @@ socket.on('auth-maintained', () => {
 })
 
 socket.on('auth-renew-failed', () => {
-  socket.emit('attempt-auth', {"token": sessionStorage.token, "username" : sessionStorage.username})
-  //alert("⚠ Authentication failed! ⚠")
+  alert("⚠ Authentication failed! ⚠")
 
 })
 
@@ -106,6 +125,7 @@ function sendText(){
     msgAlert('Alert:', 'Your message was detected as spam!')
     return;
   }
+
 
   socket.emit('send-chat-message', {type: "text", content: message});
   // console.log("Message sent: " + message)
@@ -455,6 +475,8 @@ function showFileSelector(){
 
 
 function attemptAuth(){
+  appendMessageRecieve("Authing", "system");
+
   socket.emit('attempt-auth', {"token": sessionStorage.token, "username" : sessionStorage.username})
 }
 
@@ -462,3 +484,5 @@ function renewAuth(){
   socket.emit('renew-auth', {"token": sessionStorage.token, "username" : sessionStorage.username})
  
 }
+
+
