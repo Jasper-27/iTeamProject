@@ -181,6 +181,10 @@ io.on('connection', socket => {
   })
 
 
+  /*
+    THIS NEEDS TO BE MOVED TO THE ADMIN INTERFACE AT SOME POINT
+  */
+
   // When user tries to create account
   socket.on('create-account', details => {
     // Make sure given values are valid
@@ -209,7 +213,10 @@ io.on('connection', socket => {
     }
   })
 
+
   socket.on('send-chat-message', message => {
+
+    console.log(message.token)
 
     // Check that the client is logged in, and discard their messages otherwise
     if (typeof users[socket.id] == "number"){
