@@ -131,11 +131,12 @@ io.on('connection', socket => {
     let newtoken = require('crypto').randomBytes(64).toString('hex'); 
     // console.log("👶 " + newtoken)
 
-    if (id == null){ return }
+    if ( id == null || id < 0 ){ return }
 
     try{
       if (loggedInUsers[id].token === token){ //if the token is valid
         io.to(socket.id).emit('refresh-token', newtoken)  // sends the user their new token
+        socket.leave('authorised')
         loggedInUsers[id].token = newtoken
         loggedInUsers[id].lastCheckIn = timestamp
       }else{ // if it isn't 
@@ -159,42 +160,47 @@ io.on('connection', socket => {
     //Checks the username and token are valid. Returns null if they are not
     id = verifyToken(username, token)
 
-    if (id == null){
+    if (id == null || id < 0){
       socket.emit('auth-failed')
       return
     }
 
+    try{
+      //Checks the username and token are for the user in question
+      if (loggedInUsers[id].token === token){
+        // Tell client that login was successful
+        io.to(socket.id).emit('login-success');
 
-    //Checks the username and token are for the user in question
-    if (loggedInUsers[id].token === token){
-      // Tell client that login was successful
-      io.to(socket.id).emit('login-success');
+        // Add socket to the "authorised" room so they can receive messages
+        socket.join('authorised');
+        socket.to('authorised').emit('user-connected', username); // Announce that the user has connected
+        io.to(socket.id).emit("send-username", username); // tells the new user what their name is
 
-      // Add socket to the "authorised" room so they can receive messages
-      socket.join('authorised');
-      socket.to('authorised').emit('user-connected', username); // Announce that the user has connected
-      io.to(socket.id).emit("send-username", username); // tells the new user what their name is
+        users[socket.id] = id; // The old uses array still needs the userId in it
 
-      users[socket.id] = id; // The old uses array still needs the userId in it
+        // adds the username to list of connected users (provided it isn't there already)
+        if (connected.indexOf(username) < 0){
+          connected.push(username); 
+          socket.to('authorised').emit('send-users', connected);  
 
-      // adds the username to list of connected users (provided it isn't there already)
-      if (connected.indexOf(username) < 0){
-        connected.push(username); 
-        socket.to('authorised').emit('send-users', connected);  
+          spamTracker = {client: username, spamCounter: 0, spam: false};
+          clients.push(spamTracker);
+        }
 
-        spamTracker = {client: username, spamCounter: 0, spam: false};
-        clients.push(spamTracker);
+        io.to(socket.id).emit('settings', settings); //Sends settings to the client 
+
+        console.log("👋 User " + username + " connected");
+
+      }else{
+        socket.leave('authorised')
+        socket.emit('authentication-failed')
+        console.log("😭 "+ username + " Had a failed authentication")
       }
-
-      io.to(socket.id).emit('settings', settings); //Sends settings to the client 
-
-      console.log("👋 User " + username + " connected");
-
-    }else{
-      socket.emit('authentication-failed')
-      console.log("😭 "+ username + " Had a failed authentication")
-    }
     
+    }catch{
+      socket.disconnect()
+    }
+ 
   })
 
 
@@ -332,7 +338,7 @@ io.on('connection', socket => {
         }
         // Decrements user counter when someone else sends a message
         else {
-
+          console.log("test")
           i.spamCounter = i.spamCounter - 1;
 
           // Doesn't allow counter to go below 0
