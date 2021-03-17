@@ -19,9 +19,13 @@ const app = express()
 const APIport = 8080
 
 
-// const reauthInterval = 1000000
-const reauthInterval = 50000 // the gap between the server checking when the client last check in
-const checkInWindow = 100000 //the time window the client has to check in (needs to be great that set on client)
+//production
+const reauthInterval = 60000 // the gap between the server checking when the client last check in
+const checkInWindow = 40000 //the time window the client has to check in (needs to be great that set on client)
+
+// //Testing  (remember to change on client)
+// const reauthInterval = 5000 // the gap between the server checking when the client last check in
+// const checkInWindow = 10000
 
 
 app.use ( express.json() )
@@ -122,18 +126,18 @@ io.on('connection', socket => {
     // console.log("⌚:  " + timestamp)
 
     id = verifyToken(username, token) 
-
-
-    // console.log("🔰")
-    // console.log("new: " + token + " Username: " + username)
-    // console.log("old: " + loggedInUsers[id].token + " Username: " + username)
+    
+    // console.log("👵 " + token)
+    let newtoken = require('crypto').randomBytes(64).toString('hex'); 
+    // console.log("👶 " + newtoken)
 
     if (id == null){ return }
 
     try{
       if (loggedInUsers[id].token === token){ //if the token is valid
-        io.to(socket.id).emit('auth-maintained')  // sends the user their new token
+        io.to(socket.id).emit('refresh-token', newtoken)  // sends the user their new token
         loggedInUsers[id].WFA = 0
+        loggedInUsers[id].token = newtoken
         loggedInUsers[id].lastCheckIn = timestamp
       }else{ // if it isn't 
         socket.emit('auth-renew-failed')
@@ -429,7 +433,7 @@ function checkAuth(socket){
     let currentTime = +new Date()
     
     if (currentTime - loggedInUsers[id].lastCheckIn > checkInWindow){ // If there has been x time between checking in 
-      // console.log("🚨 " + username + " did not check in soon enough")
+      console.log("🚨 " + username + " did not check in soon enough")
       disconnectUser(socket, username)
     }else{
       // console.log("✅ " + username + " checked in on time")

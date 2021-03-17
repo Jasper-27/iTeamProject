@@ -32,16 +32,9 @@ const heartBeatReauth = setInterval(function() {
 
   renewAuth()
 
-}, 100000)
+}, 20000)
 
 //=========================================================
-
-
-
-
-
-
-
 
 
 // gets a username sent from the server
@@ -90,19 +83,6 @@ socket.on('send-users', connectedUsers => {
 })
 
 
-// Renewing the token 
-socket.on('req-renew-auth', () => {
-  socket.emit('renew-auth', {"token": sessionStorage.token, "username" : sessionStorage.username})
-})
-
-socket.on('auth-maintained', () => {
-  console.log("😊 Authentication successful")
-})
-
-socket.on('auth-renew-failed', () => {
-  alert("⚠ Authentication failed! ⚠")
-
-})
 
 
 
@@ -285,7 +265,6 @@ function appendMessage(message) {
   spamCounter++;
 
   if (spamCounter > 9) {
-
     spam = true;
   }
 }
@@ -474,13 +453,26 @@ function showFileSelector(){
 }
 
 
-function attemptAuth(){
-  appendMessageRecieve("Authing", "system");
+socket.on('auth-maintained', () => {
+  console.log("😊 Authentication successful")
+})
 
+socket.on('auth-renew-failed', () => {
+  alert("⚠ Authentication failed! ⚠")
+
+})
+
+
+socket.on('refresh-token', newToken => {
+  sessionStorage.token = newToken
+  console.log("😊 Authentication successful")
+})
+
+function attemptAuth(){
   socket.emit('attempt-auth', {"token": sessionStorage.token, "username" : sessionStorage.username})
 }
 
 function renewAuth(){
+  console.log("renewAuth")
   socket.emit('renew-auth', {"token": sessionStorage.token, "username" : sessionStorage.username})
- 
 }
