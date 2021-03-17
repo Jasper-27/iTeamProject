@@ -15,7 +15,6 @@
 	<link rel="stylesheet" href="assets/css/layout/normal/styles.css">
 	<link href="https://fonts.googleapis.com/css?family=Raleway" rel="stylesheet">
 	<link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
-	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/malihu-custom-scrollbar-plugin/3.1.5/jquery.mCustomScrollbar.css">
 	<link rel="stylesheet" href="assets/css/layout/new/new.css">
 
     <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css">
@@ -61,7 +60,7 @@
 </head>
 
 
-<body style="height: 100%;min-height: 100%;">
+<body>
 
 
 
@@ -93,7 +92,7 @@
         <div class="container-fluid"><a class="navbar-brand" href="index.html">WinkiMessenger</a><button data-toggle="collapse" class="navbar-toggler" data-target="#navcol-1"><span class="sr-only">Toggle navigation</span><span class="navbar-toggler-icon"></span></button>
             <div class="collapse navbar-collapse" id="navcol-1">
                 <ul class="nav navbar-nav">
-                    <li class="nav-item"><a class="nav-link" href="index.html">home</a></li>
+                    <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
                     <li class="nav-item"><a class="nav-link" href="loginPage.html">Login</a></li>
                     <li class="nav-item"><a class="nav-link" href="../Admin/adminInterface.html">Admin</a></li>
                     <li class="nav-item"><a class="nav-link active" href="app.html">App</a></li>
@@ -107,7 +106,7 @@
 	
 	
 		<div class="head-section" >
-			<div class="headLeft-section" style= "margin-bottom: 10px;">
+			<div class="headLeft-section" id="headsectionleft" style= "margin-bottom: 10px;">
 			
 			<h3>Users:</h3>
 			
@@ -150,7 +149,7 @@
 				</ul>
 			</div>
 			
-			<div class="left-section" data-mcs-theme="minimal-dark" id="usersList" style="display:none;">
+			<div class="left-section" id="usersList" style="display:none;">
 			
 				<ul id="users">
 				
@@ -171,11 +170,19 @@
 			</div>
 			
 			<div class="right-section">
-				<div class="message" id="message-container" data-mcs-theme="minimal-dark" style="overflow-y: scroll;"></div>
-	
+
+				<div class="message" id="message-container"> 
+				
+				
+				</div>
+
 				<!-- Send Bar -->
 				
+				
+
+					
 				<div class="right-section-bottom">
+				
 					<form id="send-container">
 					
 						<div class="upload-btn">
@@ -188,7 +195,10 @@
 						<button class="btn-send" ><i class="fa fa-send"></i></button>
 						
 					</form>
+					
 				</div>
+				
+				
 				
 				
 				
@@ -213,8 +223,5 @@
 	
 	</script>
 	
-	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
-	<!-- custom scrollbar plugin -->
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/malihu-custom-scrollbar-plugin/3.1.5/jquery.mCustomScrollbar.concat.min.js"></script>
 </body>
 </html>

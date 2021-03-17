@@ -62,14 +62,17 @@ html {
   background-position: center;
   background-size: cover;
   border-radius: 50%;
+  margin-bottom: 10px;
 
 }
+
 
 .msg-bubble {
   max-width: 450px;
   margin: 10px;
   border-radius: 15px;
   padding: 10px;
+
 
 }
 
@@ -96,6 +99,17 @@ html {
 
 .left-msg .msg-bubble {
   border-bottom-left-radius: 0;
+
+}
+
+.middle-msg {
+  margin-left: 5%;
+}
+
+.middle-msg .msg-bubble {
+  margin: auto;
+  margin-bottom: 10px;
+  width: 40vw;
 
 }
 

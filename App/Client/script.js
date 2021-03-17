@@ -475,12 +475,10 @@ function appendUserJoinOrDisconnect(message){
 	
   //create the message box (div to hold the bubble)
   var messageBox = document.createElement('div');
-  messageBox.className = "msg-System";
-  messageContainer.append(messageBox);
+  messageBox.className = "msg middle-msg";
+  messageContainer.appendChild(messageBox);
   
-  //add user image
-  var userImage = document.createElement('div');
-  messageBox.appendChild(userImage);
+
   
   //specify and add the actual bubble 
   var messageBubble = document.createElement('div');
@@ -587,7 +585,12 @@ function exitSendFileMode(){
   messageInput.disabled = false;
   
   // Change "choose file" button back to its usual functionality (displaying file selector)
-  fileSelectButton.innerText = "Choose File";
+  
+  var icon = document.createElement('i');
+  icon.className ="fa fa-photo";
+	
+  fileSelectButton.innerText = "";
+  fileSelectButton.appendChild(icon);
   fileSelectButton.onclick = showFileSelector;
 
   // Override sendMessage back to sendText

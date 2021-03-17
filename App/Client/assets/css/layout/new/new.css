@@ -148,10 +148,12 @@ body{
     float: left;
     background-color: #F6F6F6;
     position: relative;
+    border-left: 1px solid #E6E6E6 ;
 }
 .message{
-    height: 85vh;
+    height: 73vh;
     font-family: sans-serif;
+    overflow-y: scroll;
 }
 .message ul{
     padding: 0px;
@@ -245,7 +247,6 @@ body{
     background: #fff;
     width: 100%;
     padding: 15px;
-    position: absolute;
     bottom: 0px;
     border-top:1px solid #E6E6E6;
     text-align: center;
@@ -285,4 +286,23 @@ body{
     left: 0;
     top: 0;
     opacity: 0;
+}
+
+@media only screen and (max-width: 1026px) {
+    #channels {
+        display: none;
+    }
+    #usersList {
+        display: none;
+    }
+    #headsectionleft{
+        display: none;
+    }
+
+    .right-section{
+        width: 100%;
+        float: left;
+        background-color: #F6F6F6;
+        position: relative;
+    }
 }
