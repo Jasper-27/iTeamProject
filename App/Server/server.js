@@ -338,7 +338,6 @@ io.on('connection', socket => {
         }
         // Decrements user counter when someone else sends a message
         else {
-          console.log("test")
           i.spamCounter = i.spamCounter - 1;
 
           // Doesn't allow counter to go below 0
