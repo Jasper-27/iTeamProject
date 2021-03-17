@@ -456,6 +456,8 @@ messageInput.addEventListener('keypress', inUsername => {
     console.log('typing')
     typingTimer = true;
     setTimeout(emit, 3000)
+    // Sets the div to visible
+  feedback.style.visibility = 'visible';
   }
 })
 
@@ -475,5 +477,5 @@ function invisible(){
 }
 // Function which emits to server every 2 seconds instead of every key press. However it still registers every keypress?
 function emit(){
-  f = false;
+  typingTimer = false;
 }
