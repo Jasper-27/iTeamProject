@@ -24,6 +24,8 @@ getUsers();
 
 attemptAuth()
 
+
+
 // gets a username sent from the server
 socket.on('send-username', data => {
   myUsername = data; 
@@ -70,6 +72,9 @@ socket.on('send-users', connectedUsers => {
 })
 
 
+
+
+
 // Functions for sending messages
 function sendText(){
   let message = messageInput.value;
@@ -89,6 +94,7 @@ function sendText(){
     msgAlert('Alert:', 'Your message was detected as spam!')
     return;
   }
+
 
   socket.emit('send-chat-message', {type: "text", content: message});
   // console.log("Message sent: " + message)
@@ -248,7 +254,6 @@ function appendMessage(message) {
   spamCounter++;
 
   if (spamCounter > 9) {
-
     spam = true;
   }
 }
@@ -334,6 +339,7 @@ function appendMessageRecieve(message, inName) {
     messageContainer.scrollTop = messageContainer.scrollHeight;
   }
 
+  
   spamCounter--;
 
   if (spamCounter < 10) {
@@ -404,8 +410,7 @@ function generateUserList(list){
 messageFileSelector.onchange = () => {
   if (0 < messageFileSelector.files.length){
     // A file has been selected, display the name of the file in the message input area
-    // Disable the input box
-    messageInput.disabled = true;
+    messageInput.disabled = true;     // Disable the input box
     // Add filename to input box
     messageInput.value = messageFileSelector.files[0].name;
     // Change "choose file" button to cancel file sending
@@ -437,7 +442,34 @@ function showFileSelector(){
   messageFileSelector.click();
 }
 
+// Token authentication stuff ===========================================
+
+socket.on('auth-maintained', () => {
+  console.log("😊 Authentication successful")
+})
+
+socket.on('auth-renew-failed', () => {
+  alert("⚠ Authentication failed! ⚠")
+
+})
+
+
+socket.on('refresh-token', newToken => {
+  sessionStorage.token = newToken
+  console.log("😊 Authentication successful")
+})
 
 function attemptAuth(){
   socket.emit('attempt-auth', {"token": sessionStorage.token, "username" : sessionStorage.username})
 }
+
+function renewAuth(){
+  console.log("renewAuth")
+  socket.emit('renew-auth', {"token": sessionStorage.token, "username" : sessionStorage.username})
+}
+
+
+// Checking in with the server every X amount of times 
+const heartBeatReauth = setInterval(function() { renewAuth() }, 20000)
+
+// =============================================================================
