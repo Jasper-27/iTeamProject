@@ -47,7 +47,6 @@ app.post('/login', (req, res) => {
     loggedInUsers[userId] = {
       "username" : username, 
       "token" : token 
-      ,"WFA" : null //Waiting For Authentication
       ,"lastCheckIn" : +new Date()
     }
 
@@ -127,6 +126,7 @@ io.on('connection', socket => {
 
     id = verifyToken(username, token) 
     
+
     // console.log("👵 " + token)
     let newtoken = require('crypto').randomBytes(64).toString('hex'); 
     // console.log("👶 " + newtoken)
@@ -136,7 +136,6 @@ io.on('connection', socket => {
     try{
       if (loggedInUsers[id].token === token){ //if the token is valid
         io.to(socket.id).emit('refresh-token', newtoken)  // sends the user their new token
-        loggedInUsers[id].WFA = 0
         loggedInUsers[id].token = newtoken
         loggedInUsers[id].lastCheckIn = timestamp
       }else{ // if it isn't 
