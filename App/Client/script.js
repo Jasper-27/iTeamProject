@@ -484,5 +484,3 @@ function renewAuth(){
   socket.emit('renew-auth', {"token": sessionStorage.token, "username" : sessionStorage.username})
  
 }
-
-

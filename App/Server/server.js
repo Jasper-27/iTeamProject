@@ -14,7 +14,6 @@ let loggedInUsers = {}
 
 const cors = require('cors')
 const express = require('express');
-const { Console } = require("console");
 
 const app = express()
 const APIport = 8080
@@ -151,7 +150,6 @@ io.on('connection', socket => {
 
   //checking the user credentials when signing in
   socket.on('attempt-auth', data =>{
-
     let username = data.username
     let token = data.token
 
