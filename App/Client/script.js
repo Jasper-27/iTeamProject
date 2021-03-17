@@ -67,19 +67,17 @@ socket.on('send-users', connectedUsers => {
 
 
 // Renewing the token 
-socket.on('req-renew-auth', data => {
+socket.on('req-renew-auth', () => {
   socket.emit('renew-auth', {"token": sessionStorage.token, "username" : sessionStorage.username})
 })
 
-socket.on('auth-maintained', data => {
+socket.on('auth-maintained', () => {
   console.log("😊 Authentication successful")
-  sessionStorage.token = data
-
-  console.log("new Token: " + sessionStorage.token)
 })
 
-socket.on('auth-renew-failed', data => {
-  alert("⚠ Authentication failed! ⚠")
+socket.on('auth-renew-failed', () => {
+  socket.emit('attempt-auth', {"token": sessionStorage.token, "username" : sessionStorage.username})
+  //alert("⚠ Authentication failed! ⚠")
 
 })
 
