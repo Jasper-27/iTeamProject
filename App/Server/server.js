@@ -20,7 +20,7 @@ const app = express()
 const APIport = 8080
 
 
-const reauthInterval = 60000
+const reauthInterval = 1000000
 
 app.use ( express.json() )
 app.use( cors() ) 
@@ -112,25 +112,20 @@ io.on('connection', socket => {
 
   //checking the user is still who they are during
   socket.on('renew-auth', data => {
-
-    console.log("The token they sent: " + data.token)
     
     let username = data.username
     let token = data.token
-    id = checkData(username, token)
+    id = checkData(username, token) 
+
+    console.log("🔰")
+    console.log("new: " + token + " Username: " + username)
+    console.log("old: " + loggedInUsers[id].token + " Username: " + username)
+
     if (id == null){ return }
 
-
     if (loggedInUsers[id].token === token){ //if the token is valid
-      console.log("they sent the right token")
-
-      let newtoken = require('crypto').randomBytes(64).toString('hex');
-      io.to(socket.id).emit('auth-maintained', newtoken)  // sends the user their new token
-      loggedInUsers[id].token = newtoken
-
-  
+      io.to(socket.id).emit('auth-maintained')  // sends the user their new token
       loggedInUsers[id].WFA = 0
-
     }else{ // if it isn't 
       socket.emit('auth-renew-failed')
       console.log("🚨 " + username + " has used an invalid token" )
@@ -216,14 +211,6 @@ io.on('connection', socket => {
 
   socket.on('send-chat-message', message => {
 
-    ///Area for testing 
-
-    if (message.content == "test"){
-
-      reauth(socket)
-     
-    }
-
     // Check that the client is logged in, and discard their messages otherwise
     if (typeof users[socket.id] == "number"){
       // Make sure message has a suitable type value
@@ -271,11 +258,8 @@ io.on('connection', socket => {
         var blacklist = settings.restrictedFiles;
 
         for (var i of blacklist) {
-          
           if (extension.includes(i)) {
-
             console.log("Bad file trying to be sent!");
-
             return;
           }
         }
@@ -390,9 +374,6 @@ function sendPreviousMessages(socket){
 }
 
 
-
-
-
 function checkData(username, token) {
   if (username == null){
     return
@@ -438,33 +419,30 @@ function disconnectUser(socket, username){
 
 
 function reauth(socket){
+
   socket.to('authorised').emit("req-renew-auth")
 
-
-  if (users[socket.id] == null) {
-    return
-  };
-
+  if (users[socket.id] == null) { return }
   
   let id = accountsFile.getAccount(users[socket.id]).userId;
   let username = accountsFile.getAccount(users[socket.id]).userName; 
-  console.log(username + " Before Token: " + loggedInUsers[id].token)
 
   loggedInUsers[id].WFA = 1
 
 
   setTimeout(() => {
 
+    console.log("Username: " + username + " Token: " + loggedInUsers[id].token)
     if( loggedInUsers[id].WFA === 1 ){
-      console.log("The token they had: " + loggedInUsers[id].token)
       socket.emit('auth-renew-failed')
       disconnectUser(socket, username)
       console.log("❌ " + username + " failed authentication")
     }else{
-      console.log(username + " After Token: " + loggedInUsers[id].token)
       console.log("✔ " + username + " authenticated correctly")
     }
 
   }, 20000); // this just tunes the amount of time needed for a response 
+
+  
 }
 
