@@ -2,7 +2,10 @@
 Class for searching and modifying the binary search trees used for storing user accounts
 Each account is a "node" in the tree, and can have up to two child nodes
 
-The first 8 bytes of the file contain the length header, which contains the number of nodes in the tree
+Headers:
+- The first 8 bytes of the file contain the length header, which contains the number of nodes in the tree (including ones that have been deleted)
+- The second 8 bytes contain a pointer to the next free space
+- The third 8 bytes contain a pointer to the root node of the tree
 
 Nodes have the following format (| symbols not included in file, just here to make easier to read)
 Username (32 bytes)|Numerical value for username (sum of all character codes)(8 bytes)|Left child node position (8 bytes)|Right child node position (8 bytes)|First name (32 bytes)|Last name (32 bytes)|Password (60 bytes)|Profile picture position (8 bytes)*
@@ -12,6 +15,7 @@ All these fields are fixed length (as this allows values to be changed without t
 
 */
 
+const e = require('cors');
 const fs = require('fs');
 const path = require('path');
 
@@ -19,7 +23,7 @@ const idealBufferSize = 348;  // The number of nodes that searchTree should try 
 
 class treeAccess {
 
-    static lengthHeader = {};  // Format: {<filePath>: <number of nodes>}
+    static headers = {};  // Format: {<filePath>: {length: <number of nodes>, nextFree: <position of next free space>, root: <position of root node>}
 
     static createTree(filePath, overwrite=false){  // If there is already a file at the location and overwrite is false, it won't be overwritten
         // Create a new file at given path  (WARNING:  This method is not asycnchronous)
@@ -39,8 +43,10 @@ class treeAccess {
                 fs.mkdirSync(path.dirname(filePath), {recursive: true});
             }
             catch{}
-            // Create the file with the header containing 0
-            fs.writeFileSync(filePath, new Uint8Array(8));
+            // Create the file with the headers containing, except the root pointer which should point to byte 24 (where the root would be if it existed)
+            let newHeaders = Buffer.alloc(24);
+            newHeaders.writeBigInt64BE(24n, 16);
+            fs.writeFileSync(filePath, newHeaders);
         }
     }
 
@@ -52,7 +58,7 @@ class treeAccess {
             fs.open(filePath, "r", async (err, descriptor) => {
                 if (err) reject(err);
                 else{
-                    if (typeof treeAccess.lengthHeader[filePath] != "number"){
+                    if (typeof treeAccess.headers[filePath] != "object"){
                         // We do not yet have the length header in memory so must read it from file
                         try{
                             await treeAccess._readHeadersToMemory(filePath);
@@ -65,7 +71,7 @@ class treeAccess {
                             return;
                         }
                     }
-                    if (treeAccess.lengthHeader[filePath] == 0){
+                    if (treeAccess.headers[filePath]["length"] == 0){
                         // There are no nodes in the tree
                         returnData.fileEmpty = true;
                         fs.close(descriptor, e => {
@@ -181,7 +187,7 @@ class treeAccess {
                                     }
                                 }
                                 // The node to be searched is outside the current buffer, so must refill the buffer
-                                let bufferDetails = treeAccess._calculateBufferDetails(treeAccess.lengthHeader[filePath], Number(currentPos));
+                                let bufferDetails = treeAccess._calculateBufferDetails(treeAccess.headers[filePath]["length"], Number(currentPos));
                                 bufferStartPos = bufferDetails[0];
                                 bufferEndPos = bufferDetails[1];
                                 fs.read(descriptor, {position: bufferStartPos, length: bufferDetails[2], buffer: Buffer.alloc(bufferDetails[2])}, search); 
@@ -189,9 +195,9 @@ class treeAccess {
                         };
                         
                         // Start search from root node (or startPoint if it has been provided)
-                        if (typeof startPoint != "number") startPoint = 8;
+                        if (typeof startPoint != "number") startPoint = treeAccess.headers[filePath]["root"];
                         currentPos = startPoint;
-                        let bufferDetails = treeAccess._calculateBufferDetails(treeAccess.lengthHeader[filePath], startPoint);
+                        let bufferDetails = treeAccess._calculateBufferDetails(treeAccess.headers[filePath]["length"], startPoint);
                         bufferStartPos = bufferDetails[0];
                         bufferEndPos = bufferDetails[1];
                         fs.read(descriptor, {position: bufferStartPos, length: bufferDetails[2], buffer: Buffer.alloc(bufferDetails[2])}, search);
@@ -233,7 +239,7 @@ class treeAccess {
                         // Copy nodeData into newNode at byte 56
                         nodeData.copy(newNode, 56, 0);
                         // Write newNode to end of file
-                        fs.write(descriptor, newNode, 0, 188, 8 + treeAccess.lengthHeader[filePath] * 188, err => {
+                        fs.write(descriptor, newNode, 0, 188, 24 + treeAccess.headers[filePath]["length"] * 188, err => {
                             if (err){
                                 fs.close(descriptor, e =>{
                                     if (e) rejectAppend(e);
@@ -243,7 +249,7 @@ class treeAccess {
                             else{
                                 fs.close(descriptor, e => {
                                     if (e) rejectAppend(e);
-                                    else resolveAppend(8 + treeAccess.lengthHeader[filePath] * 188);
+                                    else resolveAppend(24 + treeAccess.headers[filePath]["length"] * 188);
                                 });
                             }
                         });
@@ -251,10 +257,10 @@ class treeAccess {
                 });
             };
 
-            // Define function to update header
+            // Define function to update length header
             let incrementHeader = () => {
                 fs.open(filePath, "r+", (err, descriptor) => {
-                    let lengthHeader = treeAccess.lengthHeader[filePath] + 1;
+                    let lengthHeader = treeAccess.headers[filePath]["length"] + 1;
                     let headerBuffer = Buffer.alloc(8);
                     headerBuffer.writeBigInt64BE(BigInt(lengthHeader));
                     fs.write(descriptor, headerBuffer, 0, 8, 0, err => {
@@ -266,7 +272,7 @@ class treeAccess {
                         }
                         else{
                             // Update the in-memory version
-                            treeAccess.lengthHeader[filePath] = lengthHeader;
+                            treeAccess.headers[filePath]["length"] = lengthHeader;
                             fs.close(descriptor, e => {
                                 if (e) reject(e);
                                 else resolve(true);
@@ -465,11 +471,83 @@ class treeAccess {
 
                     }
                     else if (parentDetails["position"] == null){  // If nodeExists is false and position is null, it means there is no parent.
+                        let oldRootPointer = treeAccess.headers[filePath]["root"];  // Must remember current root pointer for when we delete the node, as it will change
                         // There was no parent, this can only happen if the node to be deleted is the root.  In which case we already know its position
-                        fs.open(filePath, "r+", (err, descriptor) => {
+                        fs.open(filePath, "r+", async (err, descriptor) => {
                             if (err) reject(err);
                             else{
-                                fs.write(descriptor, Buffer.alloc(188), 0, 188, 0, err => {
+                                // Need to make one of its children the root node
+                                let nodeToDelete = await treeAccess.searchTree(filePath, username);
+                                let nodeToDeleteLeftChild = nodeToDelete["data"].readBigInt64BE(40);
+                                let nodeToDeleteRightChild = nodeToDelete["data"].readBigInt64BE(48);
+                                if (nodeToDeleteLeftChild == 0 || nodeToDeleteRightChild == 0){
+                                    // If there is one child, we simply make that child the root (by updating the root pointer).  This same process also works if there are no children
+                                    await new Promise((resolveUpdateRoot, rejectUpdateRoot) => {
+                                        let newPointer = Buffer.alloc(8);
+                                        newPointer.writeBigInt64BE(nodeToDeleteLeftChild + nodeToDeleteRightChild);
+                                        fs.write(descriptor, newPointer, 0, 8, 16, err => {
+                                            if (err){
+                                                fs.close(descriptor, e => {
+                                                    if (e) rejectUpdateRoot(e);
+                                                    else rejectUpdateRoot(err);
+                                                });
+                                            }
+                                            else{
+                                                // Root pointer header in file has been updated, so update the in-memory version
+                                                treeAccess.headers[filePath]["root"] = Number(nodeToDeleteLeftChild + nodeToDeleteRightChild);
+                                                resolveUpdateRoot(true);
+                                            }
+                                        });
+                                    });
+                                }
+                                else{
+                                    // There are two children, so use the right one as the root (this choice is arbitrary) and insert the left one as child somewhere in the right subtree
+                                    await new Promise((resolveUpdateRoot, rejectUpdateRoot) => {
+                                        // Get username of left child
+                                        fs.read(descriptor, {position: Number(nodeToDeleteLeftChild), length: 32, buffer: Buffer.alloc(32)}, async (err, bytesRead, data) => {
+                                            if (err){
+                                                fs.close(descriptor, e => {
+                                                    if (e) rejectUpdateRoot(e);
+                                                    else rejectUpdateRoot(err);
+                                                });
+                                            }
+                                            else{
+                                                let leftChildUsername = treeAccess.bufferToString(data);
+                                                // Search right subtree to find a suitable parent for the left child
+                                                let suitableNode = await treeAccess.searchTree(filePath, leftChildUsername, false, Number(nodeToDeleteRightChild));
+                                                // Now add left node as the left child of suitableNode
+                                                let newPointer = Buffer.alloc(8);
+                                                newPointer.writeBigInt64BE(nodeToDeleteLeftChild);
+                                                fs.write(descriptor, newPointer, 0, 8, suitableNode["position"] + 40, err => {
+                                                    if (err){
+                                                        fs.close(descriptor, e => {
+                                                            if (e) rejectUpdateRoot(e);
+                                                            else rejectUpdateRoot(err);
+                                                        });
+                                                    }
+                                                    else{
+                                                        // Now make right child the root (by updating root pointer header)
+                                                        newPointer.writeBigInt64BE(nodeToDeleteRightChild);
+                                                        fs.write(descriptor, newPointer, 0, 8, 16, err => {
+                                                            if (err){
+                                                                fs.close(descriptor, e => {
+                                                                    if (e) rejectUpdateRoot(e);
+                                                                    else rejectUpdateRoot(err);
+                                                                });
+                                                            }
+                                                            else{
+                                                                // We have updated the header on the file, so need to update the in-memory version
+                                                                treeAccess.headers[filePath]["root"] = Number(nodeToDeleteRightChild);
+                                                                resolveUpdateRoot(true);
+                                                            }
+                                                        });
+                                                    }
+                                                });
+                                            }
+                                        });
+                                    });
+                                }
+                                fs.write(descriptor, Buffer.alloc(188), 0, 188, oldRootPointer, err => {
                                     if (err){
                                         fs.close(descriptor, e => {
                                             if (e) reject(e);
@@ -543,7 +621,7 @@ class treeAccess {
 
     static _calculateBufferDetails(treeLength, startPoint){
         // treeLength = total number of entries, startPoint = the start position of the first entry in the buffer
-        let bufferEnd = Math.min(startPoint + (idealBufferSize * 188), 8 + (treeLength * 188));
+        let bufferEnd = Math.min(startPoint + (idealBufferSize * 188), 24 + (treeLength * 188));
         let bufferSize = bufferEnd - startPoint;
         return [startPoint, bufferEnd, bufferSize];
     }
@@ -553,7 +631,7 @@ class treeAccess {
             fs.open(filePath, "r", (err, descriptor) => {
                 if (err) reject(err);
                 else{
-                    fs.read(descriptor, {position: 0, length: 8, buffer: Buffer.alloc(8)}, (err, bytesRead, data) => {
+                    fs.read(descriptor, {position: 0, length: 24, buffer: Buffer.alloc(24)}, (err, bytesRead, data) => {
                         if (err){
                             fs.close(descriptor, e => {
                                 if (e) reject(e);
@@ -561,7 +639,10 @@ class treeAccess {
                             });
                         }
                         else{
-                            treeAccess.lengthHeader[filePath] = Number(data.readBigInt64BE(0));
+                            treeAccess.headers[filePath] = {};
+                            treeAccess.headers[filePath]["length"] = Number(data.readBigInt64BE(0));
+                            treeAccess.headers[filePath]["nextFree"] = Number(data.readBigInt64BE(8));
+                            treeAccess.headers[filePath]["root"] = Number(data.readBigInt64BE(16));
                             fs.close(descriptor, e => {
                                 if (e) reject(e);
                                 else resolve(true);
