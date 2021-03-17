@@ -155,6 +155,11 @@ io.on('connection', socket => {
     
   })
 
+    // Broadcast to other users when someone is typing
+      socket.on('user_typing', myUsername => {
+      socket.to('authorised').emit('user_typing', myUsername);
+    })
+    
 
   // When user tries to create account
   socket.on('create-account', details => {

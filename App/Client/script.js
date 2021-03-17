@@ -10,6 +10,7 @@ var currentSendingUser;
 
 var myUsername = ""; 
 
+var typingTimer = false;
 
 // settings 
 var settings 
@@ -417,6 +418,8 @@ messageFileSelector.onchange = () => {
   }
 };
 
+
+
 function exitSendFileMode(){
   // Exit send file mode and allow text messages to be sent
   // Clear messageInput
@@ -440,4 +443,37 @@ function showFileSelector(){
 
 function attemptAuth(){
   socket.emit('attempt-auth', {"token": sessionStorage.token, "username" : sessionStorage.username})
+}
+
+
+
+// Listen for when client starts typing
+// Could change to trigger when message box contents is not blank? Tried but couldn't get it working
+messageInput.addEventListener('keypress', inUsername => { 
+  if(typingTimer == false){
+    inUsername = myUsername;
+    socket.emit('user_typing', inUsername);
+    console.log('typing')
+    typingTimer = true;
+    setTimeout(emit, 3000)
+  }
+})
+
+// Recieves broadcast from server about someone else typing and updates div
+socket.on('user_typing', myUsername => {
+  // Sets the div to visible
+  feedback.style.visibility = 'visible';
+  // Outputting which user is typing.
+  feedback.innerHTML = '<p><em>' + myUsername + ' is typing... </em></p>';
+  // Sets a timer triggered by the original key press. 
+  // After 4 seconds the div will become invisible until it is triggered again.
+  setTimeout(invisible, 4000)
+})
+// Function which makes the feedback div invisible.
+function invisible(){
+  feedback.style.visibility = 'hidden';
+}
+// Function which emits to server every 2 seconds instead of every key press. However it still registers every keypress?
+function emit(){
+  f = false;
 }
