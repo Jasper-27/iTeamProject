@@ -25,17 +25,6 @@ getUsers();
 attemptAuth()
 
 
-// Checking in with the server ============================
-
-
-const heartBeatReauth = setInterval(function() { 
-
-  renewAuth()
-
-}, 20000)
-
-//=========================================================
-
 
 // gets a username sent from the server
 socket.on('send-username', data => {
@@ -350,6 +339,7 @@ function appendMessageRecieve(message, inName) {
     messageContainer.scrollTop = messageContainer.scrollHeight;
   }
 
+  
   spamCounter--;
 
   if (spamCounter < 10) {
@@ -452,6 +442,7 @@ function showFileSelector(){
   messageFileSelector.click();
 }
 
+// Token authentication stuff ===========================================
 
 socket.on('auth-maintained', () => {
   console.log("😊 Authentication successful")
@@ -476,3 +467,9 @@ function renewAuth(){
   console.log("renewAuth")
   socket.emit('renew-auth', {"token": sessionStorage.token, "username" : sessionStorage.username})
 }
+
+
+// Checking in with the server every X amount of times 
+const heartBeatReauth = setInterval(function() { renewAuth() }, 20000)
+
+// =============================================================================

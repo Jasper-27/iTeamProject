@@ -122,7 +122,7 @@ io.on('connection', socket => {
     let username = data.username
     let token = data.token
     let timestamp = +new Date()
-    // console.log("⌚:  " + timestamp)
+    //console.log("⌚:  " + timestamp)
 
     id = verifyToken(username, token) 
     
@@ -405,7 +405,6 @@ function verifyToken(username, token) {
 
 
 function disconnectUser(socket, username){
-
   console.log("🚨 " + username + " failed authentication" )
   logger.log("🚨 " + username + " failed authentication ")
 
