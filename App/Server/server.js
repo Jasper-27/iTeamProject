@@ -122,7 +122,7 @@ io.on('connection', socket => {
     let username = data.username
     let token = data.token
     let timestamp = +new Date()
-    //console.log("⌚:  " + timestamp)
+    console.log("⌚:  " + timestamp)
 
     id = verifyToken(username, token) 
     
@@ -136,13 +136,13 @@ io.on('connection', socket => {
     try{
       if (loggedInUsers[id].token === token){ //if the token is valid
         io.to(socket.id).emit('refresh-token', newtoken)  // sends the user their new token
-        socket.leave('authorised')
         loggedInUsers[id].token = newtoken
         loggedInUsers[id].lastCheckIn = timestamp
       }else{ // if it isn't 
         socket.emit('auth-renew-failed')
         console.log("🚨 " + username + " has used an invalid token" )
         disconnectUser(socket, username)
+        socket.disconnect()
       }
     }catch{
       socket.disconnect()
@@ -410,11 +410,17 @@ function verifyToken(username, token) {
 
 
 function disconnectUser(socket, username){
+
+
   console.log("🚨 " + username + " failed authentication" )
   logger.log("🚨 " + username + " failed authentication ")
 
   delete users[socket.id]; // remove the user from the connected users (but doesn't delete them, sets to null i think)
 
+   // you know, just to be extra sure 
+   socket.leave('authorised')
+   socket.disconnect(); 
+ 
   //removes the users name from the client list when they log out
   var index = connected.indexOf(username);
   if (index > -1) {
