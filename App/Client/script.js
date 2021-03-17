@@ -448,16 +448,18 @@ function attemptAuth(){
 
 
 // Listen for when client starts typing
-// Could change to trigger when message box contents is not blank? Tried but couldn't get it working
 messageInput.addEventListener('keypress', inUsername => { 
+  // If user presses a key, system recognises that the variable is set to false
   if(typingTimer == false){
     inUsername = myUsername;
+    // Emits the first notification to the server
     socket.emit('user_typing', inUsername);
+    // Proof by logging on the console
     console.log('typing')
+    // After the first keypress, the variable is set to true which kicks off the timer
     typingTimer = true;
-    setTimeout(emit, 3000)
-    // Sets the div to visible
-  feedback.style.visibility = 'visible';
+    // Timer has a method which sets the typingTimer back to false and starts the process again if a user types a key
+    setTimeout(timer, 3000)
   }
 })
 
@@ -475,7 +477,7 @@ socket.on('user_typing', myUsername => {
 function invisible(){
   feedback.style.visibility = 'hidden';
 }
-// Function which emits to server every 2 seconds instead of every key press. However it still registers every keypress?
-function emit(){
+// Function which sets typingTimer to false which starts again when a user hits a key.
+function timer(){
   typingTimer = false;
 }
