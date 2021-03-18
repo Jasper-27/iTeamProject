@@ -6,8 +6,8 @@ const Settings = require("./Settings.js");
 
 const messagesFolderPath = __dirname + "/data/messages";
 const messagesIndexPath = __dirname + "/data/messages/messages_index.wdx";
-const logsFolderPath = __dirname + "/not/implemented/yet";
-const logsIndexPath = __dirname + "/not/implemented.yet";
+const logsFolderPath = __dirname + "/data/logs";
+const logsIndexPath = __dirname + "/data/logs/logs_index.wdx";
 const accountsFilePath = __dirname + "/data/accounts/accounts.wac";
 const profilePicturesFilePath = __dirname + "/not/implemented.yet";
 

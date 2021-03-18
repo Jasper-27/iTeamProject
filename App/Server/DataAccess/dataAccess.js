@@ -6,6 +6,8 @@ const path = require('path');
 
 const usersAccess = require('./usersAccess');
 const messagesAccess = require('./messagesAccess');
+const logAccess = require('./logAccess');
+const Log = require('../Log');
 
 /* 
 System can handle asynchronous read operations (unlike writes)
@@ -56,6 +58,7 @@ class DataAccess{
         // Instatiate lower level classes
         this.users = new usersAccess(this.accountsTreePath, this.profilePicturesPath);
         this.messages = new messagesAccess(this.messagesFolderPath, this.messagesIndexPath);
+        this.logs = new logAccess(this.logsFolderPath, this.logsIndexPath);
 
         // Setup readBacklog
         this.asyncReadCount = 0;
@@ -142,7 +145,7 @@ class DataAccess{
     }
 
     getMessages(startTime, endTime){
-        // Returns all messages startTime and endTime, the times should be provided as unix timestamps
+        // Returns all messages between startTime and endTime, the times should be provided as unix timestamps
         return new Promise((resolve, reject) => {
             // Must declare as function, as it will be used in different places depending on whether asyncReadLimit has been met
             let fetchMessages = async () => {
@@ -163,6 +166,37 @@ class DataAccess{
             }
             else{
                 this.readBacklog = this.readBacklog.then(fetchMessages);
+            }
+        });
+    }
+
+    log(logText){
+        // Takes in text and adds it as a log entry
+        return this.logs.addLogEntry(new Log(logText, new Date()));
+    }
+
+    getLogEntries(startTime, endTime){
+        // Returns all log entries between startTime and endTime, the times should be provided as unix timestamps
+        return new Promise((resolve, reject) => {
+            // Must declare as function, as it will be used in different places depending on whether asyncReadLimit has been met
+            let fetchEntries = async () => {
+                this.asyncReadCount++;
+                try{
+                    let result = await this.logs.getLogEntries(startTime, endTime);
+                    this.asyncReadCount--;
+                    resolve(result);
+                }
+                catch(reason){
+                    this.asyncReadCount--;
+                    reject(reason);
+                }
+            };
+            // If asyncReadCount is less than asyncReadLimit then run the code immediately, otherwise chain it to readBacklog
+            if (this.asyncReadCount < asyncReadLimit){
+                fetchEntries();
+            }
+            else{
+                this.readBacklog = this.readBacklog.then(fetchEntries);
             }
         });
     }
