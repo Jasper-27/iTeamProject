@@ -1,5 +1,4 @@
 const Message = require("./Message");
-const dataAccess_old = require("./dataAccess");  // Old system still used for logging, will move over in future
 const DataAccess = require("./DataAccess/dataAccess");
 const profanity = require("./ProfanityFilter");
 const Settings = require("./Settings.js"); 
@@ -12,8 +11,6 @@ const accountsFilePath = __dirname + "/data/accounts/accounts.wac";
 const profilePicturesFilePath = __dirname + "/not/implemented.yet";
 
 var Storage = new DataAccess(messagesFolderPath, messagesIndexPath, logsFolderPath, logsIndexPath, accountsFilePath, profilePicturesFilePath);
-// The new storage system does not yet provide logging, so old one must still be used for now
-var logger = new dataAccess_old.LogAccess(); 
 
 const users = {}  // Maps socket ids to usernames
 let loggedInUsers = {}  // Contains access token for user, uses usernames as keys
@@ -56,7 +53,7 @@ app.post('/login', async (req, res) => {  // Function must be async to allow use
     })
 
     console.log("🔑 User: " + username + " has logged in")
-    logger.log("User: " + username + " has logged in")
+    Storage.log("User: " + username + " has logged in")
 
   }else{
     res.status(406).send({message: 'Incorrect credentials'})
@@ -80,7 +77,7 @@ const io = require('socket.io')(socketPort, {
   }
 });
 
-logger.log("Server started")
+Storage.log("Server started")
 
 var profanityFilter = new profanity("*", true);
 
@@ -172,7 +169,7 @@ io.on('connection', socket => {
         let creationSuccessful = await Storage.createAccount(details.username, details.firstName, details.lastName, details.password);
         if (creationSuccessful === true){
           socket.emit('register-success');
-          logger.log("New account created: " + details.username);
+          Storage.log("New account created: " + details.username);
           console.log("👍 New account created: " + details.username); 
         }
         else{
@@ -279,7 +276,7 @@ io.on('connection', socket => {
     if (typeof name == "string"){
       socket.to('authorised').emit('user-disconnected', name);
       //logs that the user disconnected at this time
-      logger.log(name + " disconnected"); 
+      Storage.log(name + " disconnected"); 
       console.log("💔 " + name + " disconnected"); 
 
       delete users[socket.id]; // remove the user from the connected users (but doesn't delete them, sets to null i think)
