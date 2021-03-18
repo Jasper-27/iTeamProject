@@ -7,6 +7,16 @@ Headers:
 - The second 8 bytes contain a pointer to the next free space
 - The third 8 bytes contain a pointer to the root node of the tree
 
+The "next free space" header is used to allow new nodes to be written to the space previously occupied by deleted nodes.  This helps to avoid growing the file unnecessarily.
+-Deleting:-
+- When a node is deleted, its location in the file is written to the header
+- The previous value of the header is written to the first 8 bytes of the newly freed space
+
+-Adding nodes:-
+- If the header is 0, the system knows there is no unused space so must add the new node to the end of the file
+- Otherwise it instead writes the new node to the location specified in the header
+- Before doing this it copies the value in the first 8 bytes of the free space to the header, so the header points to the next free space (if there is one)
+
 Nodes have the following format (| symbols not included in file, just here to make easier to read)
 Username (32 bytes)|Numerical value for username (sum of all character codes)(8 bytes)|Left child node position (8 bytes)|Right child node position (8 bytes)|First name (32 bytes)|Last name (32 bytes)|Password (60 bytes)|Profile picture position (8 bytes)*
 
@@ -15,7 +25,6 @@ All these fields are fixed length (as this allows values to be changed without t
 
 */
 
-const e = require('cors');
 const fs = require('fs');
 const path = require('path');
 
@@ -44,9 +53,7 @@ class treeAccess {
             }
             catch{}
             // Create the file with the headers containing, except the root pointer which should point to byte 24 (where the root would be if it existed)
-            let newHeaders = Buffer.alloc(24);
-            newHeaders.writeBigInt64BE(24n, 16);
-            fs.writeFileSync(filePath, newHeaders);
+            fs.writeFileSync(filePath, Buffer.alloc(24));
         }
     }
 
@@ -71,8 +78,8 @@ class treeAccess {
                             return;
                         }
                     }
-                    if (treeAccess.headers[filePath]["length"] == 0){
-                        // There are no nodes in the tree
+                    if (treeAccess.headers[filePath]["root"] == 0){
+                        // There is no root node, so the tree must be empty
                         returnData.fileEmpty = true;
                         fs.close(descriptor, e => {
                             if (e) reject(e);
@@ -224,7 +231,7 @@ class treeAccess {
             // Define function to be used as promise for appending a new node
             let appendNode = (resolveAppend, rejectAppend) => {
                 // Promise should contain start position of new node
-                fs.open(filePath, "r+", (err, descriptor) => {
+                fs.open(filePath, "r+", async (err, descriptor) => {
                     if (err) rejectAppend(err);
                     else{
                         let usernameBuffer = treeAccess.stringToBuffer(username, 32);
@@ -238,8 +245,32 @@ class treeAccess {
                         newNode.writeBigInt64BE(0n, 48);
                         // Copy nodeData into newNode at byte 56
                         nodeData.copy(newNode, 56, 0);
-                        // Write newNode to end of file
-                        fs.write(descriptor, newNode, 0, 188, 24 + treeAccess.headers[filePath]["length"] * 188, err => {
+
+                        // Write newNode to next free position
+                        let nextFreePos = treeAccess.headers[filePath]["nextFree"];
+                        if (nextFreePos == 0){
+                            // If the next free position header points to 0, there is no more unused space between existing entries, so we must append entry to end of file
+                            nextFreePos = 24 + treeAccess.headers[filePath]["length"] * 188;
+                        }
+                        else{
+                            // The first 8 bytes of the free space will contain a pointer to the next free space, so put that pointer in the header before it is overwritten
+                            let newHeader = await new Promise((resolveReadPointer, rejectReadPointer) => {
+                                fs.read(descriptor, {position: nextFreePos, length: 8, buffer: Buffer.alloc(8)}, (err, bytesRead, data) => {
+                                    if (err){
+                                        fs.close(descriptor, e => {
+                                            if (e) rejectReadPointer(e);
+                                            else rejectReadPointer(err);
+                                        });
+                                    }
+                                    else{
+                                        resolveReadPointer(Number(data.readBigInt64BE()));
+                                    }
+                                });
+                            });
+                            await treeAccess.updateNextFreeHeader(filePath, newHeader);
+                        }
+
+                        fs.write(descriptor, newNode, 0, 188, nextFreePos, err => {
                             if (err){
                                 fs.close(descriptor, e =>{
                                     if (e) rejectAppend(e);
@@ -249,7 +280,7 @@ class treeAccess {
                             else{
                                 fs.close(descriptor, e => {
                                     if (e) rejectAppend(e);
-                                    else resolveAppend(24 + treeAccess.headers[filePath]["length"] * 188);
+                                    else resolveAppend(nextFreePos);
                                 });
                             }
                         });
@@ -258,28 +289,34 @@ class treeAccess {
             };
 
             // Define function to update length header
-            let incrementHeader = () => {
-                fs.open(filePath, "r+", (err, descriptor) => {
-                    let lengthHeader = treeAccess.headers[filePath]["length"] + 1;
-                    let headerBuffer = Buffer.alloc(8);
-                    headerBuffer.writeBigInt64BE(BigInt(lengthHeader));
-                    fs.write(descriptor, headerBuffer, 0, 8, 0, err => {
-                        if (err){
-                            fs.close(descriptor, e =>{
-                                if (e) reject(e);
-                                else reject(err);
-                            });
-                        }
-                        else{
-                            // Update the in-memory version
-                            treeAccess.headers[filePath]["length"] = lengthHeader;
-                            fs.close(descriptor, e => {
-                                if (e) reject(e);
-                                else resolve(true);
-                            });
-                        }
+            let incrementHeader = (newNodePos) => {
+                // Only update the length header if the new node was written to new space at the end of the file (rather than being written the space used by a previously deleted node)
+                let lengthHeader = treeAccess.headers[filePath]["length"];
+                if (newNodePos == 24 + (lengthHeader * 188)){
+                    fs.open(filePath, "r+", (err, descriptor) => {
+                        let headerBuffer = Buffer.alloc(8);
+                        headerBuffer.writeBigInt64BE(BigInt(lengthHeader + 1));
+                        fs.write(descriptor, headerBuffer, 0, 8, 0, err => {
+                            if (err){
+                                fs.close(descriptor, e =>{
+                                    if (e) reject(e);
+                                    else reject(err);
+                                });
+                            }
+                            else{
+                                // Update the in-memory version
+                                treeAccess.headers[filePath]["length"] = lengthHeader + 1;
+                                fs.close(descriptor, e => {
+                                    if (e) reject(e);
+                                    else resolve(true);
+                                });
+                            }
+                        });
                     });
-                });
+                }
+                else{
+                    resolve(true);
+                }
             }
 
             try{
@@ -327,13 +364,32 @@ class treeAccess {
                                 }
                             });
                         });
-                        incrementHeader();
+                        incrementHeader(newNodePos);
                     }
                 }
                 else if (parentData["fileEmpty"] === true){
-                    // There are no existing nodes, so we just have to append the new one and increment the length header
-                    await new Promise(appendNode);
-                    incrementHeader();
+                    // There are no existing nodes, so we just have to add the new one, update the root pointer, and increment the length header
+                    let newNodePos = await new Promise(appendNode);
+                    // The new node is the root node, so update root pointer
+                    fs.open(filePath, "r+", (err, descriptor) => {
+                        if (err) reject(err);
+                        else{
+                            let newPointer = Buffer.alloc(8);
+                            newPointer.writeBigInt64BE(BigInt(newNodePos));
+                            fs.write(descriptor, newPointer, 0, 8, 16, err => {
+                                if (err){
+                                    fs.close(descriptor, e => {
+                                        if (e) reject(e);
+                                        else reject(err);
+                                    });
+                                }
+                                else{
+                                    treeAccess.headers[filePath]["root"] = newNodePos;
+                                    incrementHeader(newNodePos);
+                                }
+                            });
+                        }
+                    });
                 }
             }
             catch(e){
@@ -390,7 +446,10 @@ class treeAccess {
                                             });
                                         }
                                         // Parent pointer now written, so we can delete the node
-                                        fs.write(descriptor, Buffer.alloc(188), 0, 188, nodeToDelete["position"], err => {
+                                        // To allow this space to be reallocated, we point the "next free" pointer to it, and write the existing value of the pointer to the first 8 bytes
+                                        let clearedSpace = Buffer.alloc(188);
+                                        clearedSpace.writeBigInt64BE(BigInt(treeAccess.headers[filePath]["nextFree"]));
+                                        fs.write(descriptor, clearedSpace, 0, 188, nodeToDelete["position"], async err => {
                                             if (err){
                                                 fs.close(descriptor, e => {
                                                     if (e) reject(e);
@@ -398,10 +457,14 @@ class treeAccess {
                                                 });
                                             }
                                             else{
-                                                // The node has been overwritten with 0's
-                                                fs.close(descriptor, e => {
+                                                // The node has been overwritten with the existing next free pointer and 0's
+                                                fs.close(descriptor, async e => {
                                                     if (e) reject(e);
-                                                    else resolve(true);
+                                                    else {
+                                                        // Update the "next free" header before ending
+                                                        await treeAccess.updateNextFreeHeader(filePath, nodeToDelete["position"]);
+                                                        resolve(true);
+                                                    }
                                                 });
                                             }
                                         });
@@ -443,7 +506,10 @@ class treeAccess {
                                                     }
                                                     else{
                                                         // With all necessary pointers now adjusted, the node to be deleted no longer exists in the tree.  So we can delete it from the file
-                                                        fs.write(descriptor, Buffer.alloc(188), 0, 188, nodeToDelete["position"], err => {
+                                                        // To allow the space to be reallocated, point the "next free" pointer here, and place the existing pointer in the first 8 bytes of the new free space
+                                                        let clearedSpace = Buffer.alloc(188);
+                                                        clearedSpace.writeBigInt64BE(BigInt(treeAccess.headers[filePath]["nextFree"]));
+                                                        fs.write(descriptor, clearedSpace, 0, 188, nodeToDelete["position"], async err => {
                                                             if (err){
                                                                 fs.close(descriptor, e => {
                                                                     if (e) reject(e);
@@ -452,9 +518,13 @@ class treeAccess {
                                                             }
                                                             else{
                                                                 // The node has been overwritten with 0's
-                                                                fs.close(descriptor, e => {
+                                                                fs.close(descriptor, async e => {
                                                                     if (e) reject(e);
-                                                                    else resolve(true);
+                                                                    else{
+                                                                        // Update "next free" header to point to the newly freed space
+                                                                        await treeAccess.updateNextFreeHeader(filePath, nodeToDelete["position"]);
+                                                                        resolve(true);
+                                                                    }
                                                                 });
                                                             }
                                                         });
@@ -547,7 +617,10 @@ class treeAccess {
                                         });
                                     });
                                 }
-                                fs.write(descriptor, Buffer.alloc(188), 0, 188, oldRootPointer, err => {
+                                // To allow space to be reallocated, point "next free" header to node to be deleted, and write the existing "next free" pointer to the first 8 bytes of the newly freed space
+                                let clearedSpace = Buffer.alloc(188);
+                                clearedSpace.writeBigInt64BE(BigInt(treeAccess.headers[filePath]["nextFree"]));
+                                fs.write(descriptor, clearedSpace, 0, 188, oldRootPointer, async err => {
                                     if (err){
                                         fs.close(descriptor, e => {
                                             if (e) reject(e);
@@ -555,10 +628,14 @@ class treeAccess {
                                         });
                                     }
                                     else{
-                                        // The node has been overwritten with 0's
-                                        fs.close(descriptor, e => {
+                                        // The node has been overwritten with the next free pointer and 0's
+                                        fs.close(descriptor, async e => {
                                             if (e) reject(e);
-                                            else resolve(true);
+                                            else{
+                                                // Point "next free" header to newly freed space
+                                                await treeAccess.updateNextFreeHeader(filePath, oldRootPointer);
+                                                resolve(true);
+                                            }
                                         });
                                     }
                                 });
@@ -578,6 +655,41 @@ class treeAccess {
             catch (reason){
                 reject(reason);
             }
+        });
+    }
+
+    static updateNextFreeHeader(filePath, newValue){
+        return new Promise(async (resolve, reject) => {
+            // Update the next free pointer header
+            if (typeof treeAccess.headers[filePath] != "object"){
+                // We don't yet have the headers in memory, so must load them
+                await treeAccess._readHeadersToMemory(filePath);
+            }
+            let newPointer = Buffer.alloc(8);
+            newPointer.writeBigInt64BE(BigInt(newValue));
+            fs.open(filePath, "r+", (err, descriptor) => {
+                if (err) reject(err);
+                else{
+                    fs.write(descriptor, newPointer, 0, 8, 8, err => {
+                        if (err){
+                            fs.close(descriptor, e => {
+                                if (e) reject(e);
+                                else reject(err);
+                            });
+                        }
+                        else{
+                            fs.close(descriptor, e => {
+                                if (e) reject(e);
+                                else{
+                                    // Update in-memory version
+                                    treeAccess.headers[filePath]["nextFree"] = newValue;
+                                    resolve(true);
+                                }
+                            });
+                        }
+                    });
+                }
+            });
         });
     }
 
