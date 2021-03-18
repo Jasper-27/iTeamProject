@@ -513,6 +513,10 @@ function getUsers(){
 // Fills up the connected users list on the client interface 
 function generateUserList(list){
 	
+  // get current time
+  var current = new Date();
+  var current = current.toLocaleTimeString();
+	
   connectedUsersList.innerHTML = " ";
 
   list.forEach((item, index) => {
@@ -550,7 +554,7 @@ function generateUserList(list){
 	desc.appendChild(name);
 	
 	var small = document.createElement('small');
-	small.innerText = "CurrentTime";
+	small.innerText = "Last seen: " + current;
 	
 	desc.appendChild(small);
 		
@@ -663,7 +667,7 @@ socket.on('user_typing', myUsername => {
   // Sets the div to visible
   feedback.style.visibility = 'visible';
   // Outputting which user is typing.
-  feedback.innerHTML = '<p><em>' + myUsername + ' is typing... </em></p>';
+  feedback.innerHTML =  myUsername + ' is typing...';
   // Sets a timer triggered by the original key press. 
   // After 4 seconds the div will become invisible until it is triggered again.
   clearTimeout(timeout)
