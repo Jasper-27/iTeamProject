@@ -542,7 +542,7 @@ function generateUserList(list){
 	
 	
 	var desc = document.createElement('div');
-	desc.className = "desc";
+	desc.className = "feedback";
 	
 	var name = document.createElement('h5')
 	name.innerText = item;
