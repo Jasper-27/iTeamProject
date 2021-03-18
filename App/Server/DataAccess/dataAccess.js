@@ -72,6 +72,18 @@ class DataAccess{
         return this.users.deleteAccount(username);
     }
 
+    changeFirstName(username, newFirstName){
+        return this.users.changeFirstName(username, newFirstName);
+    }
+
+    changeLastName(username, newLastName){
+        return this.users.changeLastName(username, newLastName);
+    }
+
+    changePassword(username, newPassword){
+        return this.users.changePassword(username, newPassword);
+    }
+
     checkAccountCredentials(username, password){
         // Will contain the account object if credentials match, or false if not
         return new Promise((resolve, reject) => {

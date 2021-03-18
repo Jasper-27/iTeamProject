@@ -398,6 +398,44 @@ class treeAccess {
         });
     }
 
+    static modifyNode(filePath, username, offset, newData){
+        // Find the node with the given username and, if it exists, overwrite the data from the given offset
+        return new Promise(async (resolve, reject) => {
+            if (0 <= offset && offset < 188){
+                try{
+                    // Find the node
+                    let nodeDetails = await treeAccess.searchTree(filePath, username);
+                    // Overwrite the data
+                    if (nodeDetails["fileEmpty"] === false && nodeDetails["nodeExists"] === true){
+                        fs.open(filePath, "r+", (err, descriptor) => {
+                            if (err) reject(err);
+                            else{
+                                fs.write(descriptor, newData, 0, newData.length, nodeDetails["position"] + offset, err => {
+                                    if (err){
+                                        fs.close(descriptor, e => {
+                                            if (e) reject(e);
+                                            else reject(err);
+                                        });
+                                    }
+                                    else{
+                                        resolve(true);
+                                    }
+                                });
+                            }
+                        });
+                    }
+                    else reject("Requested node does not exist");
+                }
+                catch (reason){
+                    reject(reason);
+                }
+            }
+            else{
+                reject("Offset must be between 0 and 187 (inclusive)");
+            }
+        });
+    }
+
     static removeNode(filePath, username){
         // Find the node with the given username and delete it if it exists
         return new Promise(async (resolve, reject) => {

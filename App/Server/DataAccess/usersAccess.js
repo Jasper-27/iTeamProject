@@ -62,7 +62,7 @@ class usersAccess{
                     let lastName = treeAccess.bufferToString(accountInfo["data"].subarray(88, 120));
                     let password = treeAccess.bufferToString(accountInfo["data"].subarray(120, 180));
                     // The actual profile picture is not stored in the tree, this will just be the position of the profile picture in the profile pictures file
-                    let profilePictureLocation = Number(accountInfo["data"].readBigInt64BE(80));
+                    let profilePictureLocation = Number(accountInfo["data"].readBigInt64BE(180));
                     let userAccount = new account(username, firstName, lastName, password, profilePictureLocation);
                     // The profile picture may not be needed, so it will be fetched later when it is needed
                     resolve(userAccount);
@@ -121,6 +121,66 @@ class usersAccess{
             });
         });
     }
+
+    changeFirstName(username, newFirstName){
+        return new Promise(async (resolve, reject) => {
+            // Add new promise to the pendingWrites chain to be executed once previous one is done
+            this.pendingWrites = this.pendingWrites.then(async () => {
+                try{
+                    // Create raw Buffer from data
+                    let rawData = treeAccess.stringToBuffer(newFirstName, 32);
+                    // Then update file
+                    await treeAccess.modifyNode(this.accountsTreePath, username, 56, rawData);  // First name is stored in bytes 56 - 88 of the entry
+                    resolve(true);
+                }
+                catch(err){
+                    if (err == "Requested node does not exist") reject("Account does not exist");
+                    else reject(err);
+                }
+            });
+        });
+    }
+
+    changeLastName(username, newLastName){
+        return new Promise(async (resolve, reject) => {
+            // Add new promise to the pendingWrites chain to be executed once previous one is done
+            this.pendingWrites = this.pendingWrites.then(async () => {
+                try{
+                    // Create raw Buffer from data
+                    let rawData = treeAccess.stringToBuffer(newLastName, 32);
+                    // Then update file
+                    await treeAccess.modifyNode(this.accountsTreePath, username, 88, rawData);  // Last name is stored in bytes 88 - 120 of the entry
+                    resolve(true);
+                }
+                catch(err){
+                    if (err == "Requested node does not exist") reject("Account does not exist");
+                    else reject(err);
+                }
+            });
+        });
+    }
+
+    changePassword(username, newPassword){
+        return new Promise(async (resolve, reject) => {
+            // Add new promise to the pendingWrites chain to be executed once previous one is done
+            this.pendingWrites = this.pendingWrites.then(async () => {
+                try{
+                    // Hash password
+                    let passwordHash = await bcrypt.hash(newPassword, saltRounds);
+                    // Create raw Buffer from data
+                    let rawData = treeAccess.stringToBuffer(passwordHash, 60);
+                    // Then update file
+                    await treeAccess.modifyNode(this.accountsTreePath, username, 120, rawData);  // Password is stored in bytes 120 - 180 of the entry
+                    resolve(true);
+                }
+                catch(err){
+                    if (err == "Requested node does not exist") reject("Account does not exist");
+                    else reject(err);
+                }
+            });
+        });
+    }
+
 
     deleteAccount(username){
         return new Promise((resolve, reject) => {
