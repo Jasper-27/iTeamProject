@@ -16,9 +16,15 @@ var settings
 
 var connectedUsersList = document.getElementById('users');  // The HTML list that contains the connected users 
 
+// Used for detecting spam
+var spamCounter = 0;
+var spam = false;
+
 getUsers();
 
 attemptAuth()
+
+
 
 // gets a username sent from the server
 socket.on('send-username', data => {
@@ -66,6 +72,9 @@ socket.on('send-users', connectedUsers => {
 })
 
 
+
+
+
 // Functions for sending messages
 function sendText(){
   let message = messageInput.value;
@@ -79,6 +88,13 @@ function sendText(){
     msgAlert('Alert:', 'Message is too long.')
     return; 
   }
+
+  // Blocks message if client has exceeded spam limit
+  if (spam == true) {
+    msgAlert('Alert:', 'Your message was detected as spam!')
+    return;
+  }
+
 
   socket.emit('send-chat-message', {type: "text", content: message});
   // console.log("Message sent: " + message)
@@ -100,8 +116,8 @@ function sendFile(){
     message = {type: "", content: "", fileName: file.name};  // File messages also have a filename field
 
 
+    // Client-side file extension blocking
     var restrictedFiles = settings.restrictedFiles;
-    console.log(restrictedFiles);
 
     for (var i of restrictedFiles) {
       
@@ -234,6 +250,12 @@ function appendMessage(message) {
     // However, for other types of messages do the scrolling here, as div elements fo not have an onload event
     messageContainer.scrollTop = messageContainer.scrollHeight;
   }
+
+  spamCounter++;
+
+  if (spamCounter > 9) {
+    spam = true;
+  }
 }
                                               
 //Adds a message someone else sent to the chat 
@@ -316,6 +338,19 @@ function appendMessageRecieve(message, inName) {
     // However, for other types of messages do the scrolling here, as div elements fo not have an onload event
     messageContainer.scrollTop = messageContainer.scrollHeight;
   }
+
+  
+  spamCounter--;
+
+  if (spamCounter < 10) {
+
+    spam = false;
+  }
+
+  if (spamCounter < 0) {
+
+    spamCounter = 0;
+  }
 }
 
 function appendUserJoinOrDisconnect(message){
@@ -375,8 +410,7 @@ function generateUserList(list){
 messageFileSelector.onchange = () => {
   if (0 < messageFileSelector.files.length){
     // A file has been selected, display the name of the file in the message input area
-    // Disable the input box
-    messageInput.disabled = true;
+    messageInput.disabled = true;     // Disable the input box
     // Add filename to input box
     messageInput.value = messageFileSelector.files[0].name;
     // Change "choose file" button to cancel file sending
@@ -408,7 +442,34 @@ function showFileSelector(){
   messageFileSelector.click();
 }
 
+// Token authentication stuff ===========================================
+
+socket.on('auth-maintained', () => {
+  console.log("😊 Authentication successful")
+})
+
+socket.on('auth-renew-failed', () => {
+  alert("⚠ Authentication failed! ⚠")
+
+})
+
+
+socket.on('refresh-token', newToken => {
+  sessionStorage.token = newToken
+  console.log("😊 Authentication successful")
+})
 
 function attemptAuth(){
   socket.emit('attempt-auth', {"token": sessionStorage.token, "username" : sessionStorage.username})
 }
+
+function renewAuth(){
+  console.log("renewAuth")
+  socket.emit('renew-auth', {"token": sessionStorage.token, "username" : sessionStorage.username})
+}
+
+
+// Checking in with the server every X amount of times 
+const heartBeatReauth = setInterval(function() { renewAuth() }, 20000)
+
+// =============================================================================

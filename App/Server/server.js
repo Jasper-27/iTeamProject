@@ -21,10 +21,22 @@ let loggedInUsers = {}  // Contains access token for user, uses usernames as key
 
 const cors = require('cors')
 const express = require('express');
+
 const Account = require("./Account");
+
 
 const app = express()
 const APIport = 8080
+
+
+//production
+const reauthInterval = 60000 // the gap between the server checking when the client last check in
+const checkInWindow = 40000 //the time window the client has to check in (needs to be great that set on client)
+
+// //Testing  (remember to change on client)
+// const reauthInterval = 5000 // the gap between the server checking when the client last check in
+// const checkInWindow = 10000
+
 
 app.use ( express.json() )
 app.use( cors() ) 
@@ -39,12 +51,13 @@ app.post('/login', async (req, res) => {  // Function must be async to allow use
   if (user instanceof Account){
     let name = user.userName;
 
-
     // generate the users token
     let token = require('crypto').randomBytes(64).toString('hex'); 
 
     loggedInUsers[name] = {
-      "token" : token
+      "username" : username, 
+      "token" : token, 
+      "lastCheckIn" : +new Date()
     }
 
     res.send({
@@ -87,6 +100,12 @@ let settings = Settings.readSettings();
 //for getting the connected users 
 var connected = []; 
 
+// Used for detecting spam
+var clients = [];
+var spamTracker;
+//var spamCounter;
+//var spam = false;
+
 console.log("*****************************************");
 console.log("*          😉 WINKI SERVER 😉           *");      
 console.log("*****************************************");
@@ -96,58 +115,103 @@ console.log(`📧 Message socket online: http://localhost:${socketPort}`)
 
 io.on('connection', socket => {
 
-  socket.on('attempt-auth', async data =>{
+
+  // Every min re-authenticate the clients. 
+  const heartBeatReauth = setInterval(function() { 
+    checkAuth(socket)
+  }, reauthInterval)
+
+  //checking the user is still who they are during
+  socket.on('renew-auth', data => {
     let username = data.username
     let token = data.token
+    let timestamp = +new Date()
+    // console.log("⌚:  " + timestamp)
 
-    if (username == null){
-      return
-    }
-    if (token == null){
-      return
-    }
-
-    let user = await Storage.getAccount(username)  // If an account is returned, we know the user exists.  Otherwise they don't
-
-    if (!(user instanceof Account)){
-      console.log("User not found")
-      return
-    }
+    id = verifyToken(username, token) 
     
-    if (loggedInUsers[user.userName] == null){
-      console.log("User error")
-      return
-    }
 
-    if (loggedInUsers[user.userName].token === token){
-      // Tell client that login was successful
-      io.to(socket.id).emit('login-success');
+    // console.log("👵 " + token)
+    let newtoken = require('crypto').randomBytes(64).toString('hex'); 
+    // console.log("👶 " + newtoken)
 
-      // Add socket to the "authorised" room so they can receive messages
-      socket.join('authorised');
-      socket.to('authorised').emit('user-connected', username); // Announce that the user has connected
-      io.to(socket.id).emit("send-username", username); // tells the new user what their name is
+    if ( id == null || id < 0 ){ return }
 
-      users[socket.id] = username;
-      
-      // adds the username to list of connected users (provided it isn't there already)
-      if (connected.indexOf(username) < 0){
-        connected.push(username); 
-        socket.to('authorised').emit('send-users', connected);  
+    try{
+      if (loggedInUsers[id].token === token){ //if the token is valid
+        io.to(socket.id).emit('refresh-token', newtoken)  // sends the user their new token
+        loggedInUsers[id].token = newtoken
+        loggedInUsers[id].lastCheckIn = timestamp
+      }else{ // if it isn't 
+        socket.emit('auth-renew-failed')
+        console.log("🚨 " + username + " has used an invalid token" )
+        disconnectUser(socket, username)
+        socket.disconnect()
       }
-
-      io.to(socket.id).emit('settings', settings); //Sends settings to the client 
-
-      console.log("👋 User " + username + " connected");
-
-    }else{
-      socket.emit('authentication-failed')
-      console.log("😭 "+ username + " Had a failed authentication")
+    }catch{
+      socket.disconnect()
     }
     
+
   })
 
 
+  //checking the user credentials when signing in
+  socket.on('attempt-auth', data =>{
+    let username = data.username
+    let token = data.token
+
+    //Checks the username and token are valid. Returns null if they are not
+    id = verifyToken(username, token)
+
+    if (id == null || id < 0){
+      socket.emit('auth-failed')
+      return
+    }
+
+    try{
+      //Checks the username and token are for the user in question
+      if (loggedInUsers[id].token === token){
+        // Tell client that login was successful
+        io.to(socket.id).emit('login-success');
+
+        // Add socket to the "authorised" room so they can receive messages
+        socket.join('authorised');
+        socket.to('authorised').emit('user-connected', username); // Announce that the user has connected
+        io.to(socket.id).emit("send-username", username); // tells the new user what their name is
+
+        users[socket.id] = id; // The old uses array still needs the userId in it
+
+        // adds the username to list of connected users (provided it isn't there already)
+        if (connected.indexOf(username) < 0){
+          connected.push(username); 
+          socket.to('authorised').emit('send-users', connected);  
+
+
+          spamTracker = {client: username, spamCounter: 0, spam: false};
+          clients.push(spamTracker);
+        }
+
+        io.to(socket.id).emit('settings', settings); //Sends settings to the client 
+
+        console.log("👋 User " + username + " connected");
+
+      }else{
+        socket.leave('authorised')
+        socket.emit('authentication-failed')
+        console.log("😭 "+ username + " Had a failed authentication")
+      }
+    
+    }catch{
+      socket.disconnect()
+    }
+ 
+  })
+
+
+  /*
+    THIS NEEDS TO BE MOVED TO THE ADMIN INTERFACE AT SOME POINT
+  */
   // When user tries to create account
   socket.on('create-account', async details => {
     // Make sure given values are valid
@@ -187,7 +251,9 @@ io.on('connection', socket => {
     }
   })
 
+
   socket.on('send-chat-message', message => {
+
     // Check that the client is logged in, and discard their messages otherwise
     if (typeof users[socket.id] == "string"){
       // Make sure message has a suitable type value
@@ -230,20 +296,26 @@ io.on('connection', socket => {
         return;
       }
 
-      // Testing
+      // Block blacklisted files
       if (message.type == "file") {
 
         var extension = message.fileName;
         var blacklist = settings.restrictedFiles;
 
         for (var i of blacklist) {
-          
           if (extension.includes(i)) {
-
             console.log("Bad file trying to be sent!");
-
             return;
           }
+        }
+      }
+
+      // Checks if user sending message has spam flag
+      for (var j of clients) {
+
+        if (j.client == name && j.spam == true) {
+          console.log("A message from " + j.client + " was detected as spam!");
+          return;
         }
       }
       
@@ -267,10 +339,42 @@ io.on('connection', socket => {
           });
         }
       }
+
+      // Finds the client who has just sent a message
+      for (var i of clients) {
+
+        if (i.client == name) {
+
+          // Increments spam counter
+          i.spamCounter = i.spamCounter + 1;
+
+          // Applies spam flag to user if counter exceeds 9
+          if (i.spamCounter > 9) {
+
+            i.spam = true;
+          }
+        }
+        // Decrements user counter when someone else sends a message
+        else {
+          i.spamCounter = i.spamCounter - 1;
+
+          // Doesn't allow counter to go below 0
+          if (i.spamCounter < 0) {
+
+            i.spamCounter = 0;
+          }
+          if (i.spamCounter < 10) {
+
+            i.spam = false;
+          }
+        }
+      }
     }
   })
 
   socket.on('disconnect', () => {
+
+  try{
     let name = users[socket.id];
     // Only continue if name exists (meaning user was properly connected and logged in)
     if (typeof name == "string"){
@@ -286,8 +390,12 @@ io.on('connection', socket => {
       if (index > -1) {
           connected.splice(index, 1);
       }
-      socket.to('authorised').emit('send-users', connected); 
+      socket.to('authorised').emit('send-users', connected);
     }
+    }catch{
+      console.log("error removing user, could have been kicked")
+    }
+   
   })
 
   // allows the client to request a list of new users. tried to remove this but everything broke
@@ -295,3 +403,71 @@ io.on('connection', socket => {
     socket.to('authorised').emit('send-users', connected);
   })
 })
+
+
+function verifyToken(username, token) {
+  if (username == null){
+    return
+  }
+  if (token == null){
+    return
+  }
+
+  let id = accountsFile.getUserId(username)
+
+  if (id == -1){
+    console.log("User not found")
+    return
+  }
+  
+  if (loggedInUsers[id] == null){
+    return "no user"
+  }
+  return id
+}
+
+
+function disconnectUser(socket, username){
+
+
+  console.log("🚨 " + username + " failed authentication" )
+  logger.log("🚨 " + username + " failed authentication ")
+
+  delete users[socket.id]; // remove the user from the connected users (but doesn't delete them, sets to null i think)
+
+   // you know, just to be extra sure 
+   socket.leave('authorised')
+   socket.disconnect(); 
+ 
+  //removes the users name from the client list when they log out
+  var index = connected.indexOf(username);
+  if (index > -1) {
+      connected.splice(index, 1);
+  }
+  socket.to('authorised').emit('send-users', connected); 
+}
+
+
+function checkAuth(socket){
+  try{
+    let id = users[socket.id]
+    if ( id == null ) { 
+      socket.disconnect()
+      return 
+    }
+
+    let username = loggedInUsers[id].username
+    let currentTime = +new Date()
+    
+    if (currentTime - loggedInUsers[id].lastCheckIn > checkInWindow){ // If there has been x time between checking in 
+      console.log("🚨 " + username + " did not check in soon enough")
+      disconnectUser(socket, username)
+    }else{
+      // console.log("✅ " + username + " checked in on time")
+    }
+  }catch{
+    console.log("⚠ Error disconnecting socket")
+    socket.disconnect()
+  }
+}
+
