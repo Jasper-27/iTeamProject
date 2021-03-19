@@ -377,7 +377,114 @@ class blockAccess{
                 }
             })
         });
+    }
 
+    static wipeEntries(blockPath, startTime, endTime){
+        /* 
+        Due to the way blocks are formatted, we cannot delete entries (or we would have to rewrite the whole file from the deleted entry)
+        So instead we will leave the length field intact, set the timestamp to -1 (so it will never be returned by getEntries), and overwrite the rest of the entry with 0s
+
+        This process is almost identical to getEntries, except instead of returing the found entries we "delete" them
+        */
+        return new Promise((resolve, reject) => {
+            fs.open(blockPath, "r+", (err, descriptor) => {
+                if (err) reject(err);
+                else{
+                    // The only block whose headers are stored in memory is the currently non-full one, therefore we will have to read the headers for this block from disk
+                    fs.read(descriptor, {position: 1, buffer: Buffer.alloc(24), length: 24}, (err, bytesRead, data) => { // Read from byte 1 not 0 as the BLOCKFULLHEADER is irrelevant for searching
+                        let nextFreePosition = Number(data.readBigInt64BE(8));  // This is useful for knowing where the file ends
+                        let middleEntryPosition = Number(data.readBigInt64BE(16));  // This is needed to find the middle entry so we (ideally) only have to search half of the file
+
+                        let bufferStartPos, bufferEndPos, currentPos;
+                        let deletedCount = 0;
+                        // Define function for linear search as it will to call itself "recursively" (not really recursive, but it will have to provide itself as a callback to fs.read)
+                        let findAllSuitableEntries = async (err, bytesRead, data) => {
+                            if (err) reject(err);
+                            else{
+                                while (bufferStartPos <= currentPos && currentPos + 16 <= bufferEndPos){  // Make sure at least the length and timestamp headers of the current entry are inside the buffer
+                                    let positionWithinBuffer = currentPos - bufferStartPos;  // Translate the currentPos (which represents a position within the whole file) to a position within the current buffer
+                                    let currentEntrySize = Number(data.readBigInt64BE(positionWithinBuffer));
+                                    let currentEntryTimestamp = data.readBigInt64BE(positionWithinBuffer + 8);
+                                    if (startTime <= currentEntryTimestamp && currentEntryTimestamp <= endTime){
+                                        // The current entry's timestamp fits within the requested range so "delete" it
+                                        try{
+                                            // Do the deleting inside a promise so we can await it
+                                            await new Promise((resolveDelete, rejectDelete) => {
+                                                let wipedEntry = Buffer.alloc(currentEntrySize);
+                                                wipedEntry.writeBigInt64BE(BigInt(currentEntrySize));
+                                                wipedEntry.writeBigInt64BE(BigInt(-1), 8);
+                                                // Rewrite entry with timestamp set to -1 and data set to 0s
+                                                fs.write(descriptor, wipedEntry, 0, currentEntrySize, currentPos, err => {
+                                                    if (err){
+                                                        fs.close(descriptor, e => {
+                                                            if (e) rejectDelete(e);
+                                                            else rejectDelete(err);
+                                                        });
+                                                    }
+                                                    else resolveDelete(true);
+                                                });
+                                            });
+                                            deletedCount++;
+                                        }
+                                        catch (reason){
+                                            fs.close(descriptor, e => {
+                                                if (e) reject(e);
+                                                else reject(reason);
+                                            });
+                                        } 
+                                    }
+                                    else if (endTime < currentEntryTimestamp){
+                                        // We have gone past the end of the range we want so can stop searching
+                                        fs.close(descriptor, e => {
+                                            if (e) reject(e);
+                                            else resolve(deletedCount);
+                                        });
+                                        return;
+                                    }
+                                    // Check next entry
+                                    currentPos += currentEntrySize;  // Position of next entry is calculated by adding this entry's length to its position
+                                }
+                                if (nextFreePosition <= currentPos){
+                                    // We have reached the end of the file so stop searching
+                                    fs.close(descriptor, e => {
+                                        if (e) reject(e);
+                                        else resolve(deletedCount);
+                                    });
+                                }
+                                else{
+                                    // Refill the buffer with new data starting from currentPos and continue the search
+                                    let bufferDetails = this._calculateBufferDetails(currentPos, nextFreePosition);
+                                    bufferStartPos = bufferDetails[0];
+                                    bufferEndPos = bufferDetails[1];
+                                    fs.read(descriptor, {position: currentPos, length: bufferDetails[2], buffer: Buffer.alloc(bufferDetails[2])}, findAllSuitableEntries);
+                                }
+                            }
+                        };
+                        // Get middle entry
+                        fs.read(descriptor, {position: middleEntryPosition + 8, length: 8, buffer: Buffer.alloc(8)}, (err, bytesRead, data) => {
+                            if (err) reject(err);
+                            else{
+                                let middleEntryTimestamp = data.readBigInt64BE(0);
+                                // If the timestamp of the middle entry is greater than startTime then start searching from the beginning of the block
+                                if (startTime < middleEntryTimestamp){
+                                    currentPos = 25;
+                                }
+                                else{
+                                    // If it is less than or equal to startTime then we know what we want is in the second half of the block so start searching from the middle entry
+                                    currentPos = middleEntryPosition;
+                                }
+                                let bufferDetails = blockAccess._calculateBufferDetails(currentPos, nextFreePosition);
+                                bufferStartPos = bufferDetails[0];
+                                bufferEndPos = bufferDetails[1];
+                                fs.read(descriptor, {position: bufferStartPos, length: bufferDetails[2], buffer: Buffer.alloc(bufferDetails[2])}, findAllSuitableEntries);
+                            }
+                            
+                        });
+                        
+                    });             
+                }
+            })
+        });
     }
 
     static _calculateBufferDetails(position, endOfFilePosition){

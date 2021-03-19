@@ -78,6 +78,29 @@ class logAccess{
         });
     }
 
+    wipeLogEntries(startTime, endTime){
+        // Overwrites all log entries between two timestamps (inclusive) with 0s
+        // Promise contains number of entries overwritten
+        return new Promise(async (resolve, reject) => {
+            this.pendingWrites = this.pendingWrites.then(async () => {
+                try{
+                    // First search the index to get all blocks that contain entries in the given range
+                    let blocks = await indexAccess.getBlocks(this.logsIndexPath, startTime, endTime);
+                    let wipedCount = 0;  // The number of entries wiped
+                    for (let i = 0; i < blocks.length; i++){
+                        // Search each of the blocks for all entries in the given range
+                        let blockPath = path.format({dir: this.logsFolderPath, base: `${blocks[i]}.wki`});
+                        wipedCount += await blockAccess.wipeEntries(blockPath, startTime, endTime);
+                    }
+                    resolve(wipedCount);
+                }
+                catch (reason){
+                    reject(reason);
+                }
+            });         
+        });
+    }
+
     getLogEntries(startTime, endTime){
         // Gets all entries between the two timestamps (inclusive)
         return new Promise(async (resolve, reject) => {

@@ -144,8 +144,13 @@ class DataAccess{
         return this.messages.addMessage(messageObject);
     }
 
+    deleteMessages(startTime, endTime){
+        // "Deletes" all messages between the startTime and endTime (inclusive).  The times should be provided as unix timestamps
+        return this.messages.wipeMessages(startTime, endTime);
+    }
+
     getMessages(startTime, endTime){
-        // Returns all messages between startTime and endTime, the times should be provided as unix timestamps
+        // Returns all messages between startTime and endTime (inclusive), the times should be provided as unix timestamps
         return new Promise((resolve, reject) => {
             // Must declare as function, as it will be used in different places depending on whether asyncReadLimit has been met
             let fetchMessages = async () => {
@@ -173,6 +178,11 @@ class DataAccess{
     log(logText){
         // Takes in text and adds it as a log entry
         return this.logs.addLogEntry(new Log(logText, new Date()));
+    }
+
+    deleteLogEntries(startTime, endTime){
+        // "Delete" all log entries between startTime and endTime (inclusive), the times should be provided as unix timestamps
+        return this.logs.wipeLogEntries(startTime, endTime);
     }
 
     getLogEntries(startTime, endTime){

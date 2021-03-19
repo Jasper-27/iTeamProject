@@ -90,6 +90,30 @@ class messagesAccess{
         });
     }
 
+    wipeMessages(startTime, endTime){
+        // Overwrites all messages between two timestamps (inclusive) with 0s
+        // Promise contains number of messages overwritten
+        return new Promise(async (resolve, reject) => {
+            this.pendingWrites = this.pendingWrites.then(async () => {
+                try{
+                    // First search the index to get all blocks that contain messages in the given range
+                    let blocks = await indexAccess.getBlocks(this.messagesIndexPath, startTime, endTime);
+                    let wipedCount = 0;  // The number of messages wiped
+                    for (let i = 0; i < blocks.length; i++){
+                        // Search each of the blocks for all messages in the given range
+                        let blockPath = path.format({dir: this.messagesFolderPath, base: `${blocks[i]}.wki`});
+                        wipedCount += await blockAccess.wipeEntries(blockPath, startTime, endTime);
+                    }
+                    resolve(wipedCount);
+                }
+                catch (reason){
+                    reject(reason);
+                }
+            });         
+        });
+    }
+    
+
     getMessages(startTime, endTime){
         // Gets all messages between the two timestamps (inclusive)
         return new Promise(async (resolve, reject) => {
