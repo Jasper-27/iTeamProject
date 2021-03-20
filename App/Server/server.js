@@ -42,35 +42,40 @@ app.use ( express.json() )
 app.use( cors() ) 
 
 app.post('/login', async (req, res) => {  // Function must be async to allow use of await
-    
-  const { password } = req.body; 
-  const { username } = req.body;
+    try{
+      const { password } = req.body; 
+      const { username } = req.body;
 
-  // Checks to see if the user is in the file. 
-  let user = await Storage.checkAccountCredentials(username, password);   // Returns an account object if credentials match 
-  if (user instanceof Account){
-    let name = user.userName;
+      // Checks to see if the user is in the file. 
+      let user = await Storage.checkAccountCredentials(username, password);   // Returns an account object if credentials match 
+      if (user instanceof Account){
+        let name = user.userName;
 
-    // generate the users token
-    let token = require('crypto').randomBytes(64).toString('hex'); 
+        // generate the users token
+        let token = require('crypto').randomBytes(64).toString('hex'); 
 
-    loggedInUsers[name] = {
-      "username" : username, 
-      "token" : token, 
-      "lastCheckIn" : +new Date()
+        loggedInUsers[name] = { 
+          "token" : token, 
+          "lastCheckIn" : +new Date()
+        }
+
+        res.send({
+          message: `Authentication success`,
+          token: `${ token }`,    // the response 
+        })
+
+        console.log("🔑 User: " + username + " has logged in")
+        Storage.log("User: " + username + " has logged in")
+
+      }else{
+        res.status(406).send({message: 'Incorrect credentials'})
+      }
     }
-
-    res.send({
-      message: `Authentication success`,
-      token: `${ token }`,    // the response 
-    })
-
-    console.log("🔑 User: " + username + " has logged in")
-    Storage.log("User: " + username + " has logged in")
-
-  }else{
-    res.status(406).send({message: 'Incorrect credentials'})
-  }
+    catch (err){
+      res.status(500).send({message: 'An internal error occurred'});
+      console.log("⚠ An unexpected error occurred on login attempt");
+      Storage.log("An unexpected error occured on login attempt");
+    }
 })
 
 //Start the API listening on PORT
@@ -122,26 +127,26 @@ io.on('connection', socket => {
   }, reauthInterval)
 
   //checking the user is still who they are during
-  socket.on('renew-auth', data => {
+  socket.on('renew-auth', async data => {
     let username = data.username
     let token = data.token
     let timestamp = +new Date()
     // console.log("⌚:  " + timestamp)
 
-    id = verifyToken(username, token) 
+    let name = await verifyToken(username, token) 
     
 
     // console.log("👵 " + token)
     let newtoken = require('crypto').randomBytes(64).toString('hex'); 
     // console.log("👶 " + newtoken)
 
-    if ( id == null || id < 0 ){ return }
+    if (name == null){ return }
 
     try{
-      if (loggedInUsers[id].token === token){ //if the token is valid
+      if (loggedInUsers[name].token === token){ //if the token is valid
         io.to(socket.id).emit('refresh-token', newtoken)  // sends the user their new token
-        loggedInUsers[id].token = newtoken
-        loggedInUsers[id].lastCheckIn = timestamp
+        loggedInUsers[name].token = newtoken
+        loggedInUsers[name].lastCheckIn = timestamp
       }else{ // if it isn't 
         socket.emit('auth-renew-failed')
         console.log("🚨 " + username + " has used an invalid token" )
@@ -157,21 +162,21 @@ io.on('connection', socket => {
 
 
   //checking the user credentials when signing in
-  socket.on('attempt-auth', data =>{
+  socket.on('attempt-auth', async data =>{
     let username = data.username
     let token = data.token
 
     //Checks the username and token are valid. Returns null if they are not
-    id = verifyToken(username, token)
+    let name = await verifyToken(username, token)
 
-    if (id == null || id < 0){
+    if (name == null){
       socket.emit('auth-failed')
       return
     }
 
     try{
       //Checks the username and token are for the user in question
-      if (loggedInUsers[id].token === token){
+      if (loggedInUsers[name].token === token){
         // Tell client that login was successful
         io.to(socket.id).emit('login-success');
 
@@ -180,7 +185,7 @@ io.on('connection', socket => {
         socket.to('authorised').emit('user-connected', username); // Announce that the user has connected
         io.to(socket.id).emit("send-username", username); // tells the new user what their name is
 
-        users[socket.id] = id; // The old uses array still needs the userId in it
+        users[socket.id] = name;
 
         // adds the username to list of connected users (provided it isn't there already)
         if (connected.indexOf(username) < 0){
@@ -405,25 +410,26 @@ io.on('connection', socket => {
 })
 
 
-function verifyToken(username, token) {
+async function verifyToken(username, token) {
   if (username == null){
     return
   }
   if (token == null){
     return
   }
-
-  let id = accountsFile.getUserId(username)
-
-  if (id == -1){
-    console.log("User not found")
-    return
+  try{
+    let user = await Storage.getAccount(username)
+    if (loggedInUsers[user.userName] == null){
+      return "no user"
+    }
+    return user.userName;
   }
-  
-  if (loggedInUsers[id] == null){
-    return "no user"
+  catch(reason){
+    if (reason == "Requested account does not exist"){
+      console.log("User not found")
+      return
+    }
   }
-  return id
 }
 
 
@@ -450,16 +456,15 @@ function disconnectUser(socket, username){
 
 function checkAuth(socket){
   try{
-    let id = users[socket.id]
-    if ( id == null ) { 
+    let username = users[socket.id]
+    if ( username == null ) { 
       socket.disconnect()
       return 
     }
 
-    let username = loggedInUsers[id].username
     let currentTime = +new Date()
     
-    if (currentTime - loggedInUsers[id].lastCheckIn > checkInWindow){ // If there has been x time between checking in 
+    if (currentTime - loggedInUsers[username].lastCheckIn > checkInWindow){ // If there has been x time between checking in 
       console.log("🚨 " + username + " did not check in soon enough")
       disconnectUser(socket, username)
     }else{
@@ -470,4 +475,3 @@ function checkAuth(socket){
     socket.disconnect()
   }
 }
-
