@@ -216,14 +216,13 @@ io.on('connection', socket => {
   // Broadcast to other users when someone is typing
   socket.on('user_typing', myUsername => {
     try{
-      let id = users[socket.id]
-      if (myUsername == loggedInUsers[id].username){ // stops users without a name from being set as typing. 
+      if (loggedInUsers[myUsername] != null){ // stops users without a name from being set as typing. 
         socket.to('authorised').emit('user_typing', myUsername);
       }else{
         console.log("🚨 Typing user is not logged in")
       }
     } catch{
-      console.log("🚨 Typing user is not logged in")
+      console.log("🚨🚨 Typing user is not logged in")
     }
 
   })
