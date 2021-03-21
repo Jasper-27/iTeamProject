@@ -155,11 +155,20 @@ io.on('connection', socket => {
     
   })
 
-    // Broadcast to other users when someone is typing
-      socket.on('user_typing', myUsername => {
-      socket.to('authorised').emit('user_typing', myUsername);
-    })
-    
+  // Broadcast to other users when someone is typing
+  socket.on('user_typing', myUsername => {
+    try{
+      let id = users[socket.id]
+      if (myUsername == loggedInUsers[id].username){ // stops users without a name from being set as typing. 
+        socket.to('authorised').emit('user_typing', myUsername);
+      }else{
+        console.log("🚨 Typing user is not logged in")
+      }
+    } catch{
+      console.log("🚨 Typing user is not logged in")
+    }
+
+  })
 
   // When user tries to create account
   socket.on('create-account', details => {
