@@ -2,7 +2,7 @@ const fs = require("fs");
 
 function readSettings(socket) {
     try{
-        let rawData = fs.readFileSync('settings.json');
+        let rawData = fs.readFileSync(__dirname + '/settings.json');
         let settingsJson = JSON.parse(rawData);
         return settingsJson;
     }catch{
