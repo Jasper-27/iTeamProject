@@ -10,6 +10,8 @@ var currentSendingUser;
 
 var myUsername = ""; 
 
+var typingTimer = false;
+var timeout = null;
 
 // settings 
 var settings 
@@ -422,6 +424,8 @@ messageFileSelector.onchange = () => {
   }
 };
 
+
+
 function exitSendFileMode(){
   // Exit send file mode and allow text messages to be sent
   // Clear messageInput
@@ -461,6 +465,45 @@ socket.on('refresh-token', newToken => {
 
 function attemptAuth(){
   socket.emit('attempt-auth', {"token": sessionStorage.token, "username" : sessionStorage.username})
+}
+
+
+
+// Listen for when client starts typing
+messageInput.addEventListener('keypress', inUsername => { 
+  // If user presses a key, system recognises that the variable is set to false
+  if(typingTimer == false){
+    inUsername = myUsername;
+    // Emits the first notification to the server
+    socket.emit('user_typing', inUsername);
+    // Proof by logging on the console
+    console.log('typing')
+    // After the first keypress, the variable is set to true which kicks off the timer
+    typingTimer = true;
+    // Timer has a method which sets the typingTimer back to false and starts the process again if a user types a key
+    setTimeout(timer, 3000)
+  }
+})
+
+// Recieves broadcast from server about someone else typing and updates div
+socket.on('user_typing', myUsername => {
+  // Sets the div to visible
+  feedback.style.visibility = 'visible';
+  // Outputting which user is typing.
+  feedback.innerHTML = '<p><em>' + myUsername + ' is typing... </em></p>';
+  // Sets a timer triggered by the original key press. 
+  // After 4 seconds the div will become invisible until it is triggered again.
+  clearTimeout(timeout)
+  timeout = setTimeout(invisible, 4000)
+})
+
+// Function which makes the feedback div invisible.
+function invisible(){
+  feedback.style.visibility = 'hidden';
+}
+// Function which sets typingTimer to false which starts again when a user hits a key.
+function timer(){
+  typingTimer = false;
 }
 
 function renewAuth(){

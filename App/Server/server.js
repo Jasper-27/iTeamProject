@@ -213,6 +213,19 @@ io.on('connection', socket => {
  
   })
 
+  // Broadcast to other users when someone is typing
+  socket.on('user_typing', myUsername => {
+    try{
+      if (loggedInUsers[myUsername] != null){ // stops users without a name from being set as typing. 
+        socket.to('authorised').emit('user_typing', myUsername);
+      }else{
+        console.log("🚨 Typing user is not logged in")
+      }
+    } catch{
+      console.log("🚨🚨 Typing user is not logged in")
+    }
+
+  })
 
   /*
     THIS NEEDS TO BE MOVED TO THE ADMIN INTERFACE AT SOME POINT
