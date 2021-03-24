@@ -11,6 +11,7 @@ var currentSendingUser;
 var myUsername = ""; 
 
 var typingTimer = false;
+var timeout = null;
 
 // settings 
 var settings 
@@ -492,7 +493,8 @@ socket.on('user_typing', myUsername => {
   feedback.innerHTML = '<p><em>' + myUsername + ' is typing... </em></p>';
   // Sets a timer triggered by the original key press. 
   // After 4 seconds the div will become invisible until it is triggered again.
-  setTimeout(invisible, 4000)
+  clearTimeout(timeout)
+  timeout = setTimeout(invisible, 4000)
 })
 
 // Function which makes the feedback div invisible.
