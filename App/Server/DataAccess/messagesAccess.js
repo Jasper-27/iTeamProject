@@ -124,7 +124,7 @@ class messagesAccess{
                 for (let i = 0; i < blocks.length; i++){
                     // Search each of the blocks for all messages in the given range
                     let blockPath = path.format({dir: this.messagesFolderPath, base: `${blocks[i]}.wki`});
-                    let blockMessages = await blockAccess.getEntries(blockPath, startTime, endTime);
+                    let blockMessages = await blockAccess.getEntriesBetween(blockPath, startTime, endTime);
                     // Convert each returned entry to a Message object
                     for (let j = 0; j < blockMessages.length; j++){
                         let currentMessage = blockMessages[j];
@@ -151,6 +151,86 @@ class messagesAccess{
                 reject(reason);
             }
             
+        });
+    }
+
+    getConsecutiveMessages(timeStamp, numberOfMessages, getPrecedingMessages=false){
+        // Get the specified number of messages from immediately before (if getPrecedingMessages = true) or after the given timeStamp (inclusive of timestamp)
+        return new Promise(async (resolve, reject) => {
+            try{
+                // Get block that contains given timestamp
+                let block = await indexAccess.getBlocks(this.messagesIndexPath, timeStamp, timeStamp, true);  // Use getNearby mode of getBlocks to get nearest block to the timestamp
+                let foundMessages = [];
+                if (block == false){
+                    // If the index is empty then there are no messages
+                    resolve([]);
+                    return;
+                }
+                if (getPrecedingMessages === true){
+                    // We are looking for messages before the given timestamp
+                    let entriesStillNeeded = numberOfMessages;
+                    while (0 < entriesStillNeeded && 0 < block){
+                        // May need to search multiple blocks until we have enough messages, so decrement block number on each loop if we don't have enough
+                        let blockPath = path.format({dir: this.messagesFolderPath, base: `${block}.wki`});
+                        let rawMessages = await blockAccess.getEntriesFromPositions(blockPath, await blockAccess.getEntriesNear(blockPath, timeStamp, entriesStillNeeded, true));
+                        for (let i = 0; i < rawMessages.length; i++){
+                            let currentMessage = rawMessages[i];
+                            let currentMessageTime = new Date(Number(currentMessage.readBigInt64BE(8)));
+                            let currentMessageUsername = treeAccess.bufferToString(currentMessage.subarray(16, 48));
+                            let currentMessageType = currentMessage.readInt8(48);
+                            // Convert back to string form
+                            if (currentMessageType === 1) currentMessageType = "text";
+                            else if (currentMessageType === 2) currentMessageType = "file";
+                            else if (currentMessageType === 3) currentMessageType = "image";
+                        
+                            let contentLength = Number(currentMessage.readBigInt64BE(49));
+                            let currentMessageContent = currentMessage.subarray(57, 57 + contentLength).toString();
+                            let filenameLength = Number(currentMessage.readBigInt64BE(57 + contentLength));
+                            let currentMessageFileName = currentMessage.subarray(57 + contentLength + 8, 57 + contentLength + 8 + filenameLength).toString();
+
+                            // Create message object
+                            foundMessages.push(new message(currentMessageUsername, currentMessageType, currentMessageContent, currentMessageFileName, currentMessageTime));
+                            entriesStillNeeded--;
+                        }
+                        block--;
+                    }
+                    resolve(foundMessages);
+                }
+                else{
+                    // We are looking for messages after the given timestamp
+                    let lastBlock = await indexAccess.getLastBlockNumber(this.messagesIndexPath);
+                    let entriesStillNeeded = numberOfMessages;
+                    while (0 < entriesStillNeeded && block <= lastBlock){
+                        // May need to search multiple blocks until we have enough messages, so increment block number on each loop if we don't have enough
+                        let blockPath = path.format({dir: this.messagesFolderPath, base: `${block}.wki`});
+                        let rawMessages = await blockAccess.getEntriesFromPositions(blockPath, await blockAccess.getEntriesNear(blockPath, timeStamp, entriesStillNeeded));
+                        for (let i = 0; i < rawMessages.length; i++){
+                            let currentMessage = rawMessages[i];
+                            let currentMessageTime = new Date(Number(currentMessage.readBigInt64BE(8)));
+                            let currentMessageUsername = treeAccess.bufferToString(currentMessage.subarray(16, 48));
+                            let currentMessageType = currentMessage.readInt8(48);
+                            // Convert back to string form
+                            if (currentMessageType === 1) currentMessageType = "text";
+                            else if (currentMessageType === 2) currentMessageType = "file";
+                            else if (currentMessageType === 3) currentMessageType = "image";
+                        
+                            let contentLength = Number(currentMessage.readBigInt64BE(49));
+                            let currentMessageContent = currentMessage.subarray(57, 57 + contentLength).toString();
+                            let filenameLength = Number(currentMessage.readBigInt64BE(57 + contentLength));
+                            let currentMessageFileName = currentMessage.subarray(57 + contentLength + 8, 57 + contentLength + 8 + filenameLength).toString();
+
+                            // Create message object
+                            foundMessages.push(new message(currentMessageUsername, currentMessageType, currentMessageContent, currentMessageFileName, currentMessageTime));
+                            entriesStillNeeded--;
+                        }
+                        block++;
+                    }
+                    resolve(foundMessages);
+                }
+            }
+            catch(reason){
+                reject(reason);
+            }
         });
     }
 }

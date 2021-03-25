@@ -175,6 +175,58 @@ class DataAccess{
         });
     }
 
+    getMessagesAfterTimestamp(timestamp, numberOfMessages){
+        // Fetch messages newer than the given timestamp
+        return new Promise((resolve, reject) => {
+            // Must declare as function, as it will be used in different places depending on whether asyncReadLimit has been met
+            let fetchMessages = async () => {
+                this.asyncReadCount++;
+                try{
+                    let result = await this.messages.getConsecutiveMessages(timestamp, numberOfMessages);
+                    this.asyncReadCount--;
+                    resolve(result);
+                }
+                catch(reason){
+                    this.asyncReadCount--;
+                    reject(reason);
+                }
+            };
+            // If asyncReadCount is less than asyncReadLimit then run the code immediately, otherwise chain it to readBacklog
+            if (this.asyncReadCount < asyncReadLimit){
+                fetchMessages();
+            }
+            else{
+                this.readBacklog = this.readBacklog.then(fetchMessages);
+            }
+        });
+    }
+
+    getMessagesBeforeTimestamp(timestamp, numberOfMessages){
+        // Fetch messages older than the given timestamp
+        return new Promise((resolve, reject) => {
+            // Must declare as function, as it will be used in different places depending on whether asyncReadLimit has been met
+            let fetchMessages = async () => {
+                this.asyncReadCount++;
+                try{
+                    let result = await this.messages.getConsecutiveMessages(timestamp, numberOfMessages, true);
+                    this.asyncReadCount--;
+                    resolve(result);
+                }
+                catch(reason){
+                    this.asyncReadCount--;
+                    reject(reason);
+                }
+            };
+            // If asyncReadCount is less than asyncReadLimit then run the code immediately, otherwise chain it to readBacklog
+            if (this.asyncReadCount < asyncReadLimit){
+                fetchMessages();
+            }
+            else{
+                this.readBacklog = this.readBacklog.then(fetchMessages);
+            }
+        });
+    }
+
     log(logText){
         // Takes in text and adds it as a log entry
         return this.logs.addLogEntry(new Log(logText, new Date()));

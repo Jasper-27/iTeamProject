@@ -15,6 +15,7 @@ The data field can contain multiple fields, but it is not the responsibility of 
 const fs = require('fs');
 const path = require('path');
 const indexAccess = require('./indexAccess');
+const fixedQueue = require('./../fixedQueue');
 
 const idealBufferSize = 65536;  // The amount of data getEntries should try to read from the file at a time (unlike in indexAccess, this must be a number of bytes rather than number of entries as block entries vary in size (and can be very large))
 const blockSize = 1000;  // The number of entries per block
@@ -274,7 +275,7 @@ class blockAccess{
         });
     }
 
-    static getEntries(blockPath, startTime, endTime){
+    static getEntriesBetween(blockPath, startTime, endTime){
         // Return promise containing all entries in the given block with timestamps between startTime and endTime (inclusive)
         // Searching is primarily done with linear search, but we do have a header pointing to the middle entry so we can use that to narrow the search down to half of the file
         return new Promise((resolve, reject) => {
@@ -358,7 +359,7 @@ class blockAccess{
                             else{
                                 let middleEntryTimestamp = data.readBigInt64BE(0);
                                 // If the timestamp of the middle entry is greater than startTime then start searching from the beginning of the block
-                                if (startTime < middleEntryTimestamp){
+                                if (startTime < middleEntryTimestamp || middleEntryTimestamp == -1){  // Middle entry timestamp may be -1 if the entry was deleted.  In this case search from start of file as that ensures all items will be searched if necessary
                                     currentPos = 25;
                                 }
                                 else{
@@ -378,6 +379,223 @@ class blockAccess{
             })
         });
     }
+
+    static getEntriesNear(blockPath, timeStamp, numberOfEntries, getPrecedingEntries=false){
+        // Return promise containing a number of entries (specified by numberOfEntries) before or after the given timestamp (or as many entries as we can).  If getPrecedingEntries is true, it will get the entries before the timestamp, and if false it will get ones after
+        // Returns the entry positions, NOT the entry data itself (unlike getEntriesBetween)
+        return new Promise((resolve, reject) => {
+            fs.open(blockPath, "r", (err, descriptor) => {
+                if (err) reject(err);
+                else{
+                    // The only block whose headers are stored in memory is the currently non-full one, therefore we will have to read the headers for this block from disk
+                    fs.read(descriptor, {position: 1, buffer: Buffer.alloc(24), length: 24}, (err, bytesRead, data) => { // Read from byte 1 not 0 as the BLOCKFULLHEADER is irrelevant for searching
+                        let nextFreePosition = Number(data.readBigInt64BE(8));  // This is useful for knowing where the file ends
+                        let middleEntryPosition = Number(data.readBigInt64BE(16));  // This is needed to find the middle entry so we (ideally) only have to search half of the file
+                        let middleEntryTimestamp;
+
+                        let bufferStartPos, bufferEndPos, currentPos, currentEntryTimestamp;
+                        let foundEntries = new fixedQueue(numberOfEntries);
+                        // Define function for linear search as it will to call itself "recursively" (not really recursive, but it will have to provide itself as a callback to fs.read)
+                        let findAllSuitableEntries = async (err, bytesRead, data) => {
+                            if (err) reject(err);
+                            else{
+                                // Find the first entry that is greater than timeStamp
+                                while (bufferStartPos <= currentPos && currentPos + 16 <= bufferEndPos){  // Make sure at least the length and timestamp headers of the current entry are inside the buffer
+                                    let positionWithinBuffer = currentPos - bufferStartPos;  // Translate the currentPos (which represents a position within the whole file) to a position within the current buffer
+                                    let currentEntrySize = Number(data.readBigInt64BE(positionWithinBuffer));
+                                    currentEntryTimestamp = data.readBigInt64BE(positionWithinBuffer + 8);
+                                    if (currentEntryTimestamp <= timeStamp){
+                                        if (getPrecedingEntries === true){
+                                            // If we are looking for x entries before the timestamp, then record each entry until we reach the timestamp or the end of the file.  fiexedQueue will automatically push out older entries if we have more than we need
+                                            if (currentEntryTimestamp != -1){
+                                                // Ignore deleted entries
+                                                // Add entry position to end of foundEntries
+                                                foundEntries.push(currentPos);
+                                            }
+                                        }
+                                    }
+                                    else if (getPrecedingEntries === true){
+                                        // The current entry is greater than timeStamp, so we have found all the preceding entries so can exit
+                                        fs.close(descriptor, e => {
+                                            if (e) reject(e);
+                                            else resolve(foundEntries);
+                                        });
+                                        return;
+                                    }
+                                    else{
+                                        // If we are looking for entries after the timestamp, then we don't start recording entries until one greater than the timestamp has been found
+                                        if (foundEntries.usedSize === numberOfEntries){
+                                            // We have found enough entries so can stop searching
+                                            fs.close(descriptor, e => {
+                                                if (e) reject(e);
+                                                else resolve(foundEntries);
+                                            });
+                                            return;
+                                        }
+                                        else{
+                                            foundEntries.push(currentPos);
+                                        }
+                                    }
+                                    // Check next entry
+                                    currentPos += currentEntrySize;  // Position of next entry is calculated by adding this entry's length to its position
+                                }
+                                if (nextFreePosition <= currentPos){
+                                    // We have reached the end of the file
+                                    if (foundEntries.usedSize < numberOfEntries){
+                                        /* 
+                                        If we are searching for preceding entries and haven't found enough yet, and began from the midpoint then get more from before the midpoint
+                                        We can do this by recursively calling this method to get as many entries as we need preceding the midpoint
+                                        */
+                                       let entriesStillNeeded = numberOfEntries - foundEntries.usedSize;
+                                       let entriesFromBeforeMidpoint = await blockAccess.getEntriesNear(blockPath, middleEntryTimestamp, entriesStillNeeded, true);
+                                       // Now merge the two fixedQueues together
+                                       foundEntries = entriesFromBeforeMidpoint.merge(foundEntries);
+                                    }
+                                    // Exit and resolve foundEntries
+                                    fs.close(descriptor, e => {
+                                        if (e) reject(e);
+                                        else resolve(foundEntries);
+                                    });
+                                    return;
+                                }
+                                else{
+                                    // Refill the buffer with new data starting from currentPos and continue the search
+                                    let bufferDetails = this._calculateBufferDetails(currentPos, nextFreePosition);
+                                    bufferStartPos = bufferDetails[0];
+                                    bufferEndPos = bufferDetails[1];
+                                    fs.read(descriptor, {position: currentPos, length: bufferDetails[2], buffer: Buffer.alloc(bufferDetails[2])}, findAllSuitableEntries);
+                                }
+                            }
+                        };
+                        // Get middle entry
+                        fs.read(descriptor, {position: middleEntryPosition + 8, length: 8, buffer: Buffer.alloc(8)}, (err, bytesRead, data) => {
+                            if (err) reject(err);
+                            else{
+                                middleEntryTimestamp = data.readBigInt64BE(0);
+                                // If the timestamp of the middle entry is greater than timeStamp then start searching from the beginning
+                                if (timeStamp < middleEntryTimestamp || middleEntryTimestamp == -1){
+                                    currentPos = 25;
+                                }
+                                else{
+                                    // If it is less than or equal to timeStamp then start searching from the middle entry
+                                    currentPos = middleEntryPosition;
+                                }
+                                let bufferDetails = blockAccess._calculateBufferDetails(currentPos, nextFreePosition);
+                                bufferStartPos = bufferDetails[0];
+                                bufferEndPos = bufferDetails[1];
+                                fs.read(descriptor, {position: bufferStartPos, length: bufferDetails[2], buffer: Buffer.alloc(bufferDetails[2])}, findAllSuitableEntries);
+                            }
+                            
+                        });
+                        
+                    });             
+                }
+            })
+        });
+    }
+
+    static getEntriesFromPositions(blockPath, positions){  // Positions should be an array or fixedQueue
+        // Reads entries starting at the positions given
+        return new Promise((resolve, reject) => {
+            if (positions instanceof fixedQueue){
+                positions = positions.queue;
+            }
+            let entries = [];
+            fs.open(blockPath, "r", async (err, descriptor) => {
+                if (err) reject(err);
+                else{
+                    try{
+                        let nextFreePosition = await new Promise((resolveHeader, rejectHeader) => {
+                            fs.read(descriptor, {position: 9, length: 8, buffer: Buffer.alloc(8)}, (err, bytesRead, data) => {
+                                if (err) rejectHeader(err);
+                                else{
+                                    resolveHeader(Number(data.readBigInt64BE()));
+                                }
+                            });
+                        });
+                        let bufferStartPos, bufferEndPos, currentPos;
+                        let readEntries = (err, bytesRead, data) => {
+                            if (err){
+                                fs.close(descriptor, e => {
+                                    if (e) reject(e);
+                                    else reject(err);
+                                });
+                                return;
+                            }
+                            while (bufferStartPos <= currentPos && currentPos + 8 <= bufferEndPos){  // Make sure at least the length field is inside the buffer
+                                let positionWithinBuffer = currentPos - bufferStartPos;
+                                let entryLength = Number(data.readBigInt64BE(positionWithinBuffer));
+                                if (bufferEndPos < currentPos + entryLength){  // Make sure entire entry is contained in the buffer
+                                    break;
+                                }
+                                else{
+                                    // Read entry data
+                                    let itemBuffer = Buffer.from(data.subarray(positionWithinBuffer, positionWithinBuffer + entryLength));
+                                    entries.push(itemBuffer);
+                                    if (0 < positions.length){
+                                        // If there are more positions to be read then change currentPos and repeat
+                                        currentPos = positions.pop();
+                                        if (!(25 <= currentPos && currentPos < nextFreePosition)){
+                                            // The position is outside the range of valid positions in this block
+                                            fs.close(descriptor, e => {
+                                                if (e) reject(e);
+                                                else reject("Position not in block");
+                                            });
+                                            return;
+                                        }
+                                    }
+                                    else{
+                                        // We have read all the entries, so resolve and exit
+                                        fs.close(descriptor, e => {
+                                            if (e) reject(e);
+                                            else resolve(entries);
+                                        });
+                                        return;
+                                    }
+                                }
+                            }
+                            // currentPos is outside the buffer, so refill it
+                            let bufferDetails = blockAccess._calculateBufferDetails(currentPos, nextFreePosition);
+                            bufferStartPos = bufferDetails[0];
+                            bufferEndPos = bufferDetails[1];
+                            fs.read(descriptor, {position: bufferStartPos, length: bufferDetails[2], buffer: Buffer.alloc(bufferDetails[2])}, readEntries);
+                        }
+                        if (0 < positions.length){
+                            currentPos = positions.pop();
+                            if (!(25 < currentPos && currentPos < nextFreePosition)){
+                                // The position is outside the range of valid positions in this block
+                                fs.close(descriptor, e => {
+                                    if (e) reject(e);
+                                    else reject("Position not in block");
+                                });
+                            }
+                            else{
+                                // Start searching
+                                let bufferDetails = blockAccess._calculateBufferDetails(currentPos, nextFreePosition);
+                                bufferStartPos = bufferDetails[0];
+                                bufferEndPos = bufferDetails[1];
+                                fs.read(descriptor, {position: bufferStartPos, length: bufferDetails[2], buffer: Buffer.alloc(bufferDetails[2])}, readEntries);
+                            }
+                        }
+                        else{
+                            // No positions were requested
+                            fs.close(descriptor, e => {
+                                if (e) reject(e);
+                                else resolve([]);
+                            });
+                        }
+                    }
+                    catch (reason){
+                        fs.close(descriptor, e => {
+                            if (e) reject(e);
+                            else reject(err);
+                        });
+                    }
+                }
+            });
+        });
+    }
+
 
     static wipeEntries(blockPath, startTime, endTime){
         /* 
