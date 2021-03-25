@@ -7,6 +7,7 @@ const messageFileSelector = document.getElementById("choose-file-dialog");  // T
 
 var sendMessage;  // Holds a reference to the function for sending messages (will switch between sendText and sendFile)
 var currentSendingUser;
+var oldestMessageTime;  // Holds the datetime of the oldest message in messageContainer (needed to fetch older messages)
 
 var myUsername = ""; 
 
@@ -72,6 +73,17 @@ socket.on('send-users', connectedUsers => {
   console.log(connectedUsers); 
   generateUserList(connectedUsers); 
 })
+
+// When the client is sent old messages from before they connected
+socket.on('old-messages', messages => {
+  if (messages instanceof Array){
+    for (let i = 0; i < messages.length; i++){
+      let message = messages[i];
+      oldestMessageTime = message.time;
+      addMessage(message.name, message.message, true);
+    }
+  }
+});
 
 
 
@@ -176,19 +188,40 @@ messageForm.addEventListener('submit', e => {
 })
 
 //Decides who sent a message, then adds it to chat
-function addMessage(inName, inMessage) {
+function addMessage(inName, inMessage, oldMessage=false) {
   if (inName == myUsername) {
-		appendMessage(inMessage);
+		appendMessage(inMessage, oldMessage);
   }
   else {
 		var message = inMessage;
-		appendMessageRecieve(message, inName);
+		appendMessageRecieve(message, inName, oldMessage);
   }    
 
 }
 
-//Adds a message you sent to that chat
-function appendMessage(message) {
+function addMessageElement(element, insertAtBeginning=false){
+  /* 
+  Adds given HTML element to messageContainer
+  If insertAtBeginning is true it will be inserted at the start (rather than appended to the end)
+    - This is used when displaying old messages from before the user connected
+  */
+  if (insertAtBeginning === true){
+    let firstChild = messageContainer.children[0];
+    if (firstChild == undefined){
+      // The new element is the first one
+      messageContainer.append(element);
+    }
+    else{
+      messageContainer.insertBefore(element, firstChild);
+    }
+  }
+  else{
+    messageContainer.append(element);
+  }
+}
+
+//Adds a message you sent to that chat.  If oldMessage is true, the message will be inserted above all the other messages
+function appendMessage(message, oldMessage=false) {
   // get current time
   var current = new Date();
   var current = current.toLocaleTimeString();
@@ -196,7 +229,7 @@ function appendMessage(message) {
   //create the message box (div to hold the bubble)
   var messageBox = document.createElement('div');
   messageBox.className = "msg right-msg";
-  messageContainer.append(messageBox);
+  addMessageElement(messageBox, oldMessage);
   
   //add user image
   var userImage = document.createElement('div');
@@ -244,13 +277,16 @@ function appendMessage(message) {
 
   
   messageBubble.appendChild(messageData);
-  if (message.type === "image"){
-    // For images, messageData may not always be fully loaded by the end of this function so scrollHeight can be innacurate.  So change the scrollTop in an event handler once messageData is fully loaded instead
-    messageData.onload = () => messageContainer.scrollTop = messageContainer.scrollHeight;
-  }
-  else{
-    // However, for other types of messages do the scrolling here, as div elements fo not have an onload event
-    messageContainer.scrollTop = messageContainer.scrollHeight;
+  if (oldMessage != true){
+    // If this is a new message, then scroll down to the bottom
+    if (message.type === "image"){
+      // For images, messageData may not always be fully loaded by the end of this function so scrollHeight can be innacurate.  So change the scrollTop in an event handler once messageData is fully loaded instead
+      messageData.onload = () => messageContainer.scrollTop = messageContainer.scrollHeight;
+    }
+    else{
+      // However, for other types of messages do the scrolling here, as div elements fo not have an onload event
+      messageContainer.scrollTop = messageContainer.scrollHeight;
+    }
   }
 
   spamCounter++;
@@ -261,7 +297,7 @@ function appendMessage(message) {
 }
                                               
 //Adds a message someone else sent to the chat 
-function appendMessageRecieve(message, inName) {
+function appendMessageRecieve(message, inName, oldMessage=false) {
 
   // get current time
   var current = new Date();
@@ -270,7 +306,7 @@ function appendMessageRecieve(message, inName) {
   //create the message box (div to hold the bubble)
   var messageBox = document.createElement('div');
   messageBox.className = "msg left-msg";
-  messageContainer.append(messageBox);
+  addMessageElement(messageBox, oldMessage);
   
   //add user image
   var userImage = document.createElement('div');
@@ -332,13 +368,16 @@ function appendMessageRecieve(message, inName) {
   }
   
   messageBubble.appendChild(messageData);
-  if (message.type === "image"){
-    // For images, messageData may not always be fully loaded by the end of this function so scrollHeight can be innacurate.  So change the scrollTop in an event handler once messageData is fully loaded instead
-    messageData.onload = () => messageContainer.scrollTop = messageContainer.scrollHeight;
-  }
-  else{
-    // However, for other types of messages do the scrolling here, as div elements fo not have an onload event
-    messageContainer.scrollTop = messageContainer.scrollHeight;
+  if (oldMessage != true){
+    // If this is a new message, then scroll down to the bottom
+    if (message.type === "image"){
+      // For images, messageData may not always be fully loaded by the end of this function so scrollHeight can be innacurate.  So change the scrollTop in an event handler once messageData is fully loaded instead
+      messageData.onload = () => messageContainer.scrollTop = messageContainer.scrollHeight;
+    }
+    else{
+      // However, for other types of messages do the scrolling here, as div elements do not have an onload event
+      messageContainer.scrollTop = messageContainer.scrollHeight;
+    }
   }
 
   
