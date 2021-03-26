@@ -534,7 +534,7 @@ class blockAccess{
                                     entries.push(itemBuffer);
                                     if (0 < positions.length){
                                         // If there are more positions to be read then change currentPos and repeat
-                                        currentPos = positions.pop();
+                                        currentPos = positions.shift();
                                         if (!(25 <= currentPos && currentPos < nextFreePosition)){
                                             // The position is outside the range of valid positions in this block
                                             fs.close(descriptor, e => {
@@ -561,7 +561,7 @@ class blockAccess{
                             fs.read(descriptor, {position: bufferStartPos, length: bufferDetails[2], buffer: Buffer.alloc(bufferDetails[2])}, readEntries);
                         }
                         if (0 < positions.length){
-                            currentPos = positions.pop();
+                            currentPos = positions.shift();
                             if (!(25 < currentPos && currentPos < nextFreePosition)){
                                 // The position is outside the range of valid positions in this block
                                 fs.close(descriptor, e => {
