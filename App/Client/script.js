@@ -222,9 +222,16 @@ function addMessageElement(element, insertAtBeginning=false){
 
 //Adds a message you sent to that chat.  If oldMessage is true, the message will be inserted above all the other messages
 function appendMessage(message, oldMessage=false) {
-  // get current time
-  var current = new Date();
-  var current = current.toLocaleTimeString();
+  // get message time
+  if (oldMessage === true){
+    // If oldMessage use the time from the message
+    var current = new Date(message.time);
+  }
+  else{
+    // Otherwise use time from user's machine, as this will use their timezone
+    var current = new Date();
+  }
+  current = current.toLocaleTimeString();
 	
   //create the message box (div to hold the bubble)
   var messageBox = document.createElement('div');
@@ -298,10 +305,16 @@ function appendMessage(message, oldMessage=false) {
                                               
 //Adds a message someone else sent to the chat 
 function appendMessageRecieve(message, inName, oldMessage=false) {
-
-  // get current time
-  var current = new Date();
-  var current = current.toLocaleTimeString();
+  // get message time
+  if (oldMessage === true){
+    // If oldMessage use the time from the message
+    var current = new Date(message.time);
+  }
+  else{
+    // Otherwise use time from user's machine, as this will use their timezone
+    var current = new Date();
+  }
+  current = current.toLocaleTimeString();
 	
   //create the message box (div to hold the bubble)
   var messageBox = document.createElement('div');

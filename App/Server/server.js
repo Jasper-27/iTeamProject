@@ -197,7 +197,16 @@ io.on('connection', socket => {
           clients.push(spamTracker);
         }
 
-        io.to(socket.id).emit('settings', settings); //Sends settings to the client 
+        io.to(socket.id).emit('settings', settings); //Sends settings to the client
+        // Get previous 20 messages and send them to the user
+        Storage.getMessagesBeforeTimestamp(999999999999999, 20).then(previousMessages => {
+          let messagesToSend = [];
+          // Needs to be sent in reverse order so that older messages are further up
+          for (let i = previousMessages.length - 1; 0 < i; i--){
+            messagesToSend.push({"name": previousMessages[i].senderUsername, "message": {"type": previousMessages[i].type, "content": previousMessages[i].content, "time": previousMessages[i].timeStamp, "fileName": previousMessages[i].fileName}});
+          }
+          socket.emit('old-messages', messagesToSend);
+        });
 
         console.log("👋 User " + username + " connected");
 
