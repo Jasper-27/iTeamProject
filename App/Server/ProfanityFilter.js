@@ -61,14 +61,14 @@ class ProfanityFilter {
     filter(text)
     {
         // Replace any profanity with the given symbol
-        for (let i = 0; i < this.bannedStrings.length; i++){
+        for (let i = 0; i < bannedStrings.length; i++){
             let badString;
             if (this.wholeWords){
-                badString = new RegExp("\\b" + this.bannedStrings[i] + "\\b", "gi");  // g flag to match all, i flag for case insensitive match
+                badString = new RegExp("\\b" + bannedStrings[i] + "\\b", "gi");  // g flag to match all, i flag for case insensitive match
             }
             else
             {
-                badString = new RegExp(this.bannedStrings[i], "gi");  // g flag to match all, i flag for case insensitive match
+                badString = new RegExp(bannedStrings[i], "gi");  // g flag to match all, i flag for case insensitive match
             }
             text = text.replace(badString, (match) => {
                 let newString = "";
@@ -85,14 +85,21 @@ class ProfanityFilter {
         try{
             // Each banned word of phrase should be on a new line
             rawData = fs.readFileSync(banListPath, 'utf8');
+            bannedStrings = rawData.split(/\r?\n/);
             return rawData;
+
+
+
+
         } catch (e) {
 
             fs.writeFile('bannedWordsCustom.txt', "" ,function (err) {
                 if (err) return console.log(err);
+
+                bannedStrings = [];
+                return "";
             });
-            bannedStrings = [];
-            return "";
+
         }
     }
 }

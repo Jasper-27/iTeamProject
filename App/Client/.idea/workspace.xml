@@ -2,9 +2,9 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="ea582561-f92e-492a-ad69-09463ae7af17" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/../Admin/adminInterface.html" beforeDir="false" afterPath="$PROJECT_DIR$/../Admin/adminInterface.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../Server/ProfanityFilter.js" beforeDir="false" afterPath="$PROJECT_DIR$/../Server/ProfanityFilter.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Server/bannedWordsCustom.txt" beforeDir="false" afterPath="$PROJECT_DIR$/../Server/bannedWordsCustom.txt" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
