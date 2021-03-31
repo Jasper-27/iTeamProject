@@ -9,7 +9,13 @@ socket.on('register-fail', data => {
 });
 
 // If register success, notify user
-socket.on('register-success', () => {alert('Account created')});
+socket.on('register-success', () => {
+    alert('Account created')
+
+    document.getElementById("password1Entry").value = ""
+    document.getElementById("password2Entry").value = ""
+    document.getElementById("usernameEntry").value = ""
+});
 
 // Checks to see if details are valid, then sends them on to the server. 
 function register(){

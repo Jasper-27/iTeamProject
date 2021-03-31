@@ -1,12 +1,12 @@
 // Class for containing message data
 class Message{
     timeStamp;
-    senderId;
+    senderUsername;
     type;
     content;
     fileName;
 
-    constructor(senderId, type, content, fileName, timeStamp){
+    constructor(senderUsername, type, content, fileName, timeStamp){
         if (typeof fileName == "string"){
             this.fileName = fileName;
         }
@@ -22,12 +22,12 @@ class Message{
             this.timeStamp = new Date();
         }
         // Enforce data types here to avoid unexpected errors elsewhere
-        if (typeof senderId == "string"){
-            this.senderId = senderId;
+        if (typeof senderUsername == "string"){
+            this.senderUsername = senderUsername;
         }
         else{
-            let dataType = typeof senderId;
-            throw "senderId expected a string but " + dataType + " was given";
+            let dataType = typeof senderUsername;
+            throw "senderUsername expected a string but " + dataType + " was given";
         }
         if (typeof type == "string"){
             if (type === "text" || type === "image" || type === "file"){
