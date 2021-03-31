@@ -16,17 +16,17 @@ const users = {}  // Maps socket ids to usernames
 let loggedInUsers = {}  // Contains access token for user, uses usernames as keys
 
 
-//-----------------------------------------------------------------------------------------------------------------
-//// Login API 
+const colour = require("colors")
+const cryptico = require("cryptico")
 
-const cors = require('cors')
-const express = require('express');
+var PassPhrase = "This password needs to be different for each install"; 
+var private = cryptico.generateRSAKey(PassPhrase, 2048);
+var public = cryptico.publicKeyString(private);       
 
-const Account = require("./Account");
 
+// console.log(private)
+console.log(public)
 
-const app = express()
-const APIport = 8080
 
 
 //production
@@ -36,6 +36,21 @@ const checkInWindow = 40000 //the time window the client has to check in (needs 
 // //Testing  (remember to change on client)
 // const reauthInterval = 5000 // the gap between the server checking when the client last check in
 // const checkInWindow = 10000
+
+
+
+//-----------------------------------------------------------------------------------------------------------------
+//// Login API 
+
+const cors = require('cors')
+const express = require('express');
+
+
+const Account = require("./Account");
+
+
+const app = express()
+const APIport = 8080
 
 
 app.use ( express.json() )
@@ -81,7 +96,7 @@ app.post('/login', async (req, res) => {  // Function must be async to allow use
 //Start the API listening on PORT
 app.listen( 
   APIport, 
-  () => console.log(`🔐 Login API online: http://localhost:${APIport}`)
+  () => console.log(`🔐 Login API online: http://localhost:${APIport}` .green.bold)
 )
 
 //-----------------------------------------------------------------------------------------------------------------
@@ -111,15 +126,16 @@ var spamTracker;
 //var spamCounter;
 //var spam = false;
 
-console.log("*****************************************");
-console.log("*          😉 WINKI SERVER 😉           *");      
-console.log("*****************************************");
+console.log("*****************************************" .blue);
+console.log("*          😉 WINKI SERVER 😉           *" .blue);      
+console.log("*****************************************" .blue);
 console.log(); 
 
-console.log(`📧 Message socket online: http://localhost:${socketPort}`)
+console.log(`📧 Message socket online: http://localhost:${socketPort}` .green.bold)
 
 io.on('connection', socket => {
 
+  socket.emit('send-publickey', public)
 
   // Every min re-authenticate the clients. 
   const heartBeatReauth = setInterval(function() { 
@@ -488,3 +504,4 @@ function checkAuth(socket){
     socket.disconnect()
   }
 }
+
