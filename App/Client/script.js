@@ -26,7 +26,10 @@ getUsers();
 
 attemptAuth()
 
-
+// Getting the public get
+socket.on('public', data => {
+  console.log("Hello" + data)
+})
 
 // gets a username sent from the server
 socket.on('send-username', data => {

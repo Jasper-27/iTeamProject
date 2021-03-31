@@ -56,6 +56,29 @@ const APIport = 8080
 app.use ( express.json() )
 app.use( cors() ) 
 
+// app.post('/PublicKey', async (req, res) => {
+//   try{
+//     res.send({
+//       publicKey: `${ public }`,
+//     })
+//   }catch{
+
+//   }
+// })
+
+
+app.get("/PublicKey", async(req, res) => {
+
+  console.log("Sending Public key")
+  // var id = req.params.id;
+  // do something with id
+  // send a response to user based on id
+  // var obj = { id : id, Content : "content " +id };
+
+  res.writeHead(200, {"Content-Type": "application/json"});
+  res.write(public);
+});
+
 app.post('/login', async (req, res) => {  // Function must be async to allow use of await
     try{
       const { password } = req.body; 
@@ -135,7 +158,7 @@ console.log(`📧 Message socket online: http://localhost:${socketPort}` .green.
 
 io.on('connection', socket => {
 
-  socket.emit('send-publickey', public)
+  
 
   // Every min re-authenticate the clients. 
   const heartBeatReauth = setInterval(function() { 
@@ -287,6 +310,7 @@ io.on('connection', socket => {
 
 
   socket.on('send-chat-message', message => {
+
 
     // Check that the client is logged in, and discard their messages otherwise
     if (typeof users[socket.id] == "string"){
