@@ -439,6 +439,53 @@ io.on('connection', socket => {
   socket.on('get-users', out => {
     socket.to('authorised').emit('send-users', connected);
   })
+
+
+
+var toggle;
+
+
+
+socket.on('profanityToggle', (profanitySettings) => {
+
+    if (profanitySettings.profanitySettings == 1) {
+
+    profanityFilter.toggleCustom()
+    profanityFilter.load();
+    socket.emit('toggle-update');
+    toggle == 1;
+    profanityFilter.savePreset(toggle);
+    var emitWords = profanityFilter.readBanlistFromFile();
+    socket.emit('get-Profanity', {"words": emitWords});
+}
+
+
+
+else if (profanitySettings.profanitySettings == 0) {
+
+    profanityFilter.toggleDefault()
+    profanityFilter.load();
+    socket.emit('toggle-update');
+    toggle == 0;
+    profanityFilter.savePreset(toggle)
+    var emitWords = profanityFilter.readBanlistFromFile();
+    socket.emit('get-Profanity' , {"words": emitWords});
+
+}
+
+})
+
+socket.on('profanityCustomWords', (wordsCustom) => {
+    // takes wordsCustom and creates a response to be file written in a 1d array
+    var res = wordsCustom.wordsCustom.split(" ").join("\n");
+const fs = require("fs");
+fs.writeFile("bannedWordsCustom.txt", res, function (err) {
+    if(err){
+        return console.log(err);
+    }
+});
+})
+
 })
 
 

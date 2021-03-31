@@ -1,38 +1,74 @@
 // Class for filtering out profanity
 const fs = require("fs");
-const banListPath = __dirname + "/bannedWords.txt"
+let banListPath = "";
+var preset;
+let rawData;
 
-class ProfanityFilter{
-    filterSymbol;  // The symbol to replace banned words with
-    wholeWords;  // Only filter out whole words
-    bannedStrings = [];
-    constructor(replacementSymbol, wholeWordsOnly){
-        // Can use this to configure options for the filter later
-        if (replacementSymbol == undefined){
-            this.replacementSymbol = "*";
+replacementSymbol = "*";  // The symbol to replace banned words with
+wholeWordsOnly = "";  // Only filter out whole words
+bannedStrings = [];
+
+class ProfanityFilter {
+
+
+    toggleCustom()
+    {
+        try {
+            banListPath = __dirname + "/bannedWordsCustom.txt";
+            console.log("🤬 Using Customised Profanity List!")
         }
-        else{
-            this.replacementSymbol = replacementSymbol;
+        catch {
+            console.log(err + " your nan")
         }
-        if (typeof wholeWordsOnly != "boolean"){
-            this.wholeWords = false;
-        }
-        else{
-            this.wholeWords = wholeWordsOnly;
-        }
-        this.readBanlistFromFile();
     }
 
-    filter(text){
+    toggleDefault(){
+        banListPath = __dirname + "/bannedWords.txt";
+        console.log("🤬 Using Default Profanity List!");
+
+    }
+
+    savePreset(toggle){
+        preset = toggle;
+    }
+    load() {
+
+        if (preset == 1) {
+            this.toggleCustom();
+        }
+        if (preset == 0) {
+            this.toggleDefault();
+        }
+
+
+        constructor(replacementSymbol, wholeWordsOnly)
+        {
+            // Can use this to configure options for the filter later
+            if (replacementSymbol == undefined) {
+                this.replacementSymbol = "*";
+            } else {
+                this.replacementSymbol = replacementSymbol;
+            }
+            if (typeof wholeWordsOnly != "boolean") {
+                this.wholeWords = false;
+            } else {
+                this.wholeWords = wholeWordsOnly;
+            }
+            this.readBanlistFromFile();
+        }
+    }
+
+    filter(text)
+    {
         // Replace any profanity with the given symbol
-        for (let i = 0; i < this.bannedStrings.length; i++){
+        for (let i = 0; i < bannedStrings.length; i++){
             let badString;
             if (this.wholeWords){
-                badString = new RegExp("\\b" + this.bannedStrings[i] + "\\b", "gi");  // g flag to match all, i flag for case insensitive match
+                badString = new RegExp("\\b" + bannedStrings[i] + "\\b", "gi");  // g flag to match all, i flag for case insensitive match
             }
             else
             {
-                badString = new RegExp(this.bannedStrings[i], "gi");  // g flag to match all, i flag for case insensitive match
+                badString = new RegExp(bannedStrings[i], "gi");  // g flag to match all, i flag for case insensitive match
             }
             text = text.replace(badString, (match) => {
                 let newString = "";
@@ -48,11 +84,22 @@ class ProfanityFilter{
     readBanlistFromFile(){
         try{
             // Each banned word of phrase should be on a new line
-            let rawData = fs.readFileSync(banListPath).toString();
-            this.bannedStrings = rawData.split(/\r?\n/);
-        }
-        catch (e){
-            this.bannedStrings = [];
+            rawData = fs.readFileSync(banListPath, 'utf8');
+            bannedStrings = rawData.split(/\r?\n/);
+            return rawData;
+
+
+
+
+        } catch (e) {
+
+            fs.writeFile('bannedWordsCustom.txt', "" ,function (err) {
+                if (err) return console.log(err);
+
+                bannedStrings = [];
+                return "";
+            });
+
         }
     }
 }
