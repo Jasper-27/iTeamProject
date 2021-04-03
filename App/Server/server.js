@@ -71,6 +71,8 @@ app.post('/login', async (req, res) => {  // Function must be async to allow use
   try{
     const { hashed_password } = req.body; 
     const { username } = req.body;
+    const { client_public_key } = req.body; 
+
 
     let password = cryptico.decrypt(hashed_password, private).plaintext
 
