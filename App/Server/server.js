@@ -21,16 +21,16 @@ const cryptico = require("cryptico")
 
 
 // RSA Encrypion (for key exchange)
-var PassPhrase = "This password needs to be different for each install"; 
+const PassPhrase = "This password needs to be different for each install"; 
 var private = cryptico.generateRSAKey(PassPhrase, 1024);
 var public = cryptico.publicKeyString(private);       
 
 // AES Encryption (for messages)
 var AESKey = cryptico.generateAESKey(PassPhrase, 1024)
-console.log(AESKey)
+// console.log(AESKey)
 
-var aesOut = cryptico.encryptAESCBC("hello", AESKey)
-console.log(cryptico.decryptAESCBC(aesOut, AESKey))
+// var aesOut = cryptico.encryptAESCBC("hello", AESKey)
+// console.log(cryptico.decryptAESCBC(aesOut, AESKey))
 
 
 
@@ -73,6 +73,7 @@ app.post('/login', async (req, res) => {  // Function must be async to allow use
     const { username } = req.body;
     const { client_public_key } = req.body; 
 
+    // console.log(client_public_key)
 
     let password = cryptico.decrypt(hashed_password, private).plaintext
 
@@ -85,7 +86,8 @@ app.post('/login', async (req, res) => {  // Function must be async to allow use
 
       loggedInUsers[name] = { 
         "token" : token, 
-        "lastCheckIn" : +new Date()
+        "lastCheckIn" : +new Date(), 
+        "publicKey" : client_public_key
       }
 
       res.send({
@@ -105,6 +107,7 @@ app.post('/login', async (req, res) => {  // Function must be async to allow use
     console.log("⚠ An unexpected error occurred on login attempt");
     Storage.log("An unexpected error occured on login attempt");
   }
+
 })
 
 //Start the API listening on PORT
@@ -149,12 +152,11 @@ console.log(`📧 Message socket online: http://localhost:${socketPort}` .green.
 
 io.on('connection', socket => {
 
-  
-
   // Every min re-authenticate the clients. 
   const heartBeatReauth = setInterval(function() { 
     checkAuth(socket)
   }, reauthInterval)
+
 
   //checking the user is still who they are during
   socket.on('renew-auth', async data => {
@@ -193,6 +195,7 @@ io.on('connection', socket => {
 
   //checking the user credentials when signing in
   socket.on('attempt-auth', async data =>{
+    console.log("attempt auth")
     let username = data.username
     let token = data.token
 
@@ -231,6 +234,21 @@ io.on('connection', socket => {
 
         console.log("👋 User " + username + " connected");
 
+
+        // giving the user the AES encryption key 
+
+        // console.log(loggedInUsers[name].publicKey)
+        // console.log(AESKey)
+
+        // let encryptedKey = cryptico.encrypt(AESKey, loggedInUsers[name].publicKey)
+        let encrypted = cryptico.encrypt(PassPhrase, loggedInUsers[name].publicKey)
+        console.log(encrypted.cipher)
+        
+        socket.emit('send-aes', encrypted.cipher)
+
+        // It is not encrypting the AES key because it is not a string (Could just send the password i suppose)
+
+
       }else{
         socket.leave('authorised')
         socket.emit('authentication-failed')
@@ -239,12 +257,13 @@ io.on('connection', socket => {
     
     }catch{
       socket.disconnect()
+      console.log("user was disconnected because of an error")
     }
  
   })
 
   // Broadcast to other users when someone is typing
-  socket.on('user_typing', myUsername => {
+  socket.on('user_typing',  async myUsername => {
     try{
       if (loggedInUsers[myUsername] != null){ // stops users without a name from being set as typing. 
         socket.to('authorised').emit('user_typing', myUsername);
