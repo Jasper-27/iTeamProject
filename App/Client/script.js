@@ -449,28 +449,6 @@ function showFileSelector(){
   messageFileSelector.click();
 }
 
-// Token authentication stuff ===========================================
-
-socket.on('auth-maintained', () => {
-  console.log("😊 Authentication successful")
-})
-
-socket.on('auth-renew-failed', () => {
-  alert("⚠ Authentication failed! ⚠")
-
-})
-
-
-socket.on('refresh-token', newToken => {
-  sessionStorage.token = newToken
-  console.log("😊 Authentication successful")
-})
-
-function attemptAuth(){
-  socket.emit('attempt-auth', {"token": sessionStorage.token, "username" : sessionStorage.username})
-}
-
-
 
 // Listen for when client starts typing
 messageInput.addEventListener('keypress', inUsername => { 
@@ -508,6 +486,27 @@ function invisible(){
 function timer(){
   typingTimer = false;
 }
+
+// Token authentication stuff ===========================================
+
+socket.on('auth-maintained', () => {
+  console.log("😊 Authentication successful")
+})
+
+socket.on('auth-renew-failed', () => {
+  alert("⚠ Authentication failed! ⚠")
+
+})
+
+socket.on('refresh-token', newToken => {
+  sessionStorage.token = newToken
+  console.log("😊 Authentication successful")
+})
+
+function attemptAuth(){
+  socket.emit('attempt-auth', {"token": sessionStorage.token, "username" : sessionStorage.username})
+}
+
 
 function renewAuth(){
   console.log("renewAuth")

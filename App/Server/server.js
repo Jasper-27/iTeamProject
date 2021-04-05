@@ -16,11 +16,28 @@ const users = {}  // Maps socket ids to usernames
 let loggedInUsers = {}  // Contains access token for user, uses usernames as keys
 
 
+const colour = require("colors")
+const cryptico = require("cryptico")
+
+
+// RSA keys 
+let PassPhrase = require('crypto').randomBytes(64).toString('hex'); // Random string used as password 
+var private = cryptico.generateRSAKey(PassPhrase, 1024);
+var public = cryptico.publicKeyString(private);       
+
+
+//production
+const reauthInterval = 60000 // the gap between the server checking when the client last check in
+const checkInWindow = 40000 //the time window the client has to check in (needs to be great that set on client)
+
+
+
 //-----------------------------------------------------------------------------------------------------------------
 //// Login API 
 
 const cors = require('cors')
 const express = require('express');
+
 
 const Account = require("./Account");
 
@@ -29,59 +46,57 @@ const app = express()
 const APIport = 8080
 
 
-//production
-const reauthInterval = 60000 // the gap between the server checking when the client last check in
-const checkInWindow = 40000 //the time window the client has to check in (needs to be great that set on client)
-
-// //Testing  (remember to change on client)
-// const reauthInterval = 5000 // the gap between the server checking when the client last check in
-// const checkInWindow = 10000
-
-
 app.use ( express.json() )
 app.use( cors() ) 
 
+
+app.get("/PublicKey", async(req, res) => {
+  res.writeHead(200, {"Content-Type": "application/json"});
+  res.write(public);
+});
+
 app.post('/login', async (req, res) => {  // Function must be async to allow use of await
-    try{
-      const { password } = req.body; 
-      const { username } = req.body;
+  try{
+    const { hashed_password } = req.body; 
+    const { username } = req.body;
 
-      // Checks to see if the user is in the file. 
-      let user = await Storage.checkAccountCredentials(username, password);   // Returns an account object if credentials match 
-      if (user instanceof Account){
-        let name = user.userName;
+    let password = cryptico.decrypt(hashed_password, private).plaintext
 
-        // generate the users token
-        let token = require('crypto').randomBytes(64).toString('hex'); 
+    let user = await Storage.checkAccountCredentials(username, password);   // Returns an account object if credentials match 
+    if (user instanceof Account){
+      let name = user.userName;
 
-        loggedInUsers[name] = { 
-          "token" : token, 
-          "lastCheckIn" : +new Date()
-        }
+      // generate the users token
+      let token = require('crypto').randomBytes(64).toString('hex'); 
 
-        res.send({
-          message: `Authentication success`,
-          token: `${ token }`,    // the response 
-        })
-
-        console.log("🔑 User: " + username + " has logged in")
-        Storage.log("User: " + username + " has logged in")
-
-      }else{
-        res.status(406).send({message: 'Incorrect credentials'})
+      loggedInUsers[name] = { 
+        "token" : token, 
+        "lastCheckIn" : +new Date()
       }
+
+      res.send({
+        message: `Authentication success`,
+        token: `${ token }`,    // the response 
+      })
+
+      console.log("🔑 User: " + username + " has logged in")
+      Storage.log("User: " + username + " has logged in")
+
+    }else{
+      res.status(406).send({message: 'Incorrect credentials'})
     }
+  }
     catch (err){
-      res.status(500).send({message: 'An internal error occurred'});
-      console.log("⚠ An unexpected error occurred on login attempt");
-      Storage.log("An unexpected error occured on login attempt");
-    }
+    res.status(500).send({message: 'An internal error occurred'});
+    console.log("⚠ An unexpected error occurred on login attempt");
+    Storage.log("An unexpected error occured on login attempt");
+  }
 })
 
 //Start the API listening on PORT
 app.listen( 
   APIport, 
-  () => console.log(`🔐 Login API online: http://localhost:${APIport}`)
+  () => console.log(`🔐 Login API online: http://localhost:${APIport}` .green.bold)
 )
 
 //-----------------------------------------------------------------------------------------------------------------
@@ -111,15 +126,16 @@ var spamTracker;
 //var spamCounter;
 //var spam = false;
 
-console.log("*****************************************");
-console.log("*          😉 WINKI SERVER 😉           *");      
-console.log("*****************************************");
+console.log("*****************************************" .blue);
+console.log("*          😉 WINKI SERVER 😉           *" .blue);      
+console.log("*****************************************" .blue);
 console.log(); 
 
-console.log(`📧 Message socket online: http://localhost:${socketPort}`)
+console.log(`📧 Message socket online: http://localhost:${socketPort}` .green.bold)
 
 io.on('connection', socket => {
 
+  
 
   // Every min re-authenticate the clients. 
   const heartBeatReauth = setInterval(function() { 
@@ -272,6 +288,7 @@ io.on('connection', socket => {
 
 
   socket.on('send-chat-message', message => {
+
 
     // Check that the client is logged in, and discard their messages otherwise
     if (typeof users[socket.id] == "string"){
@@ -536,3 +553,4 @@ function checkAuth(socket){
     socket.disconnect()
   }
 }
+
