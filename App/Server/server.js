@@ -19,19 +19,9 @@ let loggedInUsers = {}  // Contains access token for user, uses usernames as key
 const colour = require("colors")
 const cryptico = require("cryptico")
 
-
-// RSA Encrypion (for key exchange)
 var PassPhrase = "This password needs to be different for each install"; 
 var private = cryptico.generateRSAKey(PassPhrase, 1024);
 var public = cryptico.publicKeyString(private);       
-
-// AES Encryption (for messages)
-var AESKey = cryptico.generateAESKey(PassPhrase, 1024)
-console.log(AESKey)
-
-var aesOut = cryptico.encryptAESCBC("hello", AESKey)
-console.log(cryptico.decryptAESCBC(aesOut, AESKey))
-
 
 
 //production
