@@ -41,7 +41,7 @@
             <div class="form-group"><input class="form-control" type="text" id="user" placeholder="Username" name="username"></div>
             <div class="form-group"><input class="form-control" type="password" id="pass" name="password" placeholder="Password"></div>
     
-            <div class="form-group"><button class="btn btn-primary btn-block"  onclick="login()" style="background: var(--right-msg-bg);">Log In</button></div>
+            <div class="form-group"><button class="btn btn-primary btn-block"  onclick="getPublicKey()" style="background: var(--right-msg-bg);">Log In</button></div>
                 
         </div>
                     
@@ -55,9 +55,6 @@
         let API = "http://localhost:8080/"
 
       
-        function login(){
-            getPublicKey()
-        }
     
 
         function getPublicKey(){
@@ -66,7 +63,7 @@
             xmlHttp.onreadystatechange = function() { 
                 if (xmlHttp.status == 200){
                     if (xmlHttp.responseText.length > 1){
-                        APILogin(xmlHttp.responseText)
+                        login(xmlHttp.responseText)
                     }
                 }
             }
@@ -74,12 +71,10 @@
             xmlHttp.send(null);
         }
 
-
             
         // Posts the user details to the server so the server can check them 
-        function APILogin(serverPublic){
+        function login(serverPublic){
 
-            generateRSA()
             sessionStorage.setItem("serverPublic", serverPublic)
 
             var EncryptionResult = cryptico.encrypt(document.getElementById("user").value, serverPublic);
@@ -94,7 +89,7 @@
             xhr.send(JSON.stringify({
                 "username" : document.getElementById("user").value, 
                 "hashed_password" : EncryptionResult.cipher, 
-                "client_public_key" : serverPublic
+                "client_public_key" : sessionStorage.getItem(`publicKey`)
             }));    
 
             // handles the response from the POST request
