@@ -46,8 +46,6 @@
         </div>
                     
     </section>   
-
-    <button id="testButton" onclick="generateRSA()">GenRSA</button>
 	
 	
     <script>
@@ -62,10 +60,14 @@
             var xmlHttp = new XMLHttpRequest();
             xmlHttp.onreadystatechange = function() { 
                 if (xmlHttp.status == 200){
+
+                    
                     if (xmlHttp.responseText.length > 1){
                         login(xmlHttp.responseText)
                     }
+                    
                 }
+                    
             }
             xmlHttp.open("GET", API + "PublicKey/", true); // true for asynchronous 
             xmlHttp.send(null);
@@ -73,14 +75,15 @@
 
             
         // Posts the user details to the server so the server can check them 
-        function login(serverPublic){
+        function login(publicKey){
 
-            sessionStorage.setItem("serverPublic", serverPublic)
+            var EncryptionResult = cryptico.encrypt(document.getElementById("user").value, publicKey);
 
-            var EncryptionResult = cryptico.encrypt(document.getElementById("user").value, serverPublic);
+            console.log(EncryptionResult)
+
             
             console.log("user " + document.getElementById("user").value)
-            console.log("password " + document.getElementById("pass").value)
+            console.log("password " + document.getElementById("user").value)
 
             // POSTs the username and password to the server
             var xhr = new XMLHttpRequest();
@@ -88,8 +91,7 @@
             xhr.setRequestHeader('Content-Type', 'application/json');
             xhr.send(JSON.stringify({
                 "username" : document.getElementById("user").value, 
-                "hashed_password" : EncryptionResult.cipher, 
-                "client_public_key" : sessionStorage.getItem(`publicKey`)
+                "hashed_password" : EncryptionResult.cipher
             }));    
 
             // handles the response from the POST request
@@ -107,17 +109,6 @@
                 }
             }
         }
-
-
-    function generateRSA(){
-        var private = cryptico.generateRSAKey(document.getElementById("pass").value, 1024);
-        var public = cryptico.publicKeyString(private);   
-
-        sessionStorage.setItem(`privateKey`, private)
-        sessionStorage.setItem(`publicKey`, public)
-    }
-
-
 
     </script>
 	
