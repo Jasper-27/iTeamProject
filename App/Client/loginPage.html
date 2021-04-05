@@ -51,10 +51,7 @@
     <script>
 
         let API = "http://localhost:8080/"
-
-      
     
-
         function getPublicKey(){
             console.log(API + "PublicKey/")
             var xmlHttp = new XMLHttpRequest();
@@ -77,13 +74,7 @@
         // Posts the user details to the server so the server can check them 
         function login(publicKey){
 
-            var EncryptionResult = cryptico.encrypt(document.getElementById("user").value, publicKey);
-
-            console.log(EncryptionResult)
-
-            
-            console.log("user " + document.getElementById("user").value)
-            console.log("password " + document.getElementById("user").value)
+            var EncryptionResult = cryptico.encrypt(document.getElementById("pass").value, publicKey);
 
             // POSTs the username and password to the server
             var xhr = new XMLHttpRequest();

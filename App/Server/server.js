@@ -19,7 +19,9 @@ let loggedInUsers = {}  // Contains access token for user, uses usernames as key
 const colour = require("colors")
 const cryptico = require("cryptico")
 
-var PassPhrase = "This password needs to be different for each install"; 
+
+// RSA keys 
+let PassPhrase = require('crypto').randomBytes(64).toString('hex'); // Random string used as password 
 var private = cryptico.generateRSAKey(PassPhrase, 1024);
 var public = cryptico.publicKeyString(private);       
 
@@ -27,10 +29,6 @@ var public = cryptico.publicKeyString(private);
 //production
 const reauthInterval = 60000 // the gap between the server checking when the client last check in
 const checkInWindow = 40000 //the time window the client has to check in (needs to be great that set on client)
-
-// //Testing  (remember to change on client)
-// const reauthInterval = 5000 // the gap between the server checking when the client last check in
-// const checkInWindow = 10000
 
 
 
