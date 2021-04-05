@@ -11,3 +11,4 @@ App/Server/data/accounts.json
 App/Server/data/**
 *.wdx
 *.wki
+App/Server/package-lock.json
