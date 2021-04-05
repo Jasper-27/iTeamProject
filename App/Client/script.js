@@ -28,7 +28,7 @@ attemptAuth()
 
 //When the server connection is lost 
 socket.on('disconnect', () => {
-  document.location.href = "/loginPage.html";
+  document.location.href = "./loginPage.html";
 })
 
 // gets a username sent from the server
