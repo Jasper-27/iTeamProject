@@ -219,6 +219,7 @@ io.on('connection', socket => {
 
       }else{
         socket.leave('authorised')
+        socket.disconnect()
         socket.emit('authentication-failed')
         console.log("😭 "+ username + " Had a failed authentication")
       }
