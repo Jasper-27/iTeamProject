@@ -471,18 +471,6 @@ function attemptAuth(){
 }
 
 
-function renewAuth(){
-  console.log("renewAuth")
-  socket.emit('renew-auth', {"token": sessionStorage.token, "username" : sessionStorage.username})
-}
-
-
-// Checking in with the server every X amount of times 
-const heartBeatReauth = setInterval(function() { renewAuth() }, 20000)
-
-// =============================================================================
-
-
 
 // Listen for when client starts typing
 messageInput.addEventListener('keypress', inUsername => { 
@@ -520,3 +508,14 @@ function invisible(){
 function timer(){
   typingTimer = false;
 }
+
+function renewAuth(){
+  console.log("renewAuth")
+  socket.emit('renew-auth', {"token": sessionStorage.token, "username" : sessionStorage.username})
+}
+
+
+// Checking in with the server every X amount of times 
+const heartBeatReauth = setInterval(function() { renewAuth() }, 20000)
+
+// =============================================================================
