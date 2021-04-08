@@ -13,8 +13,8 @@
 	    	<!-- Links for the style sheets Layout -->
 	<link rel="stylesheet" href="assets/css/layout/normal/styles.css">
 
-            <!-- RSA encryption (https://github.com/wwwtyro/cryptico)-->
-    <script src="assets/js/cryptico.min.js"></script>
+            <!-- encryption (https://github.com/wwwtyro/cryptico)-->
+    <script src="assets/js/cryptico.js"></script>
 
 
 
@@ -46,8 +46,6 @@
         </div>
                     
     </section>   
-
-    <button id="testButton" onclick="generateRSA()">GenRSA</button>
 	
 	
     <script>
@@ -79,14 +77,22 @@
         // Posts the user details to the server so the server can check them 
         function APILogin(serverPublic){
 
-            generateRSA()
-            sessionStorage.setItem("serverPublic", serverPublic)
+            let rsaNum = crypto.getRandomValues(new Uint32Array(1)) /2**64
+            let rsaPass = rsaNum.toString()
+            console.log(rsaPass)
 
-            var EncryptionResult = cryptico.encrypt(document.getElementById("user").value, serverPublic);
+            // Generating keys
+            var private = cryptico.generateRSAKey(rsaPass, 1024); 
+            var public = cryptico.publicKeyString(private);   
+
+            //Adding keys to session Storage 
+            sessionStorage.setItem(`rsaPass`, rsaPass)
+            sessionStorage.setItem(`publicKey`, public)
+            sessionStorage.setItem(`serverPublic`, serverPublic)
+
+            var EncryptionResult = cryptico.encrypt(document.getElementById("pass").value, serverPublic);
+
             
-            console.log("user " + document.getElementById("user").value)
-            console.log("password " + document.getElementById("pass").value)
-
             // POSTs the username and password to the server
             var xhr = new XMLHttpRequest();
             xhr.open("POST", API + "Login/", true);
@@ -94,7 +100,7 @@
             xhr.send(JSON.stringify({
                 "username" : document.getElementById("user").value, 
                 "hashed_password" : EncryptionResult.cipher, 
-                "client_public_key" : serverPublic
+                "client_public_key" : public
             }));    
 
             // handles the response from the POST request
@@ -113,16 +119,7 @@
             }
         }
 
-
-    function generateRSA(){
-        var private = cryptico.generateRSAKey(document.getElementById("pass").value, 1024);
-        var public = cryptico.publicKeyString(private);   
-
-        sessionStorage.setItem(`privateKey`, private)
-        sessionStorage.setItem(`publicKey`, public)
-    }
-
-
+        
 
     </script>
 	
