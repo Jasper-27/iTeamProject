@@ -2,7 +2,6 @@ const cryptico = require("cryptico")
 
 
 // Creating string 
-
 let key = cryptico.generateAESKey("boobs", 1024)
 
 
@@ -20,17 +19,29 @@ console.log("BufKey: " + BufKey)
 
 
 //comparing converted version to the original
-if (BufKey === key){
+if (BufKey == key){
     console.log("😅")
 }else{
     console.log("😭")
 }
 
 
+
 /// They both look the fucking same 
 console.log(BufKey)
 console.log(key)
 
+// Encrypting a message 
+
+
+let encRes = cryptico.encryptAESCBC("Hello", key)
+
+let decRes1 = cryptico.decryptAESCBC(encRes, key)
+let decRes2 = cryptico.decryptAESCBC(encRes, BufKey)
+
+
+console.log(decRes1)
+console.log(decRes2)
 
 
 function bufferToString(buffer){
