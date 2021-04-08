@@ -4,8 +4,8 @@ const messageForm = document.getElementById('send-container');
 const messageInput = document.getElementById('message-input'); 
 const fileSelectButton = document.getElementById("choose-file-button");
 const messageFileSelector = document.getElementById("choose-file-dialog");  // The <input type="file"/> element for selecting a file to send
-const cryptico = "assets/js/cryptico.min.js" //Not sure this will work
 
+var AESKey
 
 var sendMessage;  // Holds a reference to the function for sending messages (will switch between sendText and sendFile)
 var currentSendingUser;
@@ -29,14 +29,22 @@ getUsers();
 attemptAuth()
 
 socket.on('send-aes', data =>{
-  console.log("encrypted AES: " + data)
+  // Generates the private key from the stored password 
+  var privateKey = cryptico.generateRSAKey(sessionStorage.getItem("rsaPass"), 1024);
+  let out = cryptico.decrypt(data, privateKey)
+  AESKey = cryptico.generateAESKey(out, 1024)
+  AESKey2 = cryptico.generateAESKey(out, 1024)
 
-  let privateKey = sessionStorage.getItem("privateKey")
-  console.log(privateKey)
-  // So now i just need to decrypt the aes key
-  let out = cryptico.decrypt(data, sessionStorage.getItem(privateKey)).plaintext
 
+  console.log(AESKey)
+  console.log(AESKey2)
 
+  console.log(out)
+})
+
+socket.on('enc-test', data =>{
+  console.log("enc-test")
+  let out = cryptico.decryptAESCBC(data, AESKey)
   console.log(out)
 })
 

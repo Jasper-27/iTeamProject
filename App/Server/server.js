@@ -26,12 +26,10 @@ var private = cryptico.generateRSAKey(PassPhrase, 1024);
 var public = cryptico.publicKeyString(private);       
 
 // AES Encryption (for messages)
+// var AESPassword = require('crypto').randomBytes(256).toString('hex'); 
+let AESPassword = "password"
 var AESKey = cryptico.generateAESKey(PassPhrase, 1024)
-// console.log(AESKey)
-
-// var aesOut = cryptico.encryptAESCBC("hello", AESKey)
-// console.log(cryptico.decryptAESCBC(aesOut, AESKey))
-
+console.log(AESKey)
 
 
 //production
@@ -52,6 +50,7 @@ const express = require('express');
 
 
 const Account = require("./Account");
+const { time } = require("console");
 
 
 const app = express()
@@ -234,19 +233,20 @@ io.on('connection', socket => {
 
         console.log("👋 User " + username + " connected");
 
+        //Converting AES key for encryption 
 
-        // giving the user the AES encryption key 
+        
 
-        // console.log(loggedInUsers[name].publicKey)
-        // console.log(AESKey)
 
-        // let encryptedKey = cryptico.encrypt(AESKey, loggedInUsers[name].publicKey)
-        let encrypted = cryptico.encrypt(PassPhrase, loggedInUsers[name].publicKey)
+
+        // Encryting then sending the password that generates the AES key 
+        let encrypted = cryptico.encrypt(AESPassword, loggedInUsers[name].publicKey)
         console.log(encrypted.cipher)
         
         socket.emit('send-aes', encrypted.cipher)
 
-        // It is not encrypting the AES key because it is not a string (Could just send the password i suppose)
+        socket.emit('enc-test', cryptico.encryptAESCBC("boobies", AESKey))
+
 
 
       }else{
@@ -255,7 +255,8 @@ io.on('connection', socket => {
         console.log("😭 "+ username + " Had a failed authentication")
       }
     
-    }catch{
+    }catch(e){
+      console.log(e)
       socket.disconnect()
       console.log("user was disconnected because of an error")
     }
