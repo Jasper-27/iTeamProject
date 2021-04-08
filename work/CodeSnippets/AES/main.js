@@ -1,32 +1,33 @@
 const cryptico = require("cryptico")
 
 
-let private = cryptico.generateRSAKey("butt", 1024)
-let private2 = cryptico.generateRSAKey("butt", 1024)
-
-if (private == private2){
-    console.log("😃")
-}else{
-    console.log("😔")
-}
-
+// Creating string 
 
 let key = cryptico.generateAESKey("boobs", 1024)
 
 
+// Coverty String to buffer
 let StringKey = bufferToString(key)
 console.log("StringKey: " + StringKey)
 
+
+//This is where the string would be sent over the network
+
+
+//converting it back 
 let BufKey = stringToBuffer(StringKey)
 console.log("BufKey: " + BufKey)
 
 
+//comparing converted version to the original
 if (BufKey === key){
     console.log("😅")
 }else{
     console.log("😭")
 }
 
+
+/// They both look the fucking same 
 console.log(BufKey)
 console.log(key)
 
