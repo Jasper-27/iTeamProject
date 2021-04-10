@@ -5,7 +5,7 @@ const messageInput = document.getElementById('message-input');
 const fileSelectButton = document.getElementById("choose-file-button");
 const messageFileSelector = document.getElementById("choose-file-dialog");  // The <input type="file"/> element for selecting a file to send
 
-var AESKey
+var AESKey = ""
 
 var sendMessage;  // Holds a reference to the function for sending messages (will switch between sendText and sendFile)
 var currentSendingUser;
@@ -29,25 +29,31 @@ getUsers();
 attemptAuth()
 
 socket.on('send-aes', data =>{
-  // Generates the private key from the stored password 
-  var privateKey = cryptico.generateRSAKey(sessionStorage.getItem("rsaPass"), 1024);
-  let out = cryptico.decrypt(data, privateKey)
-  AESKey = cryptico.generateAESKey(out, 1024)
-  AESKey2 = cryptico.generateAESKey(out, 1024)
+  
+  //Decrypt the data 
+  let rsaPass = sessionStorage.getItem('rsaPass')
+  let private = cryptico.generateRSAKey(rsaPass, 1024); 
+  let dec = cryptico.decrypt(data, private)
 
-
-  console.log(AESKey)
-  console.log(AESKey2)
-
-  console.log(out)
+  AESKey = stringToBuffer(dec.plaintext) // Set the AESKe
+  
 })
 
 socket.on('enc-test', data =>{
+  console.log(data)
   console.log("enc-test")
   let out = cryptico.decryptAESCBC(data, AESKey)
   console.log(out)
 })
 
+function stringToBuffer(str){
+  // Convert string to buffer
+  let buffer = []
+  for (let i = 0; i < str.length; i++){
+      buffer.push(str.charCodeAt(i))
+  }
+  return buffer
+}
 
 // gets a username sent from the server
 socket.on('send-username', data => {

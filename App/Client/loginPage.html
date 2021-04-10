@@ -86,11 +86,11 @@
             var public = cryptico.publicKeyString(private);   
 
             //Adding keys to session Storage 
-            sessionStorage.setItem(`rsaPass`, rsaPass)
+            sessionStorage.setItem(`rsaPass`, rsaPass) // can't seem to put the key in session storage
             sessionStorage.setItem(`publicKey`, public)
             sessionStorage.setItem(`serverPublic`, serverPublic)
 
-            var EncryptionResult = cryptico.encrypt(document.getElementById("pass").value, serverPublic);
+            var EncryptionResult = cryptico.encrypt(document.getElementById("pass").value, serverPublic); // encrypt password with server public key 
 
             
             // POSTs the username and password to the server

@@ -27,9 +27,8 @@ var public = cryptico.publicKeyString(private);
 
 // AES Encryption (for messages)
 // var AESPassword = require('crypto').randomBytes(256).toString('hex'); 
-let AESPassword = "password"
 var AESKey = cryptico.generateAESKey(PassPhrase, 1024)
-console.log(AESKey)
+var plainKey = bufferToString(AESKey)// convert string to plain text 
 
 
 //production
@@ -223,8 +222,7 @@ io.on('connection', socket => {
         if (connected.indexOf(username) < 0){
           connected.push(username); 
           socket.to('authorised').emit('send-users', connected);  
-
-
+          
           spamTracker = {client: username, spamCounter: 0, spam: false};
           clients.push(spamTracker);
         }
@@ -233,21 +231,17 @@ io.on('connection', socket => {
 
         console.log("👋 User " + username + " connected");
 
-        //Converting AES key for encryption 
-
-        
-
-
-
-        // Encryting then sending the password that generates the AES key 
-        let encrypted = cryptico.encrypt(AESPassword, loggedInUsers[name].publicKey)
-        console.log(encrypted.cipher)
-        
+       
+        //Sending AES key to the server 
+        let encrypted = cryptico.encrypt(plainKey, loggedInUsers[name].publicKey)        
         socket.emit('send-aes', encrypted.cipher)
 
-        socket.emit('enc-test', cryptico.encryptAESCBC("boobies", AESKey))
 
-
+        //Testing the encryption 
+        console.log("Starting enc test")
+        let payload = cryptico.encryptAESCBC("Test message", AESKey)
+        console.log(payload)
+        socket.emit('enc-test', payload)
 
       }else{
         socket.leave('authorised')
@@ -587,3 +581,12 @@ function checkAuth(socket){
   }
 }
 
+
+function bufferToString(buffer){
+  // Convert a Buffer array to a string
+  let outputStr = "";
+  for (let i of buffer.values()){
+      outputStr += String.fromCharCode(i);   
+  }
+  return outputStr;
+}
