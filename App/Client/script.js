@@ -48,6 +48,11 @@ socket.on('enc-test', data =>{
 
 
 
+//When the server connection is lost 
+socket.on('disconnect', () => {
+  document.location.href = "./loginPage.html";
+})
+
 // gets a username sent from the server
 socket.on('send-username', data => {
   myUsername = data; 
@@ -98,6 +103,9 @@ socket.on('send-users', connectedUsers => {
 // Functions for sending messages
 function sendText(){
   let message = messageInput.value;
+
+  console.log(message)
+
   if (message.trim() == ""){  return  } // stops blank messages
 
   if (message.length > settings.messageLimit){  //Makes sure the message is not longer than the message limit 

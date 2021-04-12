@@ -556,7 +556,7 @@ function encrypt(data){
 
 function decrypt(data){
   let decrypted = cryptico.decryptAESCBC(data, AESKey)
-  decrypted =  Buffer.from(decrypted, 'base64').toString()
+  decrypted = Buffer.from(decrypted, 'base64').toString()
   return decrypted
 }
 
