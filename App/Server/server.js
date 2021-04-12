@@ -159,22 +159,18 @@ io.on('connection', socket => {
   //checking the user is still who they are during
   socket.on('renew-auth', async data => {
     let username = data.username
-    let token = data.token
+    let token = decrypt(data.token)
     let timestamp = +new Date()
     // console.log("⌚:  " + timestamp)
 
     let name = await verifyToken(username, token) 
-    
-
-    // console.log("👵 " + token)
-    let newtoken = require('crypto').randomBytes(64).toString('hex'); 
-    // console.log("👶 " + newtoken)
-
     if (name == null){ return }
 
     try{
       if (loggedInUsers[name].token === token){ //if the token is valid
-        io.to(socket.id).emit('refresh-token', newtoken)  // sends the user their new token
+        let newtoken = require('crypto').randomBytes(64).toString('hex'); 
+
+        io.to(socket.id).emit('refresh-token', encrypt(newtoken))  // sends the user their new token
         loggedInUsers[name].token = newtoken
         loggedInUsers[name].lastCheckIn = timestamp
       }else{ // if it isn't 
@@ -186,28 +182,29 @@ io.on('connection', socket => {
     }catch{
       socket.disconnect()
     }
-    
+
   })
 
 
   //checking the user credentials when signing in
   socket.on('attempt-auth', async data =>{
-    let username = data.username
-    let token = data.token
-
-    //Checks the username and token are valid. Returns null if they are not
-    let name = await verifyToken(username, token)
-
-    if (name == null){
-      socket.emit('auth-failed')
-      return
-    }
 
     try{
+      let username = data.username
+      let token = cryptico.decrypt(data.token, private).plaintext
+
+      //Checks the username and token are valid. Returns null if they are not
+      let name = await verifyToken(username, token)
+
+      if (name == null){
+        socket.emit('auth-failed')
+        return
+      }
+  
       //Checks the username and token are for the user in question
       if (loggedInUsers[name].token === token){
         // Tell client that login was successful
-        io.to(socket.id).emit('login-success');
+        io.to(socket.id).emit('auth-success');
 
         // Add socket to the "authorised" room so they can receive messages
         socket.join('authorised');
@@ -228,18 +225,10 @@ io.on('connection', socket => {
         io.to(socket.id).emit('settings', settings); //Sends settings to the client 
 
         console.log("👋 User " + username + " connected");
-
        
         //Sending AES key to the server 
         let encrypted = cryptico.encrypt(plainKey, loggedInUsers[name].publicKey)        
         socket.emit('send-aes', encrypted.cipher)
-
-
-        // //Testing the encryption 
-        // console.log("Starting enc test")
-        // let payload = cryptico.encryptAESCBC("Test message", AESKey)
-        // console.log(payload)
-        // socket.emit('enc-test', payload)
 
       }else{
         socket.leave('authorised')
@@ -439,7 +428,6 @@ io.on('connection', socket => {
     socket.to('authorised').emit('send-users', connected);
   })
 
-
   var toggle;
 
   socket.on('profanityToggle', (profanitySettings) => {
@@ -509,14 +497,14 @@ function disconnectUser(socket, username){
 
   delete users[socket.id]; // remove the user from the connected users (but doesn't delete them, sets to null i think)
 
-   // you know, just to be extra sure 
-   socket.leave('authorised')
-   socket.disconnect(); 
+  // you know, just to be extra sure 
+  socket.leave('authorised')
+  socket.disconnect(); 
  
   //removes the users name from the client list when they log out
   var index = connected.indexOf(username);
   if (index > -1) {
-      connected.splice(index, 1);
+    connected.splice(index, 1);
   }
   socket.to('authorised').emit('send-users', connected); 
 }

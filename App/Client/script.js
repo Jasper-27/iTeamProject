@@ -39,14 +39,6 @@ socket.on('send-aes', data =>{
   
 })
 
-socket.on('enc-test', data =>{
-  console.log(data)
-  console.log("enc-test")
-  let out = cryptico.decryptAESCBC(data, AESKey)
-  console.log(out)
-})
-
-
 
 //When the server connection is lost 
 socket.on('disconnect', () => {
@@ -308,7 +300,7 @@ function appendMessageRecieve(message, inName) {
   if (message.type === "text"){
     messageData = document.createElement('div');
     messageData.className = "msg-text";
-     //check if the user is being @ed and make it bold 
+    //check if the user is being @ed and make it bold 
     var inc = message.content.includes("@" + myUsername);
   
     //if they are being @ed.
@@ -446,21 +438,28 @@ socket.on('auth-maintained', () => {
   console.log("😊 Authentication successful")
 })
 
+
 socket.on('auth-renew-failed', () => {
   alert("⚠ Authentication failed! ⚠")
 })
 
 
 socket.on('refresh-token', newToken => {
-  sessionStorage.token = newToken
+  sessionStorage.token = decrypt(newToken)
 })
 
 function attemptAuth(){
-  socket.emit('attempt-auth', {"token": sessionStorage.token, "username" : sessionStorage.username})
+  try{
+    let token = cryptico.encrypt(sessionStorage.token, sessionStorage.serverPublic).cipher
+    console.log(token.cipher)
+    socket.emit('attempt-auth', {"token": token, "username" : sessionStorage.username})
+  }catch{
+    alert("ERROR with toke, will disconnect soon")
+  }
 }
 
 function renewAuth(){
-  socket.emit('renew-auth', {"token": sessionStorage.token, "username" : sessionStorage.username})
+  socket.emit('renew-auth', {"token": encrypt(sessionStorage.token), "username" : sessionStorage.username})
 }
 
 // Checking in with the server every X amount of times 
@@ -504,8 +503,6 @@ function invisible(){
 function timer(){
   typingTimer = false;
 }
-
-
 
 function encrypt(data){
 
