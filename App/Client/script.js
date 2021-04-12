@@ -46,14 +46,7 @@ socket.on('enc-test', data =>{
   console.log(out)
 })
 
-function stringToBuffer(str){
-  // Convert string to buffer
-  let buffer = []
-  for (let i = 0; i < str.length; i++){
-      buffer.push(str.charCodeAt(i))
-  }
-  return buffer
-}
+
 
 // gets a username sent from the server
 socket.on('send-username', data => {
@@ -69,7 +62,8 @@ socket.on('settings', data => {
 
 //When a message is sent
 socket.on('chat-message', data => {  // Messages will be recieved in format: {name: "<username of sender>", message: {type: "<text/image/file>", content: "<data>", fileName: "<name of file sent (only for file / image messages)>"}}
-  addMessage(data.name, data.message); 
+  if (data.message.type == 'text'){ data.message.content = decrypt(data.message.content) }
+  addMessage(data.name, data.message)
 })
 
 //This code runs if the user gets mentioned in a message
@@ -101,16 +95,10 @@ socket.on('send-users', connectedUsers => {
 })
 
 
-
-
-
 // Functions for sending messages
 function sendText(){
   let message = messageInput.value;
-
-  if (message.trim() == ""){  //Stops blank messages from being sent 
-    return;
-  }
+  if (message.trim() == ""){  return  } // stops blank messages
 
   if (message.length > settings.messageLimit){  //Makes sure the message is not longer than the message limit 
     console.log("message is too long");
@@ -124,10 +112,8 @@ function sendText(){
     return;
   }
 
-
-  socket.emit('send-chat-message', {type: "text", content: message});
-  // console.log("Message sent: " + message)
-  messageInput.value = ''; 
+  socket.emit('send-chat-message', {type: "text", content: encrypt(message)})
+  messageInput.value = ''
 }
 
 // function which creates an alert that doesn't pause JS
@@ -138,33 +124,25 @@ function msgAlert(TITLE,MESSAGE) {
 }
 
 function sendFile(){
-
   // Only proceed if a file has been selected
   if (0 < messageFileSelector.files.length){
     file = messageFileSelector.files[0];
     message = {type: "", content: "", fileName: file.name};  // File messages also have a filename field
 
-
     // Client-side file extension blocking
     var restrictedFiles = settings.restrictedFiles;
 
     for (var i of restrictedFiles) {
-      
       // Checks filename for the blacklisted file extensions
       if (file.name.search(i) != -1) {
-
         console.log("Invalid File Type");
         msgAlert('Alert:', 'File type not allowed! Please chose another file.')
-        
-        
         // User-friendliness
         exitSendFileMode();
-        showFileSelector();
-
+        // showFileSelector(); 
         return;
       }
     }
-
 
     // Set message type 
     if (file.type.split("/")[0] === "image") message.type = "image";
@@ -191,8 +169,6 @@ function sendFile(){
   }
 }
 
-
-
 // Send text is the default
 sendMessage = sendText;
 
@@ -211,7 +187,6 @@ function addMessage(inName, inMessage) {
 		var message = inMessage;
 		appendMessageRecieve(message, inName);
   }    
-
 }
 
 //Adds a message you sent to that chat
@@ -331,7 +306,6 @@ function appendMessageRecieve(message, inName) {
      //check if the user is being @ed and make it bold 
     var inc = message.content.includes("@" + myUsername);
   
-
     //if they are being @ed.
     if (inc == true) {
       messageData.innerText = message.content;
@@ -368,18 +342,9 @@ function appendMessageRecieve(message, inName) {
     messageContainer.scrollTop = messageContainer.scrollHeight;
   }
 
-  
-  spamCounter--;
-
-  if (spamCounter < 10) {
-
-    spam = false;
-  }
-
-  if (spamCounter < 0) {
-
-    spamCounter = 0;
-  }
+  spamCounter--
+  if (spamCounter < 10) { spam = false  }
+  if (spamCounter < 0) {  spamCounter = 0 }
 }
 
 function appendUserJoinOrDisconnect(message){
@@ -434,7 +399,6 @@ function generateUserList(list){
   });
 }
 
-
 // Add event handler for when a file is selected
 messageFileSelector.onchange = () => {
   if (0 < messageFileSelector.files.length){
@@ -450,8 +414,6 @@ messageFileSelector.onchange = () => {
     sendMessage = sendFile;
   }
 };
-
-
 
 function exitSendFileMode(){
   // Exit send file mode and allow text messages to be sent
@@ -481,7 +443,6 @@ socket.on('auth-maintained', () => {
 
 socket.on('auth-renew-failed', () => {
   alert("⚠ Authentication failed! ⚠")
-
 })
 
 
@@ -494,12 +455,10 @@ function attemptAuth(){
   socket.emit('attempt-auth', {"token": sessionStorage.token, "username" : sessionStorage.username})
 }
 
-
 function renewAuth(){
   console.log("renewAuth")
   socket.emit('renew-auth', {"token": sessionStorage.token, "username" : sessionStorage.username})
 }
-
 
 // Checking in with the server every X amount of times 
 const heartBeatReauth = setInterval(function() { renewAuth() }, 20000)
@@ -543,4 +502,37 @@ function invisible(){
 // Function which sets typingTimer to false which starts again when a user hits a key.
 function timer(){
   typingTimer = false;
+}
+
+
+
+function encrypt(data){
+  let encrypted = cryptico.encryptAESCBC(data, AESKey)
+  return encrypted
+}
+
+function decrypt(data){
+  let decrypted = cryptico.decryptAESCBC(data, AESKey)
+  return decrypted
+}
+
+
+function stringToBuffer(str){
+  // Convert string to buffer
+  let buffer = []
+  for (let i = 0; i < str.length; i++){
+    buffer.push(str.charCodeAt(i))
+  }
+  return buffer
+}
+
+
+function bufferToString(buffer){
+  // Convert a Buffer array to a string
+  let outputStr = "";
+  for (let i of buffer.values()){
+      outputStr += String.fromCharCode(i);   
+  }
+  return outputStr;
+
 }

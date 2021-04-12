@@ -237,11 +237,11 @@ io.on('connection', socket => {
         socket.emit('send-aes', encrypted.cipher)
 
 
-        //Testing the encryption 
-        console.log("Starting enc test")
-        let payload = cryptico.encryptAESCBC("Test message", AESKey)
-        console.log(payload)
-        socket.emit('enc-test', payload)
+        // //Testing the encryption 
+        // console.log("Starting enc test")
+        // let payload = cryptico.encryptAESCBC("Test message", AESKey)
+        // console.log(payload)
+        // socket.emit('enc-test', payload)
 
       }else{
         socket.leave('authorised')
@@ -315,146 +315,121 @@ io.on('connection', socket => {
 
 
   socket.on('send-chat-message', message => {
+    let name = users[socket.id];
 
+    if (name == null || name == undefined || name == "") { socket.disconnect() } // Think this line is redundent
 
-    // Check that the client is logged in, and discard their messages otherwise
-    if (typeof users[socket.id] == "string"){
-      // Make sure message has a suitable type value
-      if (!(typeof message.type == "string" && (message.type === "text" || message.type === "image" || message.type === "file"))){
-        // Ignore the message
-        console.log("🚨 An message with an invalid type was received");
+    // Checks if user sending message has spam flag
+    for (let i of clients) {
+      if (i.client == name && i.spam == true) {
+        console.log("A message from " + i.client + " was detected as spam!");
         return;
-      }
-      let name = users[socket.id];
-
-      // Write the new message to file
-      let filteredMessage = message.content;
-      // Only filter text based messages for profanity
-      if (message.type === "text") filteredMessage = profanityFilter.filter(filteredMessage);
-      if (name == null || name == undefined || name == "") name = "unknown";
-
-      // Although async, this should not be awaited as we don't need to know the result.  This means we can just run addMessage in the background and move on
-      Storage.addMessage(new Message(name, message.type, filteredMessage, message.fileName));
-
-      socket.to('authorised').emit('chat-message', {
-        message: {
-          type: message.type, 
-          content: filteredMessage, 
-          fileName: message.fileName
-        }, 
-        name: name 
-      });
-
-      // console.log("🟢 " + name + ": " + message); 
-
-      //If message is blank. don't spam people 
-      //This is done client side as well for redundancy
-      if (message.content == ""){
-        console.log("🚨 An empty message got through");
-        return;
-      }
-
-      if (message.type === "text" && message.content.length > settings.messageLimit){ // again, just for redundancy 
-        console.log("🚨 A message that was too long got though");
-        return;
-      }
-
-      // Block blacklisted files
-      if (message.type == "file") {
-
-        var extension = message.fileName;
-        var blacklist = settings.restrictedFiles;
-
-        for (var i of blacklist) {
-          if (extension.includes(i)) {
-            console.log("Bad file trying to be sent!");
-            return;
-          }
-        }
-      }
-
-      // Checks if user sending message has spam flag
-      for (var j of clients) {
-
-        if (j.client == name && j.spam == true) {
-          console.log("A message from " + j.client + " was detected as spam!");
-          return;
-        }
-      }
-      
-      // Must also send message to user that sent it
-      socket.emit('chat-message', {
-        message:{
-          type: message.type, 
-          content: filteredMessage, 
-          fileName: message.fileName
-        }, 
-        name: name
-      });
-
-      // Checks to see if the message was @ing anyone 
-      if (message.type === "text"){
-        if (message.content.includes("@")){
-          message.content.split(" ").forEach((item, index) => {
-            if (item.charAt(0) == "@"){
-              socket.to('authorised').emit('mentioned', { target: item.substring(1), sender: name} );
-            }
-          });
-        }
-      }
-
-      // Finds the client who has just sent a message
-      for (var i of clients) {
-
-        if (i.client == name) {
-
-          // Increments spam counter
-          i.spamCounter = i.spamCounter + 1;
-
-          // Applies spam flag to user if counter exceeds 9
-          if (i.spamCounter > 9) {
-
-            i.spam = true;
-          }
-        }
-        // Decrements user counter when someone else sends a message
-        else {
-          i.spamCounter = i.spamCounter - 1;
-
-          // Doesn't allow counter to go below 0
-          if (i.spamCounter < 0) {
-
-            i.spamCounter = 0;
-          }
-          if (i.spamCounter < 10) {
-
-            i.spam = false;
-          }
-        }
       }
     }
+
+    if (messageChecks(message) == false){
+      console.log("🚨 message failed checks")
+      return
+    }
+
+    // handeling text messages
+    if (message.type == "text"){
+      message.content = decrypt(message.content)
+      message.content = profanityFilter.filter(message.content)
+
+      // The @ing code 
+      if (message.content.includes("@")){
+        message.content.split(" ").forEach((item, index) => {
+          if (item.charAt(0) == "@"){
+            socket.to('authorised').emit('mentioned', { target: item.substring(1), sender: name} );
+          }
+        });
+      }
+    }
+    
+    if (message.type == "image"){ }
+
+    if (message.type == "file") {
+      // Restriced files 
+      for (let i of settings.restrictedFiles) {
+        if (message.fileName.includes(i)) { return }
+      }
+    }
+  
+    // storing the message 
+    Storage.addMessage(new Message(name, message.type, message.content, message.fileName))
+
+    if (message.type == 'text') { message.content = encrypt(message.content) } // only encrypt text for now
+
+    // Sending message back to everyone 
+    socket.to('authorised').emit('chat-message', {
+      message: message, 
+      name: name 
+    });
+    
+    // Also send the message back to the user that sent it 
+    io.to(socket.id).emit('chat-message',{ 
+      message: message, 
+      name: name 
+    })
+
+
+    /* This code is bad, needs replacing */ 
+    // marks any new messages as spam after 9 messages 
+    for (var i of clients) {
+      if (i.client == name) {
+        i.spamCounter++
+        if (i.spamCounter > 9) { i.spam = true }
+      } else {
+        i.spamCounter--
+        if (i.spamCounter < 0) {  i.spamCounter = 0  }
+        if (i.spamCounter < 10) { i.spam == false } 
+      }
+    }
+    
   })
+
+  function messageChecks(message){
+    
+    // Make sure message has a suitable type value
+    if (!(typeof message.type == "string" && (message.type === "text" || message.type === "image" || message.type === "file"))){
+      console.log("🚨 An message with an invalid type was received");
+      return false
+    }
+
+    if (message.content == ""){
+      console.log("🚨 An empty message got through");
+      return false
+    }
+
+    if (message.type === "text" && message.content.length > settings.messageLimit){ // again, just for redundancy 
+      console.log("🚨 A message that was too long got though");
+      return false
+    }
+
+    return true
+  }
 
   socket.on('disconnect', () => {
 
-  try{
-    let name = users[socket.id];
-    // Only continue if name exists (meaning user was properly connected and logged in)
-    if (typeof name == "string"){
-      socket.to('authorised').emit('user-disconnected', name);
-      //logs that the user disconnected at this time
-      Storage.log(name + " disconnected"); 
-      console.log("💔 " + name + " disconnected"); 
+    try{
+      let name = users[socket.id];
+      // Only continue if name exists (meaning user was properly connected and logged in)
+      if (typeof name == "string"){
+        socket.to('authorised').emit('user-disconnected', name);
+        //logs that the user disconnected at this time
+        Storage.log(name + " disconnected"); 
+        console.log("💔 " + name + " disconnected"); 
 
-      delete users[socket.id]; // remove the user from the connected users (but doesn't delete them, sets to null i think)
+        delete users[socket.id]; // remove the user from the connected users (but doesn't delete them, sets to null i think)
 
-      //removes the users name from the client list when they log out
-      var index = connected.indexOf(name);
-      if (index > -1) {
-          connected.splice(index, 1);
+        //removes the users name from the client list when they log out
+        var index = connected.indexOf(name);
+        if (index > -1) {
+            connected.splice(index, 1);
+        }
+        socket.to('authorised').emit('send-users', connected);
       }
-      socket.to('authorised').emit('send-users', connected);
-    }
     }catch{
       console.log("error removing user, could have been kicked")
     }
@@ -467,51 +442,43 @@ io.on('connection', socket => {
   })
 
 
+  var toggle;
 
-var toggle;
-
-
-
-socket.on('profanityToggle', (profanitySettings) => {
+  socket.on('profanityToggle', (profanitySettings) => {
 
     if (profanitySettings.profanitySettings == 1) {
 
-    profanityFilter.toggleCustom()
-    profanityFilter.load();
-    socket.emit('toggle-update');
-    toggle == 1;
-    profanityFilter.savePreset(toggle);
-    var emitWords = profanityFilter.readBanlistFromFile();
-    socket.emit('get-Profanity', {"words": emitWords});
-}
+      profanityFilter.toggleCustom()
+      profanityFilter.load();
+      socket.emit('toggle-update');
+      toggle == 1;
+      profanityFilter.savePreset(toggle);
+      var emitWords = profanityFilter.readBanlistFromFile();
+      socket.emit('get-Profanity', {"words": emitWords});
+    }else if (profanitySettings.profanitySettings == 0) {
 
-
-
-else if (profanitySettings.profanitySettings == 0) {
-
-    profanityFilter.toggleDefault()
-    profanityFilter.load();
-    socket.emit('toggle-update');
-    toggle == 0;
-    profanityFilter.savePreset(toggle)
-    var emitWords = profanityFilter.readBanlistFromFile();
-    socket.emit('get-Profanity' , {"words": emitWords});
-
-}
-
-})
-
-socket.on('profanityCustomWords', (wordsCustom) => {
-    // takes wordsCustom and creates a response to be file written in a 1d array
-    var res = wordsCustom.wordsCustom.split(" ").join("\n");
-const fs = require("fs");
-fs.writeFile("bannedWordsCustom.txt", res, function (err) {
-    if(err){
-        return console.log(err);
+      profanityFilter.toggleDefault()
+      profanityFilter.load();
+      socket.emit('toggle-update');
+      toggle == 0;
+      profanityFilter.savePreset(toggle)
+      var emitWords = profanityFilter.readBanlistFromFile();
+      socket.emit('get-Profanity' , {"words": emitWords});
     }
-});
-})
 
+  })
+
+  socket.on('profanityCustomWords', (wordsCustom) => {
+    // takes wordsCustom and creates a response to be file written in a 1d array
+    var res = wordsCustom.wordsCustom.split(" ").join("\n")
+    const fs = require("fs")
+
+    s.writeFile("bannedWordsCustom.txt", res, function (err) {
+      if(err){
+          return console.log(err);
+      }
+    })
+  })
 })
 
 
@@ -539,8 +506,6 @@ async function verifyToken(username, token) {
 
 
 function disconnectUser(socket, username){
-
-
   console.log("🚨 " + username + " failed authentication" )
   logger.log("🚨 " + username + " failed authentication ")
 
@@ -582,6 +547,23 @@ function checkAuth(socket){
 }
 
 
+
+function encrypt(data){
+
+  // data = stringToBuffer()
+  let encrypted = cryptico.encryptAESCBC(data, AESKey)
+  return encrypted
+}
+
+function decrypt(data){
+
+  // data = stringToBuffer
+
+  let decrypted = cryptico.decryptAESCBC(data, AESKey)
+  return decrypted
+}
+
+
 function bufferToString(buffer){
   // Convert a Buffer array to a string
   let outputStr = "";
@@ -589,4 +571,13 @@ function bufferToString(buffer){
       outputStr += String.fromCharCode(i);   
   }
   return outputStr;
+
+}
+function stringToBuffer(str){
+  // Convert string to buffer
+  let buffer = []
+  for (let i = 0; i < str.length; i++){
+      buffer.push(str.charCodeAt(i))
+  }
+  return buffer
 }
