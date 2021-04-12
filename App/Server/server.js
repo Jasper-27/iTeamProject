@@ -549,20 +549,16 @@ function checkAuth(socket){
 
 
 function encrypt(data){
-
-  // data = stringToBuffer()
+  data = Buffer.from(data).toString('base64')
   let encrypted = cryptico.encryptAESCBC(data, AESKey)
   return encrypted
 }
 
 function decrypt(data){
-
-  // data = stringToBuffer
-
   let decrypted = cryptico.decryptAESCBC(data, AESKey)
+  decrypted =  Buffer.from(decrypted, 'base64').toString()
   return decrypted
 }
-
 
 function bufferToString(buffer){
   // Convert a Buffer array to a string

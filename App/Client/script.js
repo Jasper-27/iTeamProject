@@ -507,12 +507,17 @@ function timer(){
 
 
 function encrypt(data){
+
+  data = btoa(unescape(encodeURIComponent(data)));
+
   let encrypted = cryptico.encryptAESCBC(data, AESKey)
   return encrypted
 }
 
 function decrypt(data){
+  
   let decrypted = cryptico.decryptAESCBC(data, AESKey)
+  decrypted = decodeURIComponent(escape(window.atob(decrypted)));
   return decrypted
 }
 
