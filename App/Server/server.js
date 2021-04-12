@@ -50,6 +50,7 @@ const express = require('express');
 
 const Account = require("./Account");
 const { time } = require("console");
+const e = require("cors");
 
 
 const app = express()
@@ -361,16 +362,17 @@ io.on('connection', socket => {
     })
 
 
-    /* This code is bad, needs replacing */ 
-    // marks any new messages as spam after 9 messages 
-    for (var i of clients) {
-      if (i.client == name) {
-        i.spamCounter++
-        if (i.spamCounter > 9) { i.spam = true }
-      } else {
-        i.spamCounter--
-        if (i.spamCounter < 0) {  i.spamCounter = 0  }
-        if (i.spamCounter < 10) { i.spam == false } 
+    // Marks a user as spam if they sent > 10 messagesone after the other 
+    for (let i of clients){
+      if (i.client == name){
+        i.spamCounter++ 
+        if (i.spamCounter > 10 ){
+          i.spam == true
+        }else{
+          i.spam == false
+        }
+      }else{
+        i.spamCounter -- 
       }
     }
     

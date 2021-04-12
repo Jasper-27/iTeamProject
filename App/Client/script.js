@@ -382,7 +382,6 @@ function appendUserJoinOrDisconnect(message){
 }
 // asks the server for a list of currently connected users 
 function getUsers(){
-  console.log("runningFunction");
   socket.emit('get-users', "");
 }
 
