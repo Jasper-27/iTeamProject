@@ -56,7 +56,6 @@ socket.on('disconnect', () => {
 // gets a username sent from the server
 socket.on('send-username', data => {
   myUsername = data; 
-  console.log("My username is: " + myUsername)
 }) 
 
 //Syncing settings with the server
@@ -103,8 +102,6 @@ socket.on('send-users', connectedUsers => {
 // Functions for sending messages
 function sendText(){
   let message = messageInput.value;
-
-  console.log(message)
 
   if (message.trim() == ""){  return  } // stops blank messages
 
@@ -456,7 +453,6 @@ socket.on('auth-renew-failed', () => {
 
 socket.on('refresh-token', newToken => {
   sessionStorage.token = newToken
-  console.log("😊 Authentication successful")
 })
 
 function attemptAuth(){
@@ -464,7 +460,6 @@ function attemptAuth(){
 }
 
 function renewAuth(){
-  console.log("renewAuth")
   socket.emit('renew-auth', {"token": sessionStorage.token, "username" : sessionStorage.username})
 }
 
@@ -482,8 +477,6 @@ messageInput.addEventListener('keypress', inUsername => {
     inUsername = myUsername;
     // Emits the first notification to the server
     socket.emit('user_typing', inUsername);
-    // Proof by logging on the console
-    console.log('typing')
     // After the first keypress, the variable is set to true which kicks off the timer
     typingTimer = true;
     // Timer has a method which sets the typingTimer back to false and starts the process again if a user types a key

@@ -187,13 +187,11 @@ io.on('connection', socket => {
       socket.disconnect()
     }
     
-
   })
 
 
   //checking the user credentials when signing in
   socket.on('attempt-auth', async data =>{
-    console.log("attempt auth")
     let username = data.username
     let token = data.token
 
