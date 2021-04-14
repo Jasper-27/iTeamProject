@@ -24,7 +24,7 @@ var connectedUsersList = document.getElementById('users');  // The HTML list tha
 var spamCounter = 0;
 var spam = false;
 
-getUsers();
+// getUsers();
 
 attemptAuth()
 
@@ -84,10 +84,10 @@ socket.on('user-disconnected', name => {
 })
 
 
-//When the client is sent a list of users, update the display with that list
+//When the client is sent a list of users, update the display with that list (triggered by get users)
 socket.on('send-users', connectedUsers => {
-  console.log(connectedUsers); 
-  generateUserList(connectedUsers); 
+  let usersList = JSON.parse(decrypt(connectedUsers))
+  generateUserList(usersList)
 })
 
 
@@ -378,7 +378,6 @@ function appendUserJoinOrDisconnect(message){
   
   messageBubble.appendChild(messageData);
   messageContainer.scrollTop = messageContainer.scrollHeight;
-	
 }
 // asks the server for a list of currently connected users 
 function getUsers(){
@@ -450,7 +449,6 @@ socket.on('refresh-token', newToken => {
 function attemptAuth(){
   try{
     let token = cryptico.encrypt(sessionStorage.token, sessionStorage.serverPublic).cipher
-    console.log(token.cipher)
     socket.emit('attempt-auth', {"token": token, "username" : sessionStorage.username})
   }catch{
     alert("ERROR with toke, will disconnect soon")
@@ -465,7 +463,6 @@ function renewAuth(){
 const heartBeatReauth = setInterval(function() { renewAuth() }, 20000)
 
 // =============================================================================
-
 
 
 // Listen for when client starts typing
@@ -504,15 +501,12 @@ function timer(){
 }
 
 function encrypt(data){
-
   data = btoa(unescape(encodeURIComponent(data)));
-
   let encrypted = cryptico.encryptAESCBC(data, AESKey)
   return encrypted
 }
 
 function decrypt(data){
-  
   let decrypted = cryptico.decryptAESCBC(data, AESKey)
   decrypted = decodeURIComponent(escape(window.atob(decrypted)));
   return decrypted

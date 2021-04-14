@@ -49,8 +49,6 @@ const express = require('express');
 
 
 const Account = require("./Account");
-const { time } = require("console");
-const e = require("cors");
 
 
 const app = express()
@@ -65,6 +63,15 @@ app.get("/PublicKey", async(req, res) => {
   res.writeHead(200, {"Content-Type": "application/json"});
   res.write(public);
 });
+
+// app.get("/token", async(req, res) => {
+
+//   // generate the users token
+//   let token = require('crypto').randomBytes(64).toString('hex'); 
+
+//   res.writeHead(200, {"Content-Type": "application/json"});
+//   res.write(token);
+// });
 
 app.post('/login', async (req, res) => {  // Function must be async to allow use of await
   try{
@@ -212,16 +219,16 @@ io.on('connection', socket => {
         socket.to('authorised').emit('user-connected', username); // Announce that the user has connected
         io.to(socket.id).emit("send-username", username); // tells the new user what their name is
 
-        users[socket.id] = name;
+        users[socket.id] = name
 
         // adds the username to list of connected users (provided it isn't there already)
         if (connected.indexOf(username) < 0){
-          connected.push(username); 
-          socket.to('authorised').emit('send-users', connected);  
-          
+          connected.push(username);     
           spamTracker = {client: username, spamCounter: 0, spam: false};
           clients.push(spamTracker);
         }
+
+        sendUsers(socket) // Sends the new users list to everyone
 
         io.to(socket.id).emit('settings', settings); //Sends settings to the client 
 
@@ -314,12 +321,10 @@ io.on('connection', socket => {
         return;
       }
     }
-
     if (messageChecks(message) == false){
       console.log("🚨 message failed checks")
       return
     }
-
     // handeling text messages
     if (message.type == "text"){
       message.content = decrypt(message.content)
@@ -334,7 +339,6 @@ io.on('connection', socket => {
         });
       }
     }
-    
     if (message.type == "image"){ }
 
     if (message.type == "file") {
@@ -354,14 +358,14 @@ io.on('connection', socket => {
       message: message, 
       name: name 
     });
-    
+
     // Also send the message back to the user that sent it 
     io.to(socket.id).emit('chat-message',{ 
       message: message, 
       name: name 
     })
 
-
+    
     // Marks a user as spam if they sent > 10 messagesone after the other 
     for (let i of clients){
       if (i.client == name){
@@ -417,7 +421,9 @@ io.on('connection', socket => {
         if (index > -1) {
             connected.splice(index, 1);
         }
-        socket.to('authorised').emit('send-users', connected);
+        // socket.to('authorised').emit('send-users', encrypt(connected));
+
+        sendUsers(socket)
       }
     }catch{
       console.log("error removing user, could have been kicked")
@@ -427,7 +433,7 @@ io.on('connection', socket => {
 
   // allows the client to request a list of new users. tried to remove this but everything broke
   socket.on('get-users', out => {
-    socket.to('authorised').emit('send-users', connected);
+    sendUsers(socket)
   })
 
   var toggle;
@@ -459,7 +465,7 @@ io.on('connection', socket => {
   socket.on('profanityCustomWords', (wordsCustom) => {
     // takes wordsCustom and creates a response to be file written in a 1d array
     var res = wordsCustom.wordsCustom.split(" ").join("\n")
-    const fs = require("fs")
+    const fs = require("fs") // !This shouldn't be here - Jasper 
 
     s.writeFile("bannedWordsCustom.txt", res, function (err) {
       if(err){
@@ -508,9 +514,13 @@ function disconnectUser(socket, username){
   if (index > -1) {
     connected.splice(index, 1);
   }
-  socket.to('authorised').emit('send-users', connected); 
+  sendUsers(socket) 
 }
 
+function sendUsers(socket){
+  let con = JSON.stringify(connected);
+  socket.to('authorised').emit('send-users', encrypt(con));
+}
 
 function checkAuth(socket){
   try{
