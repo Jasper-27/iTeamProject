@@ -64,14 +64,6 @@ app.get("/PublicKey", async(req, res) => {
   res.write(public);
 });
 
-// app.get("/token", async(req, res) => {
-
-//   // generate the users token
-//   let token = require('crypto').randomBytes(64).toString('hex'); 
-
-//   res.writeHead(200, {"Content-Type": "application/json"});
-//   res.write(token);
-// });
 
 app.post('/login', async (req, res) => {  // Function must be async to allow use of await
   try{
