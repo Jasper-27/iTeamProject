@@ -451,7 +451,7 @@ function attemptAuth(){
     let token = cryptico.encrypt(sessionStorage.token, sessionStorage.serverPublic).cipher
     socket.emit('attempt-auth', {"token": token, "username" : sessionStorage.username})
   }catch{
-    alert("ERROR with toke, will disconnect soon")
+    alert("ERROR with token, will disconnect soon")
   }
 }
 
