@@ -105,16 +105,23 @@
 
             // handles the response from the POST request
             xhr.onload = function() {
-                console.log(this.responseText);
                 var data = JSON.parse(this.responseText);
 
                 if (data.message === "Authentication success"){
-                    sessionStorage.setItem('token', data.token) // set's the token in session storage 
-                    sessionStorage.setItem('username',  document.getElementById("user").value)
-                    console.log("Login success")
-                    window.location.replace("./app.html"); //changes to the main app window 
+
+                    let decrypted_token = cryptico.decrypt(data.token, private)
+
+                    if (decrypted_token.status == "success"){
+                        sessionStorage.setItem('token', decrypted_token.plaintext) // set's the token in session storage 
+                        sessionStorage.setItem('username',  document.getElementById("user").value)
+                        console.log("Login success")
+                        window.location.replace("./app.html"); //changes to the main app window 
+                    }else{
+                        alert("🚨 Error decrypting token")
+                    }
+                   
                 }else{
-                    alert("Login failed")
+                    alert("😭 Login failed")
                 }
             }
         }

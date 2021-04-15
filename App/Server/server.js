@@ -81,6 +81,7 @@ app.post('/login', async (req, res) => {  // Function must be async to allow use
 
       // generate the users token
       let token = require('crypto').randomBytes(64).toString('hex'); 
+      let encrypted_token = cryptico.encrypt(token, client_public_key).cipher // encrypted cipher for sending 
 
       loggedInUsers[name] = { 
         "token" : token, 
@@ -90,7 +91,7 @@ app.post('/login', async (req, res) => {  // Function must be async to allow use
 
       res.send({
         message: `Authentication success`,
-        token: `${ token }`,    // the response 
+        token: `${ encrypted_token }`,    // the response
       })
 
       console.log("🔑 User: " + username + " has logged in")
