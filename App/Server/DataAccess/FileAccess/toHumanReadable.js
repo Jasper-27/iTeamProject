@@ -109,3 +109,4 @@ function convertBlob(filePath, readablePath){
         });
     });
 }
+convertBlob(__dirname + "/../../data/test/testBlob.blb", __dirname + "/../../data/test/testBlob_readable.blb")
