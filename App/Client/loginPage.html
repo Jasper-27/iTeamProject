@@ -7,7 +7,6 @@
     <title>Winki-login</title>
     <link rel="shortcut icon" type="image/png" href="./logo.png"/>
 
-
     <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css">
 	
 	    	<!-- Links for the style sheets Colour -->
@@ -19,16 +18,10 @@
             <!-- encryption (https://github.com/wwwtyro/cryptico)-->
     <script src="assets/js/cryptico.min.js"></script>
 
-
-
 </head>
 
 <body>
-
-    <script>
-        console.log(sessionStorage.getItem('ip'))
-    </script>
-
+    
     <nav class="navbar navbar-light navbar-expand-md">
         <div class="container-fluid"><a class="navbar-brand" href="index.html">WinkiMessenger</a><button data-toggle="collapse" class="navbar-toggler" data-target="#navcol-1"><span class="sr-only">Toggle navigation</span><span class="navbar-toggler-icon"></span></button>
             <div class="collapse navbar-collapse" id="navcol-1">
@@ -58,14 +51,12 @@
 	
     <script>
 
-        let API = "http://localhost:8080/"
+        let API = "http://" + self.location.host.split(':')[0] + ":8080/"
 
-      
         function login(){
             getPublicKey()
         }
     
-
         function getPublicKey(){
             console.log(API + "PublicKey/")
             var xmlHttp = new XMLHttpRequest();
@@ -134,18 +125,12 @@
             }
         }
 
-        
-
     </script>
 	
 	
     <script src="assets/js/jquery.min.js"></script>
     <script src="assets/bootstrap/js/bootstrap.min.js"></script>
-	
-
-		
+			
 </body>
-
-
 
 </html>
