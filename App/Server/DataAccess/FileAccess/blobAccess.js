@@ -94,7 +94,7 @@ class blobAccess{
                                         // We have found a free area of exactly the right size
                                         // Update nextFreeArea pointer to point to next free area
                                         let rawBytes = Buffer.alloc(17);
-                                        rawBytes.writeBigInt64BE(BigInt(nextFreeArea));
+                                        rawBytes.writeBigInt64BE(BigInt(nextFreeArea), 1);
                                         rawBytes.writeBigInt64BE(0n, 9);
                                         fs.write(descriptor, rawBytes, 1, 8, freeAreaPointerAddr, err => {
                                             if (err){
@@ -107,6 +107,7 @@ class blobAccess{
                                                 // Now update the newly allocated area with the correct details
                                                 rawBytes.writeInt8(2);  // Set first byte to 2 to show that this space is allocated
                                                 rawBytes.writeBigInt64BE(BigInt(chunksNeeded), 1);
+                                                rawBytes.writeBigInt64BE(0n, 9);  // Set actual bytes used to 0 as the space has just been allocated but nothing has been written yet
                                                 fs.write(descriptor, rawBytes, 0, 17, thisFreeArea, err => {
                                                     if (err){
                                                         fs.close(descriptor, e => {
@@ -182,7 +183,7 @@ class blobAccess{
                                             let rawBytes = Buffer.alloc(17);
                                             rawBytes.writeInt8(2);  // Set first byte to 2 to show that space is allocated
                                             rawBytes.writeBigInt64BE(BigInt(chunksNeeded), 1);
-                                            rawBytes.writeBigInt64BE(0n, 7);
+                                            rawBytes.writeBigInt64BE(0n, 9);  // Set actual bytes used to 0 as the space has just been allocated but nothing has been written yet
                                             fs.write(descriptor, rawBytes, 0, 17, newSpaceAddress, err => {
                                                 if (err){
                                                     fs.close(descriptor, e => {
@@ -213,8 +214,8 @@ class blobAccess{
                                         }
                                         else{
                                             // Try next free area
-                                            freeAreaPointerAddr = thisFreeArea + 8;
-                                            fs.read(descriptor, {position: nextFreeArea, length: 16, buffer: Buffer.alloc(16)}, findFreeArea);
+                                            freeAreaPointerAddr = thisFreeArea + 9;
+                                            fs.read(descriptor, {position: nextFreeArea, length: 17, buffer: Buffer.alloc(17)}, findFreeArea);
                                         }
                                     }
                                 }
@@ -226,8 +227,8 @@ class blobAccess{
                                 let rawBytes = Buffer.alloc(17);
                                 rawBytes.writeInt8(2);
                                 rawBytes.writeBigInt64BE(BigInt(chunksNeeded), 1);
-                                rawBytes.writeBigInt64BE(0n, 8);
-                                fs.write(descriptor, rawBytes, 0, 16, newSpaceAddress, err => {
+                                rawBytes.writeBigInt64BE(0n, 9);
+                                fs.write(descriptor, rawBytes, 0, 17, newSpaceAddress, err => {
                                     if (err){
                                         fs.close(descriptor, e => {
                                             if (e) reject(e);
@@ -256,7 +257,7 @@ class blobAccess{
                                 });
                             }
                             else{
-                                fs.read(descriptor, {position: nextFreeArea, length: 16, buffer: Buffer.alloc(16)}, findFreeArea);
+                                fs.read(descriptor, {position: nextFreeArea, length: 17, buffer: Buffer.alloc(17)}, findFreeArea);
                             }
                         }
                         
@@ -306,7 +307,10 @@ class blobAccess{
                                                 });
                                             }
                                             else{
-                                                resolve(true);
+                                                fs.close(descriptor, e => {
+                                                    if (e) reject(e);
+                                                    else resolve(true);
+                                                });
                                             }
                                         });
                                     };
@@ -322,6 +326,7 @@ class blobAccess{
                                             if (data.readInt8(0) == 1){
                                                 // The next space is also deallocated so merge the newly freed one with it
                                                 nextFreeArea = data.readBigInt64BE(9);
+                                                let nextFreeAreaSize = Number(data.readBigInt64BE(1));
                                                 // Find the nextFree pointer that points to this area and update it with the position of the newly freed block
                                                 let pointerAddress = 0;
                                                 let findPointer = (err, bytesRead, data) => {
@@ -332,11 +337,22 @@ class blobAccess{
                                                         });
                                                     }
                                                     else{
-                                                        if (data.readBigInt64BE() == position + (freedAreaSize + 128)){
+                                                        if (data.readBigInt64BE() == position + (freedAreaSize * 128)){
                                                             // Update the pointer to point to newly freed space instead
                                                             let rawBytes = Buffer.alloc(8);
                                                             rawBytes.writeBigInt64BE(BigInt(position));
-                                                            writeChunkDetails();
+                                                            fs.write(descriptor, rawBytes, 0, 8, pointerAddress, err => {
+                                                                if (err){
+                                                                    fs.close(descriptor, e => {
+                                                                        if (e) reject(e);
+                                                                        else reject(err);
+                                                                    });
+                                                                }
+                                                                else{
+                                                                    freedAreaSize += nextFreeAreaSize;  // Increase size field of newly freed area as it now also includes the free area following it
+                                                                    writeChunkDetails();
+                                                                }
+                                                            });
                                                         }
                                                         else{
                                                             pointerAddress = Number(data.readBigInt64BE()) + 1;
@@ -381,6 +397,6 @@ blobAccess.createBlob(testPath);
 blobAccess.allocate(testPath, 3004).then(value => console.log(value), 
 reason => console.log(reason)
 );
-/* blobAccess.deallocate(testPath, 16).then(value => console.log(value), reason => {
+ /*blobAccess.deallocate(testPath, 9232).then(value => console.log(value), reason => {
     console.log(reason);
 }) */
