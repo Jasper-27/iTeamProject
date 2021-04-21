@@ -172,8 +172,8 @@ function sendText(){
 // function which creates an alert that doesn't pause JS
 function msgAlert(TITLE,MESSAGE) {
   "use strict";   
-  document.getElementById("msg").innerHTML = `<span class='closebtn' onclick="this.parentElement.style.visibility='hidden';"'>&times;</span><strong>   ${TITLE}  </strong>  ${MESSAGE}`;
-  msg.style.visibility = 'visible';
+  document.getElementById("errormessage").innerHTML = `<span class='closebtn' onclick="this.parentElement.style.visibility='hidden';"'>&times;</span><strong>   ${TITLE}  </strong>  ${MESSAGE}`;
+  errormessage.style.visibility = 'visible';
 }
 
 
