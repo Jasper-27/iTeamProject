@@ -42,7 +42,7 @@ const checkInWindow = 40000 //the time window the client has to check in (needs 
 
 
 //-----------------------------------------------------------------------------------------------------------------
-//// Login API 
+//// API 
 
 const cors = require('cors')
 const express = require('express');
@@ -57,6 +57,7 @@ const APIport = 8080
 
 app.use ( express.json() )
 app.use( cors() ) 
+
 
 
 app.get("/PublicKey", async(req, res) => {
@@ -112,7 +113,7 @@ app.post('/login', async (req, res) => {  // Function must be async to allow use
 //Start the API listening on PORT
 app.listen( 
   APIport, 
-  () => console.log(`🔐 Login API online: http://localhost:${APIport}` .green.bold)
+  () => console.log(`🔐 Login API online at port: ${APIport} \n` .green.bold)
 )
 
 //-----------------------------------------------------------------------------------------------------------------
@@ -147,7 +148,7 @@ console.log("*          😉 WINKI SERVER 😉           *" .blue);
 console.log("*****************************************" .blue);
 console.log(); 
 
-console.log(`📧 Message socket online: http://localhost:${socketPort}` .green.bold)
+console.log(`📧 Message socket online at port: ${socketPort}` .green.bold)
 
 io.on('connection', socket => {
 

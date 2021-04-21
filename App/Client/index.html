@@ -22,6 +22,17 @@
 
 </head>
 
+<script> 
+    console.log(self.location.host)
+
+    let address = self.location.host.split(':')[0]
+    console.log(address)
+
+    sessionStorage.setItem('ip', address)
+
+    console.log(sessionStorage.getItem('ip'))
+</script>
+
 <body>
     <nav class="navbar navbar-light navbar-expand-md">
         <div class="container-fluid"><a class="navbar-brand" href="#">WinkiMessenger</a><button data-toggle="collapse" class="navbar-toggler" data-target="#navcol-1"><span class="sr-only">Toggle navigation</span><span class="navbar-toggler-icon"></span></button>
