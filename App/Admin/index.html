@@ -9,10 +9,31 @@
     <link rel="stylesheet" href="../Client/assets/css/layout/normal/messageBubble.css">
     <link rel="stylesheet" href="../Client/assets/css/layout/normal/Navigation-with-Button-Layout.css">
     <link rel="stylesheet" href="../Client/assets/css/layout/normal/styles.css">
-<script defer src="http://localhost:4500/socket.io/socket.io.js"></script>
 
-    <script defer src="adminInterface.js"></script>
 </head>
+
+ <!-- This section loads in the script file, and socket.io using the IP address of the server. -->
+ <script> 
+
+    console.log(sessionStorage.getItem('ip'))
+
+    let ioAddress = "http://" + self.location.host.split(':')[0] + ":4500/socket.io/socket.io.js"
+    console.log(ioAddress)
+
+    const socket_script = document.createElement("script")
+    socket_script.src = ioAddress
+    socket_script.async = false
+    socket_script.defer = true
+    document.head.appendChild(socket_script)
+
+
+    const script = document.createElement("script")
+    script.src = "adminInterface.js"
+    script.async = false
+    script.defer = true
+    document.head.appendChild(script)
+
+</script>
 
 <body>
     <nav class="navbar navbar-light navbar-expand-md navigation-clean-button">
