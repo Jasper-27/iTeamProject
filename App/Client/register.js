@@ -1,6 +1,9 @@
 
 
-const socket = io('http://localhost:4500'); 
+// this needs to be changed over to the seperate window at some point
+
+const socket = io('http://' + self.location.host.split(':')[0] + ':4500'); // sets the ip and port to use with socket.io
+
 
 
 // Tell the user when a registration has failed 
@@ -19,7 +22,6 @@ socket.on('register-success', () => {
 
 // Checks to see if details are valid, then sends them on to the server. 
 function register(){
-	
 	var passwordValue = document.getElementById("password1Entry").value 
 	var password2Value = document.getElementById("password2Entry").value 
 	var usernameinput = document.getElementById("usernameEntry").value 

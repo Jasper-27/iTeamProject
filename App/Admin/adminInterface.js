@@ -1,4 +1,4 @@
-const socket = io('http://localhost:4500');
+const socket = io('http://' + self.location.host.split(':')[0] + ':4500'); // sets the ip and port to use with socket.io
 
 var profanitySettings = 0;
 
