@@ -27,7 +27,15 @@ getUsers();
 
 attemptAuth()
 
-
+let image = [];
+ss(socket).on('test-image', stream => {
+  stream.on('data', chunk => {
+    console.log(chunk);
+    for (let i in chunk){
+      image.push(i);
+    }
+  });
+});
 
 // gets a username sent from the server
 socket.on('send-username', data => {
@@ -563,6 +571,75 @@ function renewAuth(){
   socket.emit('renew-auth', {"token": sessionStorage.token, "username" : sessionStorage.username})
 }
 
+var fileToSend;
+function sendFileStream(file){  // Takes a JS file object and opens a stream to the server to send it
+  fileToSend = file;
+  let base64Length = 4 * Math.ceil(file.size / 3);  // Calculate the size of the string once this is converted to base64
+  // Must also take the descriptor string into account ("data:<content type>/<file type>;base64,")
+  base64Length += file.type.length + 13;  // file.type will give the <content type>/<file type> part of the string, and 13 is length of "data:;base64,"
+  // Send a request to the server to open up a writeable stream so this file can be sent
+  socket.emit('request-send-stream', {"type": "", "size": base64Length});  // Type specifies whether this is part of a message or a profile picture
+}
+
+socket.on('reject-send-stream', reason => {
+  if (reason === "File is too large"){
+    msgAlert("Unable to send", `File must be less than ${settings.fileSizeLimit / 1000}KB`);
+  }
+  else{
+    msgAlert("Unable to send", reason);
+  }
+});
+
+ss(socket).on('accept-send-stream', stream => {
+  // The server has accepted the write stream request and opened a stream, so send the file through it
+  // First convert to base64
+  if (fileToSend){
+    // Only continue if fileToSend is defined
+    let reader = new FileReader();
+    reader.addEventListener("load", () => {
+      // Once converted to base64, start sending to server
+      // Divide string into suitably sized chunks and send one after the other
+      let chunksCount = Math.ceil(reader.result.length / 16384);
+      let cursor = 0;
+      // Function for writing data to the stream
+      let write = () => {
+        // Try to write to stream if it isn't full
+        if (cursor < reader.result.length){
+          if (stream._writableState.needDrain === false){
+            // Otherwise wait until it drains
+            stream.write(reader.result.slice(cursor, cursor + 16384), () => {
+              cursor += 16384;
+              write();
+            });
+          }
+          else{
+            // Otherwise wait until it drains
+            stream.once('drain', write);
+          }
+        }
+      };
+      write();
+      /* for (let i = 0; i < chunksCount; i++){
+        // Try to write the next chunk to the stream, but if it is too full then wait for it to drain before continuing
+        if (!stream.write(reader.result.slice(cursor, cursor + 16384))){
+          stream.once('drain', () => {
+            // The stream has been drained on the other end, so we can write more
+            stream.write(reader.result.slice(cursor, cursor + 16384));
+            cursor += 16384;
+          });
+        }
+        else{
+          cursor += 16384;
+        }
+      } */
+    });
+    reader.readAsDataURL(fileToSend);
+  }
+});
+
+sendFile = () => {
+  sendFileStream(messageFileSelector.files[0]);
+};
 
 // Checking in with the server every X amount of times 
 const heartBeatReauth = setInterval(function() { renewAuth() }, 20000)

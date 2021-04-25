@@ -1,7 +1,7 @@
 const Message = require("./Message");
 const DataAccess = require("./DataAccess/dataAccess");
 const profanity = require("./ProfanityFilter");
-const Settings = require("./Settings.js"); 
+const Settings = require("./Settings.js");
 
 const messagesFolderPath = __dirname + "/data/messages";
 const messagesIndexPath = __dirname + "/data/messages/messages_index.wdx";
@@ -15,7 +15,8 @@ var Storage = new DataAccess(messagesFolderPath, messagesIndexPath, logsFolderPa
 const users = {}  // Maps socket ids to usernames
 let loggedInUsers = {}  // Contains access token for user, uses usernames as keys
 
-
+const fs = require('fs');  // TESTING ONLY
+const blobAccess = require('./DataAccess/FileAccess/blobAccess');  // THIS ALSO
 //-----------------------------------------------------------------------------------------------------------------
 //// Login API 
 
@@ -56,7 +57,9 @@ app.post('/login', async (req, res) => {  // Function must be async to allow use
 
         loggedInUsers[name] = { 
           "token" : token, 
-          "lastCheckIn" : +new Date()
+          "lastCheckIn" : +new Date(),
+          "sendStream": null,
+          "readStream": null
         }
 
         res.send({
@@ -94,6 +97,8 @@ const io = require('socket.io')(socketPort, {
     origin: "*"
   }
 });
+
+const ss = require('socket.io-stream');
 
 Storage.log("Server started")
 
@@ -208,6 +213,9 @@ io.on('connection', socket => {
           socket.emit('old-messages', messagesToSend);
         });
 
+        let stream = ss.createStream();
+        ss(socket).emit('test-image', stream, {name: "overlayTest.jpg"});
+        fs.createReadStream(__dirname + "/data/test/jre-8u271-windows-i586-iftw.exe").pipe(stream);
         console.log("👋 User " + username + " connected");
 
       }else{
@@ -399,12 +407,43 @@ io.on('connection', socket => {
     }
   })
 
+  socket.on('request-send-stream', details => {
+    try{
+      if (details.size <= settings.fileSizeLimit){
+        // Create a stream and send it to the client, so they can use it to stream data to the server
+        let stream = ss.createStream();
+        // Allocate blob space
+        blobAccess.allocate(__dirname + "/data/test/testBlob.blb", details.size).then(addr => {
+          blobAccess.getWritableStream(__dirname + "/data/test/testBlob.blb", addr).then(fileStream => {
+            stream.pipe(fileStream);
+            loggedInUsers[users[socket.id]].sendStream = fileStream;
+            ss(socket).emit('accept-send-stream', stream);
+          });
+        });
+        
+      }
+      else{
+        socket.emit('reject-send-stream', 'File is too large');
+      }
+    }
+    catch{
+      socket.emit('reject-send-stream', 'Error Occured');
+    }
+    
+  });
   socket.on('disconnect', () => {
 
   try{
     let name = users[socket.id];
     // Only continue if name exists (meaning user was properly connected and logged in)
     if (typeof name == "string"){
+      // Close any streams the client had open
+      if (loggedInUsers[name].sendStream){
+        loggedInUsers[name].sendStream.destroy();
+      }
+      if (loggedInUsers[name].readStream){
+        loggedInUsers[name].readStream.destroy();
+      }
       socket.to('authorised').emit('user-disconnected', name);
       //logs that the user disconnected at this time
       Storage.log(name + " disconnected"); 

@@ -20,6 +20,7 @@ Blob files are not designed to be searchable, as they are just large pools of sp
 */
 
 const fs = require('fs');
+const { PassThrough } = require('stream');
 
 class blobAccess{
 
@@ -52,8 +53,54 @@ class blobAccess{
         });
     }
 
-    static writeToEntry(filePath, position, data){
-        // Overwrite the data in the entry at the given position
+    static getWritableStream(filePath, position){
+        // Set up a writable stream to write to the file
+        return new Promise((resolve, reject) => {
+            // First get the maximum size of the allocated space so we can stop the stream if it tries to write more than allowed
+            fs.open(filePath, "r+", (err, descriptor) => {
+                if (err) reject(err);
+                else{
+                    fs.read(descriptor, {position: position + 1, length: 8, buffer: Buffer.alloc(8)}, (err, bytesRead, data) => {
+                        if (err){
+                            fs.close(descriptor, e => {
+                                if (e) reject(e);
+                                else reject(err);
+                            });
+                        }
+                        else{
+                            let maxLength = Number(data.readBigInt64BE()) * 128;
+                            let stream = fs.createWriteStream(filePath, {fd: descriptor, start: position + 17});
+                            // Create a PassThrough stream to monitor the data to close the stream if too much data is sent
+                            let monitorStream = PassThrough();
+                            // Create totalLifetimeBytesWritten attribute of monitorStream to record total bytes sent through stream
+                            monitorStream.totalLifetimeBytesWritten = 0;
+                            monitorStream.on("data", chunk => {
+                                monitorStream.totalLifetimeBytesWritten += chunk.length;
+                                if (maxLength <= monitorStream.totalLifetimeBytesWritten){
+                                    // Producer attempted to write too much data, so close the stream
+                                    monitorStream.close();
+                                }
+                            });
+                            // Listen on stream close to update length field in blob
+                            monitorStream.on("close", () => {
+                                let lengthWritten = Buffer.alloc(8);
+                                lengthWritten.writeBigInt64BE(BigInt(monitorStream.totalLifetimeBytesWritten));
+                                fs.write(descriptor, lengthWritten, 0, 8, position + 9, (err) => {
+                                    stream.close();
+                                    fs.close(descriptor, e => {
+                                        if (e) throw e;
+                                        else if (err) throw err;
+                                    });
+                                });
+                            });
+                            // Connect monitorStream to stream
+                            monitorStream.pipe(stream);
+                            resolve(monitorStream);
+                        }
+                    });
+                }
+            });
+        });
     }
 
     static allocate(filePath, amount){
@@ -391,12 +438,4 @@ class blobAccess{
         });
     }
 }
-
-const testPath = __dirname + "/../../data/test/testBlob.blb";
-blobAccess.createBlob(testPath);
-blobAccess.allocate(testPath, 3004).then(value => console.log(value), 
-reason => console.log(reason)
-);
- /*blobAccess.deallocate(testPath, 9232).then(value => console.log(value), reason => {
-    console.log(reason);
-}) */
+module.exports = blobAccess;
