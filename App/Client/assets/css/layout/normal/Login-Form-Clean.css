@@ -5,13 +5,11 @@
 }
 
 
-.login-clean form .btn-primary:active {
-  transform: translateY(1px);
-}
+.login-clean form .btn-primary:active { transform: translateY(1px); }
 
-.btn:hover {  opacity: 0.7;  }
+.btn:hover { opacity: 0.7; }
 
-.btn {  transition: 0.1s; }
+.btn { transition: 0.1s; }
 
 
 .login-box {
@@ -33,6 +31,4 @@
   border: 2px solid #dad8d8;
 }
 
-.login-page {
-  background-color: aliceblue;
-}
+.login-page { background-color: aliceblue; }
