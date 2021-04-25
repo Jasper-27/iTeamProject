@@ -39,6 +39,10 @@
             <h2 class="sr-only">Login Form</h2>
     
             <div id="credentials" class="illustration"><img src="logo.png" height="220" width="220"></div>
+
+            <div class="alert" id="login_failed_alert" style="visibility: hidden;">  </div>
+            <div id="alert_spacer" style="visibility: hidden;"></div>
+
             <div class="form-group"><input class="form-control" type="text" id="user" placeholder="Username" name="username"></div>
             <div class="form-group"><input class="form-control" type="password" id="pass" name="password" placeholder="Password"></div>
             <div class="form-group"><button class="btn btn-primary btn-block"  onclick="login()" style="background: var(--right-msg-bg);">Log In</button></div>
@@ -71,7 +75,6 @@
         }
 
 
-            
         // Posts the user details to the server so the server can check them 
         function APILogin(serverPublic){
 
@@ -119,9 +122,34 @@
                     }
                    
                 }else{
-                    alert("😭 Login failed")
+                    // alert("😭 Login failed")
+                    msgAlert("Error:", "login failed")
                 }
             }
+        }
+
+        function msgAlert(TITLE,MESSAGE) {
+            "use strict";   
+
+            let alertBox = document.getElementById("login_failed_alert")
+            let alertSpacer = document.getElementById("alert_spacer")
+
+            alertBox.innerHTML = `<span class='closebtn' onclick="closePopup()"'>&times;</span><strong>   ${TITLE}  </strong>  ${MESSAGE}`;
+            alertBox.style.visibility = 'visible';
+
+            alertSpacer.innerHTML = `</br>`;
+            alertSpacer.style.visibility = 'visible';
+        }
+
+        function closePopup(){
+            let alertBox = document.getElementById("login_failed_alert")
+            let alertSpacer = document.getElementById("alert_spacer")
+
+            alertBox.style.visibility = 'hidden'
+            alertBox.innerHTML = ""
+
+            alertSpacer.style.visibility = 'hidden'
+            alertSpacer.innerHTML = ""
         }
 
 
