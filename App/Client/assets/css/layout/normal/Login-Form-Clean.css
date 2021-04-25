@@ -1,40 +1,7 @@
-.login-clean {
-  padding: 80px 0;
-  height:100vh;
-}
-
-.login-clean form {
-  max-width: 320px;
-  width: 90%;
-  margin: 0 auto;
-  padding: 40px;
-  border-radius: 4px;
-}
-
 .login-clean .illustration {
   text-align: center;
   padding: 0 0 20px;
   font-size: 100px;
-
-}
-
-.login-clean form .form-control {
-  border: none;
-  border-radius: 0;
-  box-shadow: none;
-  outline: none;
-  text-indent: 8px;
-  height: 42px;
-}
-
-.login-clean form .btn-primary {
-  border: none;
-  border-radius: 4px;
-  padding: 11px;
-  box-shadow: none;
-  margin-top: 26px;
-  text-shadow: none;
-  outline: none !important;
 }
 
 
@@ -42,14 +9,30 @@
   transform: translateY(1px);
 }
 
-.login-clean form .forgot {
+.btn:hover {  opacity: 0.7;  }
+
+.btn {  transition: 0.1s; }
+
+
+.login-box {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  -webkit-transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%);
+
+  background-color: rgb(255, 255, 255);
+  padding: 20px;
+
   display: block;
-  text-align: center;
-  font-size: 12px;
-  text-decoration: none;
+  width: 40%;
+  min-width: 300px;
+  margin: auto;
+
+  border-radius: 10px;
+  border: 2px solid #dad8d8;
 }
 
-.login-clean form .forgot:hover, .login-clean form .forgot:active {
-  text-decoration: none;
+.login-page {
+  background-color: aliceblue;
 }
-
