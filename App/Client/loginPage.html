@@ -38,11 +38,14 @@
         <div class="login-box" >
             <h2 class="sr-only">Login Form</h2>
     
+            <!-- Logo -->
             <div id="credentials" class="illustration"><img src="logo.png" height="220" width="220"></div>
 
-            <div class="alert" id="login_failed_alert" style="visibility: hidden;">  </div>
+            <!-- Alert for if the login fails -->
+            <div class="alert" id="login_failed_alert" style="visibility: hidden;" onclick="closePopup()"></div> 
             <div id="alert_spacer" style="visibility: hidden;"></div>
 
+            <!-- The logins fields  -->
             <div class="form-group"><input class="form-control" type="text" id="user" placeholder="Username" name="username"></div>
             <div class="form-group"><input class="form-control" type="password" id="pass" name="password" placeholder="Password"></div>
             <div class="form-group"><button class="btn btn-primary btn-block"  onclick="login()" style="background: var(--right-msg-bg);">Log In</button></div>
@@ -128,6 +131,7 @@
             }
         }
 
+        // Error message code
         function msgAlert(TITLE,MESSAGE) {
             "use strict";   
 

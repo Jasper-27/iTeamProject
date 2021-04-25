@@ -37,10 +37,11 @@
 
 .alert {
   padding: 5px;
-  background-color: #f44336;
+  background-color: #fa554a;
   color: white;
   width: 70%;
   margin: auto;
+  text-align: center;
 }
 
 .closebtn {
