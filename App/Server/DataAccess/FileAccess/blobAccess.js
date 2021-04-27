@@ -87,7 +87,7 @@ class blobAccess{
                         }
                         else{
                             let maxLength = Number(data.readBigInt64BE()) * 128;
-                            let stream = fs.createWriteStream(filePath, {start: position + 17});
+                            let stream = fs.createWriteStream(filePath, {start: position + 17, flags: "r+"});
                             // Create a PassThrough stream to monitor the data to close the stream if too much data is sent
                             let monitorStream = PassThrough();
                             // Create totalLifetimeBytesWritten attribute of monitorStream to record total bytes sent through stream

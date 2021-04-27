@@ -297,6 +297,7 @@ io.on('connection', socket => {
   socket.on('send-chat-message', message => processChatMessage(socket, message));
 
   socket.on('request-send-stream', details => {
+    // The client is requesting a stream with which they can send a file based message
     try{
       if (loggedInUsers[users[socket.id]].sendStream){
         // Client already has one writable stream open, they can't have another
@@ -362,9 +363,14 @@ io.on('connection', socket => {
       }
       else if (availableFiles[fileId]){
         // If fileId exists then stream that file from blob
-        blobAccess.getReadableStream(__dirname + "/data/test/testBlob.blb", availableFiles[fileId]).then(readStream => {
+        blobAccess.getReadableStream(__dirname + "/data/test/testBlob.blb", availableFiles[fileId]).then(fileStream => {
           let stream = ss.createStream();
-          readStream.pipe(stream);
+          stream.on("finish", () => {
+            stream.destroy();
+            loggedInUsers[users[socket.id]].readStream = null;
+          });
+          loggedInUsers[users[socket.id]].readStream = stream;
+          fileStream.pipe(stream);
           ss(socket).emit('accept-read-stream', stream);
         });
       }
