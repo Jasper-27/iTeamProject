@@ -283,7 +283,8 @@ function appendMessage(message, oldMessage=false) {
   else if (message.type === "image"){
     messageData = document.createElement('img');
     messageData.className = "image-message msg-image";
-    messageData.src = message.content;
+    // messageData.src = message.content;
+    fetchFile("image", message.fileName, message.content, messageData);
   }
   else if (message.type === "file"){
     messageData = document.createElement('div');
@@ -577,6 +578,13 @@ function renewAuth(){
   socket.emit('renew-auth', {"token": sessionStorage.token, "username" : sessionStorage.username})
 }
 
+var requestedFileDetails = {};  // The type and filename of the requested file
+function fetchFile(messageType, fileName, fileId, elementToInsertFile){
+  requestedFileDetails = {"type": messageType, "fileName": fileName, "elementForFile": elementToInsertFile};
+  // Fetch the file from the server via a stream
+  socket.emit('request-read-stream', fileId);
+}
+
 var fileToSend;
 function sendFileStream(file){  // Takes a JS file object and opens a stream to the server to send it
   fileToSend = file;
@@ -644,6 +652,22 @@ ss(socket).on('accept-send-stream', stream => {
     });
     reader.readAsDataURL(fileToSend);
   }
+});
+
+ss(socket).on('accept-read-stream', stream => {
+  // This still holds the entire file in the client's memory
+  let fileData = "";
+  stream.on('data', chunk => {
+    fileData += chunk;
+  });
+  stream.on("finish", () => {
+    if (requestedFileDetails.type === "file"){
+      requestedFileDetails.elementForFile.href = fileData;
+    }
+    else if (requestedFileDetails.type === "image"){
+      requestedFileDetails.elementForFile.src = fileData;
+    }
+  });
 });
 
 sendFile = () => {

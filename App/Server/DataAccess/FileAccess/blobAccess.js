@@ -46,10 +46,28 @@ class blobAccess{
         }
     }
 
-    static getData(filePath, position){
-        // Return the data in the entry at the given position
+    static getReadableStream(filePath, position){
+        // Return a stream to read the data in the entry at the given position
         return new Promise((resolve, reject) => {
-            
+            // First get the amount of data to read
+            fs.open(filePath, "r", (err, descriptor) => {
+                if (err) reject(err);
+                else{
+                    fs.read(descriptor, {position: position + 9, length: 8, buffer: Buffer.alloc(8)}, (err, bytesRead, data) => {
+                        if (err){
+                            fs.close(descriptor, e => {
+                                if (e) reject(e);
+                                else reject(err);
+                            });
+                        }
+                        else{
+                            let dataLength = Number(data.readBigInt64BE());
+                            let stream = fs.createReadStream(filePath, {fd: descriptor, start: position + 17, end: position + dataLength - 1});
+                            resolve(stream);
+                        }
+                    });
+                }
+            });
         });
     }
 

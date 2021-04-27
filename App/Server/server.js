@@ -294,125 +294,7 @@ io.on('connection', socket => {
   })
 
 
-  socket.on('send-chat-message', message => {
-
-    // Check that the client is logged in, and discard their messages otherwise
-    if (typeof users[socket.id] == "string"){
-      // Make sure message has a suitable type value
-      if (!(typeof message.type == "string" && (message.type === "text" || message.type === "image" || message.type === "file"))){
-        // Ignore the message
-        console.log("🚨 An message with an invalid type was received");
-        return;
-      }
-      let name = users[socket.id];
-
-      // Write the new message to file
-      let filteredMessage = message.content;
-      // Only filter text based messages for profanity
-      if (message.type === "text") filteredMessage = profanityFilter.filter(filteredMessage);
-      if (name == null || name == undefined || name == "") name = "unknown";
-
-      // Although async, this should not be awaited as we don't need to know the result.  This means we can just run addMessage in the background and move on
-      Storage.addMessage(new Message(name, message.type, filteredMessage, message.fileName));
-
-      socket.to('authorised').emit('chat-message', {
-        message: {
-          type: message.type, 
-          content: filteredMessage, 
-          fileName: message.fileName
-        }, 
-        name: name 
-      });
-
-      // console.log("🟢 " + name + ": " + message); 
-
-      //If message is blank. don't spam people 
-      //This is done client side as well for redundancy
-      if (message.content == ""){
-        console.log("🚨 An empty message got through");
-        return;
-      }
-
-      if (message.type === "text" && message.content.length > settings.messageLimit){ // again, just for redundancy 
-        console.log("🚨 A message that was too long got though");
-        return;
-      }
-
-      // Block blacklisted files
-      if (message.type == "file") {
-
-        var extension = message.fileName;
-        var blacklist = settings.restrictedFiles;
-
-        for (var i of blacklist) {
-          if (extension.includes(i)) {
-            console.log("Bad file trying to be sent!");
-            return;
-          }
-        }
-      }
-
-      // Checks if user sending message has spam flag
-      for (var j of clients) {
-
-        if (j.client == name && j.spam == true) {
-          console.log("A message from " + j.client + " was detected as spam!");
-          return;
-        }
-      }
-      
-      // Must also send message to user that sent it
-      socket.emit('chat-message', {
-        message:{
-          type: message.type, 
-          content: filteredMessage, 
-          fileName: message.fileName
-        }, 
-        name: name
-      });
-
-      // Checks to see if the message was @ing anyone 
-      if (message.type === "text"){
-        if (message.content.includes("@")){
-          message.content.split(" ").forEach((item, index) => {
-            if (item.charAt(0) == "@"){
-              socket.to('authorised').emit('mentioned', { target: item.substring(1), sender: name} );
-            }
-          });
-        }
-      }
-
-      // Finds the client who has just sent a message
-      for (var i of clients) {
-
-        if (i.client == name) {
-
-          // Increments spam counter
-          i.spamCounter = i.spamCounter + 1;
-
-          // Applies spam flag to user if counter exceeds 9
-          if (i.spamCounter > 9) {
-
-            i.spam = true;
-          }
-        }
-        // Decrements user counter when someone else sends a message
-        else {
-          i.spamCounter = i.spamCounter - 1;
-
-          // Doesn't allow counter to go below 0
-          if (i.spamCounter < 0) {
-
-            i.spamCounter = 0;
-          }
-          if (i.spamCounter < 10) {
-
-            i.spam = false;
-          }
-        }
-      }
-    }
-  })
+  socket.on('send-chat-message', message => processChatMessage(socket, message));
 
   socket.on('request-send-stream', details => {
     try{
@@ -469,6 +351,30 @@ io.on('connection', socket => {
       socket.emit('reject-send-stream', 'Error Occured');
     }
     
+  });
+
+  socket.on('request-read-stream', fileId => {
+    // The client is requesting to be streamed a file
+    try{
+      if (loggedInUsers[users[socket.id]].readStream){
+        // They already have a read stream open, they can't have another
+        socket.emit('reject-read-stream', 'Existing readable stream already open');
+      }
+      else if (availableFiles[fileId]){
+        // If fileId exists then stream that file from blob
+        blobAccess.getReadableStream(__dirname + "/data/test/testBlob.blb", availableFiles[fileId]).then(readStream => {
+          let stream = ss.createStream();
+          readStream.pipe(stream);
+          ss(socket).emit('accept-read-stream', stream);
+        });
+      }
+      else{
+        socket.emit('reject-read-stream', 'Invalid fileId');
+      }
+    }
+    catch{
+      socket.emit('reject-read-stream', 'Error Occured');
+    }
   });
   socket.on('disconnect', () => {
 
