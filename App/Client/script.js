@@ -130,6 +130,12 @@ function msgAlert(TITLE,MESSAGE) {
   msg.style.visibility = 'visible';
 }
 
+function updateUploadProgress(sent, total){
+  // Update the message in the message input box with the current progress while uploading a file
+  let percentage = Math.floor((sent / total) * 100);
+  messageInput.value = `Sending ${percentage}%`;
+}
+
 function sendFile(){
 
   // Only proceed if a file has been selected
@@ -577,8 +583,13 @@ function sendFileStream(file){  // Takes a JS file object and opens a stream to 
   let base64Length = 4 * Math.ceil(file.size / 3);  // Calculate the size of the string once this is converted to base64
   // Must also take the descriptor string into account ("data:<content type>/<file type>;base64,")
   base64Length += file.type.length + 13;  // file.type will give the <content type>/<file type> part of the string, and 13 is length of "data:;base64,"
+  // Create a message details object in same format as normal text messages
+  let messageDetails = {"type": "", "fileName": ""};
+  if (file.type.split("/")[0] === "image") messageDetails.type = "image";
+  else messageDetails.type = "file";
+  messageDetails.fileName = file.name;
   // Send a request to the server to open up a writeable stream so this file can be sent
-  socket.emit('request-send-stream', {"type": "", "size": base64Length});  // Type specifies whether this is part of a message or a profile picture
+  socket.emit('request-send-stream', {"type": "file_message", "size": base64Length, "messageDetails": messageDetails});  // Type specifies whether this is part of a message or a profile picture
 }
 
 socket.on('reject-send-stream', reason => {
@@ -598,8 +609,12 @@ ss(socket).on('accept-send-stream', stream => {
     let reader = new FileReader();
     reader.addEventListener("load", () => {
       // Once converted to base64, start sending to server
-      // Divide string into suitably sized chunks and send one after the other
-      let chunksCount = Math.ceil(reader.result.length / 16384);
+
+      // First set the cancel button to close the stream early if pressed
+      fileSelectButton.onclick = () => {
+        stream.end(exitSendFileMode);
+      };
+      // Divide string into suitably sized chunks and send one after the other using the stream
       let cursor = 0;
       // Function for writing data to the stream
       let write = () => {
@@ -609,6 +624,8 @@ ss(socket).on('accept-send-stream', stream => {
             // Otherwise wait until it drains
             stream.write(reader.result.slice(cursor, cursor + 16384), () => {
               cursor += 16384;
+              // Update progress message
+              updateUploadProgress(cursor, reader.result.length);
               write();
             });
           }
@@ -617,21 +634,13 @@ ss(socket).on('accept-send-stream', stream => {
             stream.once('drain', write);
           }
         }
+        else{
+          // The file has been fully sent, so close the stream
+          stream.end();
+          exitSendFileMode();
+        }
       };
       write();
-      /* for (let i = 0; i < chunksCount; i++){
-        // Try to write the next chunk to the stream, but if it is too full then wait for it to drain before continuing
-        if (!stream.write(reader.result.slice(cursor, cursor + 16384))){
-          stream.once('drain', () => {
-            // The stream has been drained on the other end, so we can write more
-            stream.write(reader.result.slice(cursor, cursor + 16384));
-            cursor += 16384;
-          });
-        }
-        else{
-          cursor += 16384;
-        }
-      } */
     });
     reader.readAsDataURL(fileToSend);
   }

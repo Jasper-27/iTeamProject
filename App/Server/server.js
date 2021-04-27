@@ -113,8 +113,15 @@ var connected = [];
 // Used for detecting spam
 var clients = [];
 var spamTracker;
-//var spamCounter;
-//var spam = false;
+
+/* 
+List of files available to be streamed (these can be requested by clients to get the files attached to file messages)
+The list maps numerical ids to positions in the file for storing images and files
+This is necessary as giving the client the positions directly would be insecure, as the client could specify an invalid position
+To prevent it growing infinitely, the list is limited to 1000 available files at a time.  When more files become available, the oldest is pushed out
+*/
+var availableFiles = [];
+var availableFilesNextPos = -1;  // Start from -1 so first one will be 0
 
 console.log("*****************************************");
 console.log("*          😉 WINKI SERVER 😉           *");      
@@ -409,24 +416,56 @@ io.on('connection', socket => {
 
   socket.on('request-send-stream', details => {
     try{
-      if (details.size <= settings.fileSizeLimit){
-        // Create a stream and send it to the client, so they can use it to stream data to the server
-        let stream = ss.createStream();
-        // Allocate blob space
-        blobAccess.allocate(__dirname + "/data/test/testBlob.blb", details.size).then(addr => {
-          blobAccess.getWritableStream(__dirname + "/data/test/testBlob.blb", addr).then(fileStream => {
-            stream.pipe(fileStream);
-            loggedInUsers[users[socket.id]].sendStream = fileStream;
-            ss(socket).emit('accept-send-stream', stream);
+      if (loggedInUsers[users[socket.id]].sendStream){
+        // Client already has one writable stream open, they can't have another
+        socket.emit('reject-send-stream', 'Existing writable stream already open');
+      }
+      else if (details.type === "file_message"){
+        // The client wants to send a file based message
+        if (details.size <= settings.fileSizeLimit){
+          // Create a message object
+          if (details.messageDetails.type != "file" && details.messageDetails.type != "image") socket.emit('reject-send-stream', 'Invalid message');
+          // The content and timestamp fields will be provided later once the stream is complete
+          let message =  {"type": details.messageDetails.type, "fileName": details.messageDetails.fileName};
+          // Create a stream and send it to the client, so they can use it to stream data to the server
+          let stream = ss.createStream();
+          // Allocate blob space
+          blobAccess.allocate(__dirname + "/data/test/testBlob.blb", details.size).then(addr => {
+            blobAccess.getWritableStream(__dirname + "/data/test/testBlob.blb", addr).then(fileStream => {
+              stream.pipe(fileStream);
+              loggedInUsers[users[socket.id]].sendStream = fileStream;
+              fileStream.on("finish", () => {
+                // Add position to content field of message object
+                message.content = addr.toString();
+                // Send message to users and save to file
+                processChatMessage(socket, message);
+                // Destroy the stream when finished
+                fileStream.destroy();
+                loggedInUsers[users[socket.id]].sendStream = null;
+              });
+              fileStream.on("close", () => {
+                // If stream is closed early, then deallocate the newly allocated space
+                if (fileStream.totalLifetimeBytesWritten < details.size){
+                  blobAccess.deallocate(__dirname + "/data/test/testBlob.blb", addr).then(() => {
+                    if (loggedInUsers[users[socket.id]]){
+                      // Only if the user hasn't already been destroyed
+                      loggedInUsers[users[socket.id]].sendStream = null;
+                    }
+                  });
+                }   
+              });
+              ss(socket).emit('accept-send-stream', stream);
+            });
           });
-        });
-        
+          
+        }
+        else{
+          socket.emit('reject-send-stream', 'File is too large');
+        }
       }
-      else{
-        socket.emit('reject-send-stream', 'File is too large');
-      }
+      
     }
-    catch{
+    catch (e){
       socket.emit('reject-send-stream', 'Error Occured');
     }
     
@@ -440,9 +479,11 @@ io.on('connection', socket => {
       // Close any streams the client had open
       if (loggedInUsers[name].sendStream){
         loggedInUsers[name].sendStream.destroy();
+        loggedInUsers[name].sendStream = null;
       }
       if (loggedInUsers[name].readStream){
         loggedInUsers[name].readStream.destroy();
+        loggedInUsers[name].readStream = null;
       }
       socket.to('authorised').emit('user-disconnected', name);
       //logs that the user disconnected at this time
@@ -470,6 +511,139 @@ io.on('connection', socket => {
   })
 })
 
+async function processChatMessage(socket, message){
+  // Check that the client is logged in, and discard their messages otherwise
+  if (typeof users[socket.id] == "string"){
+    // Make sure message has a suitable type value
+    if (!(typeof message.type == "string" && (message.type === "text" || message.type === "image" || message.type === "file"))){
+      // Ignore the message
+      console.log("🚨 An message with an invalid type was received");
+      return;
+    }
+    let name = users[socket.id];
+
+    // Write the new message to file
+    let filteredMessage = message.content;
+    // Only filter text based messages for profanity
+    if (message.type === "text") filteredMessage = profanityFilter.filter(filteredMessage);
+    if (name == null || name == undefined || name == "") name = "unknown";
+
+    // Although async, this should not be awaited as we don't need to know the result.  This means we can just run addMessage in the background and move on
+    Storage.addMessage(new Message(name, message.type, filteredMessage, message.fileName));
+
+    if (message.type === "file" || message.type === "image"){
+      // The content field will be a position in the file for storing files and images, but must be added to availableFiles
+      if (999 <= availableFilesNextPos){
+        // Start from 0 again if it goes over the maximum size, replacing the oldest
+        availableFilesNextPos = 0;
+      }
+      else{
+        availableFilesNextPos += 1;
+      }
+      // Place the positon in the file in availableFiles
+      availableFiles[availableFilesNextPos] = Number(message.content);
+      // Then send the position in availableFiles instead
+      filteredMessage = availableFilesNextPos;
+    }
+
+    socket.to('authorised').emit('chat-message', {
+      message: {
+        type: message.type, 
+        content: filteredMessage, 
+        fileName: message.fileName
+      }, 
+      name: name 
+    });
+
+    // console.log("🟢 " + name + ": " + message); 
+
+    //If message is blank. don't spam people 
+    //This is done client side as well for redundancy
+    if (message.content == ""){
+      console.log("🚨 An empty message got through");
+      return;
+    }
+
+    if (message.type === "text" && message.content.length > settings.messageLimit){ // again, just for redundancy 
+      console.log("🚨 A message that was too long got though");
+      return;
+    }
+
+    // Block blacklisted files
+    if (message.type == "file") {
+
+      var extension = message.fileName;
+      var blacklist = settings.restrictedFiles;
+
+      for (var i of blacklist) {
+        if (extension.includes(i)) {
+          console.log("Bad file trying to be sent!");
+          return;
+        }
+      }
+    }
+
+    // Checks if user sending message has spam flag
+    for (var j of clients) {
+
+      if (j.client == name && j.spam == true) {
+        console.log("A message from " + j.client + " was detected as spam!");
+        return;
+      }
+    }
+    
+    // Must also send message to user that sent it
+    socket.emit('chat-message', {
+      message:{
+        type: message.type, 
+        content: filteredMessage, 
+        fileName: message.fileName
+      }, 
+      name: name
+    });
+
+    // Checks to see if the message was @ing anyone 
+    if (message.type === "text"){
+      if (message.content.includes("@")){
+        message.content.split(" ").forEach((item, index) => {
+          if (item.charAt(0) == "@"){
+            socket.to('authorised').emit('mentioned', { target: item.substring(1), sender: name} );
+          }
+        });
+      }
+    }
+
+    // Finds the client who has just sent a message
+    for (var i of clients) {
+
+      if (i.client == name) {
+
+        // Increments spam counter
+        i.spamCounter = i.spamCounter + 1;
+
+        // Applies spam flag to user if counter exceeds 9
+        if (i.spamCounter > 9) {
+
+          i.spam = true;
+        }
+      }
+      // Decrements user counter when someone else sends a message
+      else {
+        i.spamCounter = i.spamCounter - 1;
+
+        // Doesn't allow counter to go below 0
+        if (i.spamCounter < 0) {
+
+          i.spamCounter = 0;
+        }
+        if (i.spamCounter < 10) {
+
+          i.spam = false;
+        }
+      }
+    }
+  }
+}
 
 async function verifyToken(username, token) {
   if (username == null){
