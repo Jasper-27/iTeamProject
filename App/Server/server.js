@@ -115,6 +115,9 @@ var connected = [];
 var clients = [];
 var spamTracker;
 
+// List of the 20 most recent messages (to avoid needing to read disk when sending old messages every time a user connects)
+var mostRecentMessages = [];
+
 /* 
 List of files available to be streamed (these can be requested by clients to get the files attached to file messages)
 The list maps numerical ids to positions in the file for storing images and files
@@ -211,6 +214,7 @@ io.on('connection', socket => {
         }
 
         io.to(socket.id).emit('settings', settings); //Sends settings to the client
+
         // Get previous 20 messages and send them to the user
         sendOldMessages(socket, 999999999999999);
 
@@ -437,8 +441,15 @@ async function processChatMessage(socket, message){
     if (message.type === "text") filteredMessage = profanityFilter.filter(filteredMessage);
     if (name == null || name == undefined || name == "") name = "unknown";
 
+    let messageObj = new Message(name, message.type, filteredMessage, message.fileName);
     // Although async, this should not be awaited as we don't need to know the result.  This means we can just run addMessage in the background and move on
-    Storage.addMessage(new Message(name, message.type, filteredMessage, message.fileName));
+    Storage.addMessage(messageObj);
+    // Also push to list of 20 most recent messages
+    mostRecentMessages.push(messageObj);
+    if (20 < mostRecentMessages.length){
+      // Keep to maximum of 20 by pushing out old message
+      mostRecentMessages.shift();
+    }
 
     if (message.type === "file" || message.type === "image"){
       // The content field will be a position in the file for storing files and images, but must be added to availableFiles
@@ -557,7 +568,7 @@ async function processChatMessage(socket, message){
 function sendOldMessages(socket, timestamp){
   // Send the 20 messages preceding the given timestamp
   if (typeof timestamp != "number" || timestamp < 0 || typeof users[socket.id] != "string" || Date.now() - loggedInUsers[users[socket.id]].lastOldMessageRequest < 1000) return;  // Either invalid timestamp value, user not logged in, or less than 1 second has passed since client's previous request for old messages so do nothing
-  Storage.getMessagesBeforeTimestamp(timestamp, 20).then(previousMessages => {
+  let sendMessages = (previousMessages) => {
     let messagesToSend = [];
     // Needs to be sent in reverse order so that older messages are further up
     for (let i = previousMessages.length - 1; 0 <= i; i--){
@@ -566,7 +577,23 @@ function sendOldMessages(socket, timestamp){
     // Record time of this request to prevent user sending another for 1 second
     loggedInUsers[users[socket.id]].lastOldMessageRequest = Date.now();
     socket.emit('old-messages', messagesToSend);
-  });
+  };
+  if (timestamp === 999999999999999){
+    // Request is for the most recent messages so use the in memory list rather than reading disk
+    if (0 < mostRecentMessages.length){
+      sendMessages(mostRecentMessages);
+    }
+    else{
+      // First need to fetch the 20 most recent messages
+      Storage.getMessagesBeforeTimestamp(timestamp, 20).then(messages => {
+        mostRecentMessages = messages;
+        sendMessages(mostRecentMessages);
+      });
+    }
+  }
+  else{
+    Storage.getMessagesBeforeTimestamp(timestamp, 20).then(sendMessages);
+  }
 }
 
 async function verifyToken(username, token) {
