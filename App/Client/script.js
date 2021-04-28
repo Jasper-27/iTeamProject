@@ -85,15 +85,34 @@ socket.on('send-users', connectedUsers => {
 // When the client is sent old messages from before they connected
 socket.on('old-messages', messages => {
   if (messages instanceof Array){
+    let oldScrollHeight = messageContainer.scrollHeight;
     for (let i = 0; i < messages.length; i++){
       let message = messages[i];
-      oldestMessageTime = message.time;
+      oldestMessageTime = message.message.time;
       addMessage(message.name, message.message, true);
     }
+    // Recalculate scrollTop so that it is still scrolled to the same place as before the old messages where added
+    messageContainer.scrollTop = messageContainer.scrollHeight - oldScrollHeight;
   }
 });
 
-
+// Request older messages when scrollbar is brought all the way up
+messageContainer.onscroll = () => {
+  if (messageContainer.scrollTop == 0){
+    // If scrolled all the way to the top then request another 20 of the previous messages
+    // Wait until the user releases the mouse on the scrollbar, otherwise it will immediately scroll even further up once messages have loaded
+    let mouseReleased = () => {
+      // Only continue if still scrolled to the top
+      if (messageContainer.scrollTop == 0){
+        if (oldestMessageTime == undefined) oldestMessageTime = 999999999999999;
+        socket.emit('request-old-messages', oldestMessageTime);
+      }
+      // Clear listener for next time
+      messageContainer.removeEventListener("mouseup", mouseReleased);
+    };
+    messageContainer.addEventListener("mouseup", mouseReleased);
+  }
+}
 
 
 

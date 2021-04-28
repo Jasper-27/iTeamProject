@@ -58,6 +58,7 @@ app.post('/login', async (req, res) => {  // Function must be async to allow use
         loggedInUsers[name] = { 
           "token" : token, 
           "lastCheckIn" : +new Date(),
+          "lastOldMessageRequest": 0,
           "sendStream": null,
           "readStream": null
         }
@@ -211,14 +212,7 @@ io.on('connection', socket => {
 
         io.to(socket.id).emit('settings', settings); //Sends settings to the client
         // Get previous 20 messages and send them to the user
-        Storage.getMessagesBeforeTimestamp(999999999999999, 20).then(previousMessages => {
-          let messagesToSend = [];
-          // Needs to be sent in reverse order so that older messages are further up
-          for (let i = previousMessages.length - 1; 0 < i; i--){
-            messagesToSend.push({"name": previousMessages[i].senderUsername, "message": {"type": previousMessages[i].type, "content": previousMessages[i].content, "time": previousMessages[i].timeStamp, "fileName": previousMessages[i].fileName}});
-          }
-          socket.emit('old-messages', messagesToSend);
-        });
+        sendOldMessages(socket, 999999999999999);
 
         let stream = ss.createStream();
         ss(socket).emit('test-image', stream, {name: "overlayTest.jpg"});
@@ -231,7 +225,7 @@ io.on('connection', socket => {
         console.log("😭 "+ username + " Had a failed authentication")
       }
     
-    }catch{
+    }catch(err){
       socket.disconnect()
     }
  
@@ -292,7 +286,6 @@ io.on('connection', socket => {
       }
     }
   })
-
 
   socket.on('send-chat-message', message => processChatMessage(socket, message));
 
@@ -417,10 +410,14 @@ io.on('connection', socket => {
    
   })
 
+  // Client wants the 20 messages preceding the given timestamp
+  socket.on('request-old-messages', timestamp => sendOldMessages(socket, timestamp));
+
   // allows the client to request a list of new users. tried to remove this but everything broke
   socket.on('get-users', out => {
     socket.to('authorised').emit('send-users', connected);
   })
+
 })
 
 async function processChatMessage(socket, message){
@@ -555,6 +552,21 @@ async function processChatMessage(socket, message){
       }
     }
   }
+}
+
+function sendOldMessages(socket, timestamp){
+  // Send the 20 messages preceding the given timestamp
+  if (typeof timestamp != "number" || timestamp < 0 || typeof users[socket.id] != "string" || Date.now() - loggedInUsers[users[socket.id]].lastOldMessageRequest < 1000) return;  // Either invalid timestamp value, user not logged in, or less than 1 second has passed since client's previous request for old messages so do nothing
+  Storage.getMessagesBeforeTimestamp(timestamp, 20).then(previousMessages => {
+    let messagesToSend = [];
+    // Needs to be sent in reverse order so that older messages are further up
+    for (let i = previousMessages.length - 1; 0 <= i; i--){
+      messagesToSend.push({"name": previousMessages[i].senderUsername, "message": {"type": previousMessages[i].type, "content": previousMessages[i].content, "time": +previousMessages[i].timeStamp, "fileName": previousMessages[i].fileName}});
+    }
+    // Record time of this request to prevent user sending another for 1 second
+    loggedInUsers[users[socket.id]].lastOldMessageRequest = Date.now();
+    socket.emit('old-messages', messagesToSend);
+  });
 }
 
 async function verifyToken(username, token) {
