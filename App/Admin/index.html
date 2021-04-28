@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="../Client/assets/css/layout/normal/Navigation-with-Button-Layout.css">
     <link rel="stylesheet" href="../Client/assets/css/layout/normal/styles.css">
 
+
+
 </head>
 
  <!-- This section loads in the script file, and socket.io using the IP address of the server. -->
@@ -33,6 +35,14 @@
     script.defer = true
     document.head.appendChild(script)
 
+
+
+    const reg_script = document.createElement("script")
+    reg_script.src = "register.js"
+    reg_script.async = false
+    reg_script.defer = true
+    document.head.appendChild(reg_script)
+
 </script>
 
 <body>
@@ -45,35 +55,29 @@
                     <li class="nav-item dropdown"><a class="dropdown-toggle nav-link" data-toggle="dropdown" aria-expanded="false" href="#">Dropdown </a>
                         <div class="dropdown-menu"><a class="dropdown-item" href="#">First Item</a><a class="dropdown-item" href="#">Second Item</a><a class="dropdown-item" href="#">Third Item</a></div>
                     </li>
-                </ul><span class="navbar-text actions"> <a class="login" href="#">Log In</a><a class="btn btn-light action-button" role="button" href="#">Sign Up</a></span>
+                </ul><span class="navbar-text actions"> <a class="register" href="register.html">register</a></span>
+
+
             </div>
         </div>
     </nav>
     <div id="allItems" style="min-height: 100%;">
         <div class="container">
             <div class="row d-inline d-sm-inline-block d-md-inline-block d-lg-flex d-xl-flex" style="min-height: 80%;height: 80%;">
-                <div class="col" id="left" style="border-width: 1.5px;border-style: solid;border-radius: 5px;padding-top: 10px;">
-                    <div id="LeftItems">
-                        <h3 id="leftTitle">Add User</h3>
-                    </div>
-                    <form id="userInputForm">
-                        <div class="form-row">
-                            <div class="col">
-                                <h5>User Name:</h5>
-                            </div>
-                            <div class="col"><input class="form-control" type="text"></div>
-                        </div>
-                        <div class="form-row">
-                            <div class="col">
-                                <h5>Password:</h5>
-                            </div>
-                            <div class="col"><input class="form-control" type="text"></div>
-                        </div>
-                        <div class="form-row">
-                            <div class="col d-xl-flex justify-content-xl-center"><button class="btn btn-primary" id="userSubmit" type="submit">Button</button></div>
-                        </div>
-                    </form>
+                <!-- Create user  -->
+                <div class="col" id="right" style="border-width: 1.5px;border-style: solid;border-radius: 5px;padding-top: 10px;">
+                    <h3>Create user</h3>
+                    <div class="form-group"><input class="form-control" type="text" id="usernameEntry" placeholder="Username" name="username"></div>
+                    <div class="form-group"><input class="form-control" type="password" id="password1Entry" name="password1" placeholder="Password"></div>
+                    <div class="form-group"><input class="form-control" type="password" id="password2Entry" name="password2" placeholder="Repeat Password"></div>
+                    
+                    <h4>Optional Data</h4>
+                    <div class="form-group"><input class="form-control" type="text" id="firstName" name="firstName" placeholder="First Name"></div>
+                    <div class="form-group"><input class="form-control" type="text" id="lastName" name="lastName" placeholder="Last Name"></div>
+                    
+                    <div class="form-group"><button class="btn btn-primary btn-block" id="submit"  type="submit" onclick = "register()" style="background: var(--right-msg-bg); ">Register</button></div>
                 </div>
+
                 <div class="col" id="middle" style="border-width: 1.5px;border-style: solid;border-radius: 5px;">
                     <div id="MiddleItems">
                         <h3>Settings</h3>
@@ -85,6 +89,7 @@
                         </div>
                     </div>
                 </div>
+
                 <div class="col" id="right" style="border-width: 1.5px;border-style: solid;border-radius: 5px;padding-top: 10px;">
                     <div id="RightItems"></div>
                     <h3>Banned Words</h3>
@@ -96,8 +101,14 @@
                         <button onclick="submitWordsCustom()" class="btn btn-dark" type="button">Submit</button>
                     </form>
                 </div>
+
+               
+
+
             </div>
         </div>
+            
+
     </div>
     <script src="../Client/assets/js/jquery.min.js"></script>
     <script src="../Client/assets/bootstrap/js/bootstrap.min.js"></script>

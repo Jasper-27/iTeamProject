@@ -260,48 +260,7 @@ io.on('connection', socket => {
 
   })
 
-  /*
-    THIS NEEDS TO BE MOVED TO THE ADMIN INTERFACE AT SOME POINT
-  */
-  // When user tries to create account
-  socket.on('create-account', async details => {
-    // Make sure given values are valid
-    if (typeof details.username != "string"){
-      socket.emit('register-fail', 'Invalid username');
-    }
-    else if (typeof details.firstName != "string"){
-      socket.emit('register-fail', 'Invalid first name');
-    }
-    else if (typeof details.lastName != "string"){
-      socket.emit('register-fail', 'Invalid last name');
-    }
-    else if (typeof details.password != "string"){
-      socket.emit('register-fail', 'Invalid password');
-    }
-    else{
-      // Details are valid
-      try{
-        let creationSuccessful = await Storage.createAccount(details.username, details.firstName, details.lastName, details.password);
-        if (creationSuccessful === true){
-          socket.emit('register-success');
-          Storage.log("New account created: " + details.username);
-          console.log("👍 New account created: " + details.username); 
-        }
-        else{
-          socket.emit('register-fail', 'Unable to create account');
-        }
-      }
-      catch (reason){
-        if (reason === "Username taken"){
-          socket.emit('register-fail', 'Username taken');
-        }
-        else{
-          socket.emit('register-fail', 'Unable to create account');
-        }
-      }
-    }
-  })
-
+ 
 
   socket.on('send-chat-message', message => {
     let name = users[socket.id];
@@ -468,6 +427,50 @@ io.on('connection', socket => {
     })
   })
 })
+
+
+// Registering users =====================================================================================================
+
+// When user tries to create account
+socket.on('create-account', async details => {
+  // Make sure given values are valid
+  if (typeof details.username != "string"){
+    socket.emit('register-fail', 'Invalid username');
+  }
+  else if (typeof details.firstName != "string"){
+    socket.emit('register-fail', 'Invalid first name');
+  }
+  else if (typeof details.lastName != "string"){
+    socket.emit('register-fail', 'Invalid last name');
+  }
+  else if (typeof details.password != "string"){
+    socket.emit('register-fail', 'Invalid password');
+  }
+  else{
+    // Details are valid
+    try{
+      let creationSuccessful = await Storage.createAccount(details.username, details.firstName, details.lastName, details.password);
+      if (creationSuccessful === true){
+        socket.emit('register-success');
+        Storage.log("New account created: " + details.username);
+        console.log("👍 New account created: " + details.username); 
+      }
+      else{
+        socket.emit('register-fail', 'Unable to create account');
+      }
+    }
+    catch (reason){
+      if (reason === "Username taken"){
+        socket.emit('register-fail', 'Username taken');
+      }
+      else{
+        socket.emit('register-fail', 'Unable to create account');
+      }
+    }
+  }
+})
+
+//===========================================================================================================================
 
 
 async function verifyToken(username, token) {
