@@ -584,15 +584,19 @@ function sendOldMessages(socket, timestamp){
       sendMessages(mostRecentMessages);
     }
     else{
-      // First need to fetch the 20 most recent messages
-      Storage.getMessagesBeforeTimestamp(timestamp, 20).then(messages => {
+      // First need to fetch the 20 most recent messages (get 21 and discard latest as Storage returns messages including the one with the given timestamp)
+      Storage.getMessagesBeforeTimestamp(timestamp, 21).then(messages => {
+        messages.pop();
         mostRecentMessages = messages;
         sendMessages(mostRecentMessages);
       });
     }
   }
   else{
-    Storage.getMessagesBeforeTimestamp(timestamp, 20).then(sendMessages);
+    Storage.getMessagesBeforeTimestamp(timestamp, 21).then(messages => {
+      messages.pop()
+      sendMessages(messages);
+    });
   }
 }
 

@@ -9,6 +9,7 @@ class fixedQueue{
     constructor(size){
         this.queue = [];
         this.size = size;
+        this.usedSize = 0;
     }
 
     push(item){
@@ -26,10 +27,15 @@ class fixedQueue{
         return this.queue.pop();
     }
 
-    merge(queueToMerge){
+    merge(queueToMerge, mergeToBeginning=false){
         // Merge another fixedQueue object into this one
         if (queueToMerge.usedSize + this.usedSize <= this.size){
-            this.queue = this.queue.concat(queueToMerge);
+            if (mergeToBeginning === true){
+                this.queue = queueToMerge.queue.concat(this.queue);
+            }
+            else{
+                this.queue = this.queue.concat(queueToMerge.queue);
+            }
             this.usedSize = queueToMerge.usedSize + this.usedSize;
         }
         else{

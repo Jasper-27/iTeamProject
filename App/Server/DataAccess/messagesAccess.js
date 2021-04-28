@@ -161,6 +161,7 @@ class messagesAccess{
                 // Get block that contains given timestamp
                 let block = await indexAccess.getBlocks(this.messagesIndexPath, timeStamp, timeStamp, true);  // Use getNearby mode of getBlocks to get nearest block to the timestamp
                 let foundMessages = [];
+                let previousBlockFoundMessages = [];
                 if (block == false){
                     // If the index is empty then there are no messages
                     resolve([]);
@@ -192,9 +193,11 @@ class messagesAccess{
                             foundMessages.push(new message(currentMessageUsername, currentMessageType, currentMessageContent, currentMessageFileName, currentMessageTime));
                             entriesStillNeeded--;
                         }
+                        previousBlockFoundMessages = foundMessages.concat(previousBlockFoundMessages);
+                        foundMessages = [];
                         block--;
                     }
-                    resolve(foundMessages);
+                    resolve(previousBlockFoundMessages);
                 }
                 else{
                     // We are looking for messages after the given timestamp

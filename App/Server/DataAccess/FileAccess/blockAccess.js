@@ -392,6 +392,7 @@ class blockAccess{
                         let nextFreePosition = Number(data.readBigInt64BE(8));  // This is useful for knowing where the file ends
                         let middleEntryPosition = Number(data.readBigInt64BE(16));  // This is needed to find the middle entry so we (ideally) only have to search half of the file
                         let middleEntryTimestamp;
+                        var searchingFromMidpoint = false;
 
                         let bufferStartPos, bufferEndPos, currentPos, currentEntryTimestamp;
                         let foundEntries = new fixedQueue(numberOfEntries);
@@ -415,7 +416,17 @@ class blockAccess{
                                         }
                                     }
                                     else if (getPrecedingEntries === true){
-                                        // The current entry is greater than timeStamp, so we have found all the preceding entries so can exit
+                                        // The current entry is greater than timeStamp, so wont find any more preceding entries past this point
+                                        if (searchingFromMidpoint && foundEntries.usedSize < numberOfEntries){
+                                            /* 
+                                            If we are searching for preceding entries and haven't found enough yet, and began from the midpoint then get more from before the midpoint
+                                            We can do this by recursively calling this method to get as many entries as we need preceding the midpoint
+                                            */
+                                           let entriesStillNeeded = numberOfEntries - foundEntries.usedSize;
+                                           let entriesFromBeforeMidpoint = await blockAccess.getEntriesNear(blockPath, Number(middleEntryTimestamp), entriesStillNeeded, true);
+                                           // Now merge the two fixedQueues together
+                                           foundEntries.merge(entriesFromBeforeMidpoint, true);
+                                        }
                                         fs.close(descriptor, e => {
                                             if (e) reject(e);
                                             else resolve(foundEntries);
@@ -447,9 +458,9 @@ class blockAccess{
                                         We can do this by recursively calling this method to get as many entries as we need preceding the midpoint
                                         */
                                        let entriesStillNeeded = numberOfEntries - foundEntries.usedSize;
-                                       let entriesFromBeforeMidpoint = await blockAccess.getEntriesNear(blockPath, middleEntryTimestamp, entriesStillNeeded, true);
+                                       let entriesFromBeforeMidpoint = await blockAccess.getEntriesNear(blockPath, Number(middleEntryTimestamp), entriesStillNeeded, true);
                                        // Now merge the two fixedQueues together
-                                       foundEntries = entriesFromBeforeMidpoint.merge(foundEntries);
+                                       foundEntries.merge(entriesFromBeforeMidpoint, true);
                                     }
                                     // Exit and resolve foundEntries
                                     fs.close(descriptor, e => {
@@ -473,12 +484,17 @@ class blockAccess{
                             else{
                                 middleEntryTimestamp = data.readBigInt64BE(0);
                                 // If the timestamp of the middle entry is greater than timeStamp then start searching from the beginning
-                                if (timeStamp < middleEntryTimestamp || middleEntryTimestamp == -1){
+                                /* What to do if the timestamp to be searched for is equal to the middle entry depends on whether getPrecedingEntries is true
+                                    If it is true, then we should start searching from the beginning because we want to search entries before the timestamp
+                                    If false, we should start searching from midpoint because we want to search the entries after the timestamp
+                                */
+                                if (timeStamp < middleEntryTimestamp || (timeStamp == middleEntryTimestamp && getPrecedingEntries === true) || middleEntryTimestamp == -1){
                                     currentPos = 25;
                                 }
                                 else{
                                     // If it is less than or equal to timeStamp then start searching from the middle entry
                                     currentPos = middleEntryPosition;
+                                    searchingFromMidpoint = true;
                                 }
                                 let bufferDetails = blockAccess._calculateBufferDetails(currentPos, nextFreePosition);
                                 bufferStartPos = bufferDetails[0];
@@ -562,7 +578,7 @@ class blockAccess{
                         }
                         if (0 < positions.length){
                             currentPos = positions.shift();
-                            if (!(25 < currentPos && currentPos < nextFreePosition)){
+                            if (!(25 <= currentPos && currentPos < nextFreePosition)){
                                 // The position is outside the range of valid positions in this block
                                 fs.close(descriptor, e => {
                                     if (e) reject(e);
