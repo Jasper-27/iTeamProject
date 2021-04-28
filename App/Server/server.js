@@ -40,6 +40,10 @@ const checkInWindow = 40000 //the time window the client has to check in (needs 
 // const checkInWindow = 10000
 
 
+var adminSecret = require('crypto').randomBytes(256).toString('hex'); 
+
+var adminPassword = "password"
+
 
 //-----------------------------------------------------------------------------------------------------------------
 //// API 
@@ -101,14 +105,55 @@ app.post('/login', async (req, res) => {  // Function must be async to allow use
     }else{
       res.status(406).send({message: 'Incorrect credentials'})
     }
-  }
-    catch (err){
+  }catch (err){
     res.status(500).send({message: 'An internal error occurred'});
     console.log("⚠ An unexpected error occurred on login attempt");
     Storage.log("An unexpected error occured on login attempt");
   }
 
 })
+
+
+
+/* Admin login */
+
+app.post('/AdminLogin', async (req, res) => {  // Function must be async to allow use of await
+  try{
+    const { hashed_password } = req.body; 
+    const { client_public_key } = req.body; 
+
+    // console.log(client_public_key)
+
+    let password = cryptico.decrypt(hashed_password, private).plaintext
+
+
+    if (password == adminPassword){
+
+      let encrypted_secret = cryptico.encrypt(adminSecret, client_public_key).cipher // encrypted cipher for sending 
+      res.status(200).send({
+        message: `Authentication success`,
+        token: `${ encrypted_secret }`    // the response
+      })
+
+      console.log("🧠 an Admin has logged in")
+      Storage.log("Admin has logged in ")
+
+    }else{
+      console.log("incorrect credentials")
+      res.status(406).send({message: 'Incorrect credentials'})
+    }
+
+  }catch (err){
+    res.status(500).send({message: 'An internal error occurred'});
+    console.log("⚠ An unexpected error occurred on login attempt");
+    Storage.log("An unexpected error occured on login attempt");
+
+    console.log(err)
+  }
+
+})
+
+
 
 //Start the API listening on PORT
 app.listen( 
@@ -143,9 +188,9 @@ var spamTracker;
 //var spamCounter;
 //var spam = false;
 
-console.log("*****************************************" .blue);
-console.log("*          😉 WINKI SERVER 😉           *" .blue);      
-console.log("*****************************************" .blue);
+console.log("*****************************************" .cyan);
+console.log("*          😉 WINKI SERVER 😉           *" .cyan);      
+console.log("*****************************************" .cyan);
 console.log(); 
 
 console.log(`📧 Message socket online at port: ${socketPort}` .green.bold)
@@ -426,51 +471,53 @@ io.on('connection', socket => {
       }
     })
   })
-})
 
 
-// Registering users =====================================================================================================
+  // Registering users =====================================================================================================
 
-// When user tries to create account
-socket.on('create-account', async details => {
-  // Make sure given values are valid
-  if (typeof details.username != "string"){
-    socket.emit('register-fail', 'Invalid username');
-  }
-  else if (typeof details.firstName != "string"){
-    socket.emit('register-fail', 'Invalid first name');
-  }
-  else if (typeof details.lastName != "string"){
-    socket.emit('register-fail', 'Invalid last name');
-  }
-  else if (typeof details.password != "string"){
-    socket.emit('register-fail', 'Invalid password');
-  }
-  else{
-    // Details are valid
-    try{
-      let creationSuccessful = await Storage.createAccount(details.username, details.firstName, details.lastName, details.password);
-      if (creationSuccessful === true){
-        socket.emit('register-success');
-        Storage.log("New account created: " + details.username);
-        console.log("👍 New account created: " + details.username); 
+  // When user tries to create account
+  socket.on('create-account', async details => {
+    // Make sure given values are valid
+    if (typeof details.username != "string"){
+      socket.emit('register-fail', 'Invalid username');
+    }
+    else if (typeof details.firstName != "string"){
+      socket.emit('register-fail', 'Invalid first name');
+    }
+    else if (typeof details.lastName != "string"){
+      socket.emit('register-fail', 'Invalid last name');
+    }
+    else if (typeof details.password != "string"){
+      socket.emit('register-fail', 'Invalid password');
+    }
+    else{
+      // Details are valid
+      try{
+        let creationSuccessful = await Storage.createAccount(details.username, details.firstName, details.lastName, details.password);
+        if (creationSuccessful === true){
+          socket.emit('register-success');
+          Storage.log("New account created: " + details.username);
+          console.log("👍 New account created: " + details.username); 
+        }
+        else{
+          socket.emit('register-fail', 'Unable to create account');
+        }
       }
-      else{
-        socket.emit('register-fail', 'Unable to create account');
+      catch (reason){
+        if (reason === "Username taken"){
+          socket.emit('register-fail', 'Username taken');
+        }
+        else{
+          socket.emit('register-fail', 'Unable to create account');
+        }
       }
     }
-    catch (reason){
-      if (reason === "Username taken"){
-        socket.emit('register-fail', 'Username taken');
-      }
-      else{
-        socket.emit('register-fail', 'Unable to create account');
-      }
-    }
-  }
+  })
+
+  //===========================================================================================================================
+
 })
 
-//===========================================================================================================================
 
 
 async function verifyToken(username, token) {
