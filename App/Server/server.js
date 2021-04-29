@@ -126,6 +126,7 @@ To prevent it growing infinitely, the list is limited to 1000 available files at
 */
 var availableFiles = [];
 var availableFilesNextPos = -1;  // Start from -1 so first one will be 0
+var availableFilesIndeces = {};  // Like availableFiles but does the opposite- maps file positions to indeces in availableFiles
 
 console.log("*****************************************");
 console.log("*          😉 WINKI SERVER 😉           *");      
@@ -452,18 +453,8 @@ async function processChatMessage(socket, message){
     }
 
     if (message.type === "file" || message.type === "image"){
-      // The content field will be a position in the file for storing files and images, but must be added to availableFiles
-      if (999 <= availableFilesNextPos){
-        // Start from 0 again if it goes over the maximum size, replacing the oldest
-        availableFilesNextPos = 0;
-      }
-      else{
-        availableFilesNextPos += 1;
-      }
-      // Place the positon in the file in availableFiles
-      availableFiles[availableFilesNextPos] = Number(message.content);
-      // Then send the position in availableFiles instead
-      filteredMessage = availableFilesNextPos;
+      // If a file, the message object will contain the postion within the blob file that the file can be found, not the file itself.  So add to list of available files so client can request the file if it needs it
+      filteredMessage = addToAvailableFiles(Number(message.content));
     }
 
     socket.to('authorised').emit('chat-message', {
@@ -572,6 +563,10 @@ function sendOldMessages(socket, timestamp){
     let messagesToSend = [];
     // Needs to be sent in reverse order so that older messages are further up
     for (let i = previousMessages.length - 1; 0 <= i; i--){
+      if (previousMessages[i].type === "file" || previousMessages[i].type === "image"){
+        // Add to list of available files
+        previousMessages[i].content = addToAvailableFiles(Number(previousMessages[i].content));
+      }
       messagesToSend.push({"name": previousMessages[i].senderUsername, "message": {"type": previousMessages[i].type, "content": previousMessages[i].content, "time": +previousMessages[i].timeStamp, "fileName": previousMessages[i].fileName}});
     }
     // Record time of this request to prevent user sending another for 1 second
@@ -664,4 +659,26 @@ function checkAuth(socket){
     console.log("⚠ Error disconnecting socket")
     socket.disconnect()
   }
+}
+
+function addToAvailableFiles(position){
+  // Add a file position to the list of available files
+  if (availableFilesIndeces[position] == undefined){
+    // Only add to availableFiles if it isn't already there
+
+    if (999 <= availableFilesNextPos){
+      // Start from 0 again if it goes over the maximum size, replacing the oldest
+      availableFilesNextPos = 0;
+    }
+    else{
+      availableFilesNextPos += 1;
+    }
+    // Remove the existing file from availableFiles and replace it
+    delete availableFilesIndeces[availableFiles[availableFilesNextPos]];
+    // Place the positon in the file in availableFiles
+    availableFiles[availableFilesNextPos] = position;
+    availableFilesIndeces[position] = availableFilesNextPos;
+    return availableFilesNextPos;
+  }
+  else return availableFilesIndeces[position];
 }
