@@ -255,6 +255,9 @@ function addMessageElement(element, insertAtBeginning=false){
 
 //Adds a message you sent to that chat.  If oldMessage is true, the message will be inserted above all the other messages
 function appendMessage(message, oldMessage=false) {
+  // Need to take into account the current height of messageContainer before adding new element changes it, so do it up here
+  let needsScroll = true;
+  if (oldMessage === true || messageContainer.scrollTop != messageContainer.scrollHeight - messageContainer.offsetHeight) needsScroll = false;
   // get message time
   if (oldMessage === true){
     // If oldMessage use the time from the message
@@ -318,7 +321,8 @@ function appendMessage(message, oldMessage=false) {
 
   
   messageBubble.appendChild(messageData);
-  if (oldMessage != true){
+  // Only scroll to the bottom on a new message being added if the user is already scrolled to the bottom (otherwise they may be trying to read old messages)
+  if (needsScroll){
     // If this is a new message, then scroll down to the bottom
     if (message.type === "image"){
       // For images, messageData may not always be fully loaded by the end of this function so scrollHeight can be innacurate.  So change the scrollTop in an event handler once messageData is fully loaded instead
@@ -339,6 +343,9 @@ function appendMessage(message, oldMessage=false) {
                                               
 //Adds a message someone else sent to the chat 
 function appendMessageRecieve(message, inName, oldMessage=false) {
+  // Need to take into account the current height of messageContainer before adding new element changes it, so do it up here
+  let needsScroll = true;
+  if (oldMessage === true || messageContainer.scrollTop != messageContainer.scrollHeight - messageContainer.offsetHeight) needsScroll = false;
   // get message time
   if (oldMessage === true){
     // If oldMessage use the time from the message
@@ -415,7 +422,8 @@ function appendMessageRecieve(message, inName, oldMessage=false) {
   }
   
   messageBubble.appendChild(messageData);
-  if (oldMessage != true){
+  // Only scroll to the bottom on a new message being added if the user is already scrolled to the bottom (otherwise they may be trying to read old messages)
+  if (needsScroll){
     // If this is a new message, then scroll down to the bottom
     if (message.type === "image"){
       // For images, messageData may not always be fully loaded by the end of this function so scrollHeight can be innacurate.  So change the scrollTop in an event handler once messageData is fully loaded instead
@@ -442,6 +450,9 @@ function appendMessageRecieve(message, inName, oldMessage=false) {
 }
 
 function appendUserJoinOrDisconnect(message){
+  // Need to take into account the current height of messageContainer before adding new element changes it, so do it up here
+  let needsScroll = true;
+  if (messageContainer.scrollTop != messageContainer.scrollHeight - messageContainer.offsetHeight) needsScroll = false;
 	// get current time
   var current = new Date();
   var current = current.toLocaleTimeString();
@@ -474,7 +485,10 @@ function appendUserJoinOrDisconnect(message){
   messageData.innerText = message;
   
   messageBubble.appendChild(messageData);
-  messageContainer.scrollTop = messageContainer.scrollHeight;
+  if (needsScroll){
+    // Only scroll down to the notification if the user is already fully scrolled down (otherwise they may be trying to read old messages)
+    messageContainer.scrollTop = messageContainer.scrollHeight;
+  }
 	
 }
 // asks the server for a list of currently connected users 
