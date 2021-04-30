@@ -62,7 +62,7 @@ class blobAccess{
                         }
                         else{
                             let dataLength = Number(data.readBigInt64BE());
-                            let stream = fs.createReadStream(filePath, {fd: descriptor, start: position + 17, end: position + dataLength - 1});
+                            let stream = fs.createReadStream(filePath, {fd: descriptor, start: position + 17, end: position + 17 + dataLength - 1});
                             resolve(stream);
                         }
                     });

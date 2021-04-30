@@ -687,6 +687,10 @@ ss(socket).on('accept-send-stream', stream => {
   }
 });
 
+socket.on('reject-read-stream', reason => {
+  msgAlert("Unable to fetch file", reason);
+});
+
 ss(socket).on('accept-read-stream', stream => {
   // This still holds the entire file in the client's memory
   let fileData = "";

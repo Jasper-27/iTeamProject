@@ -370,6 +370,9 @@ io.on('connection', socket => {
           loggedInUsers[users[socket.id]].readStream = stream;
           fileStream.pipe(stream);
           ss(socket).emit('accept-read-stream', stream);
+        }, 
+        () => {
+          socket.emit('reject-read-stream', 'Error Occured');
         });
       }
       else{
@@ -563,11 +566,12 @@ function sendOldMessages(socket, timestamp){
     let messagesToSend = [];
     // Needs to be sent in reverse order so that older messages are further up
     for (let i = previousMessages.length - 1; 0 <= i; i--){
+      let content = previousMessages[i].content;  // Must use a variable as otherwise the lastOldMessages array might be modified
       if (previousMessages[i].type === "file" || previousMessages[i].type === "image"){
         // Add to list of available files
-        previousMessages[i].content = addToAvailableFiles(Number(previousMessages[i].content));
+        content = addToAvailableFiles(Number(previousMessages[i].content));
       }
-      messagesToSend.push({"name": previousMessages[i].senderUsername, "message": {"type": previousMessages[i].type, "content": previousMessages[i].content, "time": +previousMessages[i].timeStamp, "fileName": previousMessages[i].fileName}});
+      messagesToSend.push({"name": previousMessages[i].senderUsername, "message": {"type": previousMessages[i].type, "content": content, "time": +previousMessages[i].timeStamp, "fileName": previousMessages[i].fileName}});
     }
     // Record time of this request to prevent user sending another for 1 second
     loggedInUsers[users[socket.id]].lastOldMessageRequest = Date.now();
