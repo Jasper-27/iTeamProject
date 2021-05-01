@@ -316,8 +316,8 @@ io.on('connection', socket => {
               stream.pipe(fileStream);
               loggedInUsers[users[socket.id]].sendStream = fileStream;
               fileStream.on("finish", () => {
-                // Add position to content field of message object
-                message.content = addr.toString();
+                // Add position and size to content field of message object
+                message.content = `${addr.toString()}:${details.size}`;
                 // Send message to users and save to file
                 processChatMessage(socket, message);
                 // Destroy the stream when finished
@@ -459,14 +459,17 @@ async function processChatMessage(socket, message){
 
     if (message.type === "file" || message.type === "image"){
       // If a file, the message object will contain the postion within the blob file that the file can be found, not the file itself.  So add to list of available files so client can request the file if it needs it
-      filteredMessage = addToAvailableFiles(Number(message.content));
+      let splitFileDetails = message.content.split(":");  // Content field is in format: "<position in blob file>:<file size (bytes)>" so split
+      message.fileSize = Number(splitFileDetails[1]);
+      filteredMessage = addToAvailableFiles(Number(splitFileDetails[0]));
     }
 
     socket.to('authorised').emit('chat-message', {
       message: {
         type: message.type, 
         content: filteredMessage, 
-        fileName: message.fileName
+        fileName: message.fileName,
+        fileSize: message.fileSize  // This simply will be undefined if not a file
       }, 
       name: name 
     });
@@ -513,7 +516,8 @@ async function processChatMessage(socket, message){
       message:{
         type: message.type, 
         content: filteredMessage, 
-        fileName: message.fileName
+        fileName: message.fileName,
+        fileSize: message.fileSize
       }, 
       name: name
     });
@@ -569,11 +573,14 @@ function sendOldMessages(socket, timestamp){
     // Needs to be sent in reverse order so that older messages are further up
     for (let i = previousMessages.length - 1; 0 <= i; i--){
       let content = previousMessages[i].content;  // Must use a variable as otherwise the lastOldMessages array might be modified
+      let fileSize;
       if (previousMessages[i].type === "file" || previousMessages[i].type === "image"){
         // Add to list of available files
-        content = addToAvailableFiles(Number(previousMessages[i].content));
+        let splitFileDetails = previousMessages[i].content.split(":");
+        fileSize = Number(splitFileDetails[1]);
+        content = addToAvailableFiles(Number(splitFileDetails[0]));
       }
-      messagesToSend.push({"name": previousMessages[i].senderUsername, "message": {"type": previousMessages[i].type, "content": content, "time": +previousMessages[i].timeStamp, "fileName": previousMessages[i].fileName}});
+      messagesToSend.push({"name": previousMessages[i].senderUsername, "message": {"type": previousMessages[i].type, "content": content, "time": +previousMessages[i].timeStamp, "fileName": previousMessages[i].fileName, "fileSize": fileSize}});
     }
     // Record time of this request to prevent user sending another for 1 second
     loggedInUsers[users[socket.id]].lastOldMessageRequest = Date.now();

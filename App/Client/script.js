@@ -5,7 +5,9 @@ const messageInput = document.getElementById('message-input');
 const fileSelectButton = document.getElementById("choose-file-button");
 const messageFileSelector = document.getElementById("choose-file-dialog");  // The <input type="file"/> element for selecting a file to send
 
-var sendMessage;  // Holds a reference to the function for sending messages (will switch between sendText and sendFile)
+const fileSizeWarningThreshold = 5000000;  // Bytes. A warning will be displayed before downloading files larger than this
+
+var sendMessage;  // Holds a reference to the function for sending messages (will switch between sendText and sendFileStream)
 var currentSendingUser;
 var oldestMessageTime;  // Holds the datetime of the oldest message in messageContainer (needed to fetch older messages)
 
@@ -155,59 +157,8 @@ function updateUploadProgress(sent, total){
   messageInput.value = `Sending ${percentage}%`;
 }
 
-function sendFile(){
-
-  // Only proceed if a file has been selected
-  if (0 < messageFileSelector.files.length){
-    file = messageFileSelector.files[0];
-    message = {type: "", content: "", fileName: file.name};  // File messages also have a filename field
 
 
-    // Client-side file extension blocking
-    var restrictedFiles = settings.restrictedFiles;
-
-    for (var i of restrictedFiles) {
-      
-      // Checks filename for the blacklisted file extensions
-      if (file.name.search(i) != -1) {
-
-        console.log("Invalid File Type");
-        msgAlert('Alert:', 'File type not allowed! Please chose another file.')
-        
-        
-        // User-friendliness
-        exitSendFileMode();
-        showFileSelector();
-
-        return;
-      }
-    }
-
-
-    // Set message type 
-    if (file.type.split("/")[0] === "image") message.type = "image";
-    else message.type = "file";
-    // Convert file to base64 and send.  This should be done asyncronously to avoid large files blocking the UI thread
-    reader = new FileReader();
-    // Add code to event listener to run asyncronously when conversion to base64 is complete
-    reader.addEventListener("load", () => {
-      // Send message
-      message.content = reader.result;
-      // ISSUE: Disconnection issue occurs here when sending large files.  The client gets disconnected if the file is larger than the servers io.engine.maxHttpBufferSize
-      // TEMPORARY SOLUTION:
-      if (999900 < JSON.stringify(message).length){  // Limit is 1,000,000 but use 999,000 here to be safe
-        msgAlert('Alert:', ' File is too big.')
-        return;
-      }
-
-      socket.emit('send-chat-message', message);
-    });
-    // Start conversion to base64
-    reader.readAsDataURL(file);
-    // Return to normal text mode
-    exitSendFileMode();
-  }
-}
 
 
 
@@ -307,9 +258,10 @@ function appendMessage(message, oldMessage=false) {
     messageData = document.createElement('img');
     let fetchDataLink = createFetchMessageLink(message, messageData);
     messageBubble.appendChild(fetchDataLink);
+    if (messageContainer.scrollTop == messageContainer.scrollHeight - messageContainer.offsetHeight) messageData.onload = () => messageContainer.scrollTop = messageContainer.scrollHeight;
     messageData.className = "image-message msg-image";
     // If this is a new message then fetch it automatically
-    if (oldMessage === false) fetchDataLink.click();
+    if (oldMessage === false && message.fileSize < fileSizeWarningThreshold) fetchDataLink.click();
   }
   else if (message.type === "file"){
     messageData = document.createElement('div');
@@ -324,7 +276,7 @@ function appendMessage(message, oldMessage=false) {
     downloadBtn.innerText = message.fileName;
     downloadBtn.href = message.content;
     messageData.appendChild(downloadBtn);
-    if (oldMessage === false) fetchDataLink.click();
+    if (oldMessage === false && message.fileSize < fileSizeWarningThreshold) fetchDataLink.click();
   }
 
   
@@ -336,10 +288,8 @@ function appendMessage(message, oldMessage=false) {
       // For images, messageData may not always be fully loaded by the end of this function so scrollHeight can be innacurate.  So change the scrollTop in an event handler once messageData is fully loaded instead
       messageData.onload = () => messageContainer.scrollTop = messageContainer.scrollHeight;
     }
-    else{
-      // However, for other types of messages do the scrolling here, as div elements fo not have an onload event
-      messageContainer.scrollTop = messageContainer.scrollHeight;
-    }
+    // However, for other types of messages do the scrolling here, as div elements fo not have an onload event
+    messageContainer.scrollTop = messageContainer.scrollHeight;
   }
 
   spamCounter++;
@@ -419,8 +369,9 @@ function appendMessageRecieve(message, inName, oldMessage=false) {
     let fetchDataLink = createFetchMessageLink(message, messageData);
     messageBubble.appendChild(fetchDataLink);
     messageData.className = "image-message msg-image";
+    if (messageContainer.scrollTop == messageContainer.scrollHeight - messageContainer.offsetHeight) messageData.onload = () => messageContainer.scrollTop = messageContainer.scrollHeight;
     // If this is a new message then fetch it automatically
-    if (oldMessage === false) fetchDataLink.click();
+    if (oldMessage === false && message.fileSize < fileSizeWarningThreshold) fetchDataLink.click();
   }
   else if (message.type === "file"){
     messageData = document.createElement('div');
@@ -435,7 +386,7 @@ function appendMessageRecieve(message, inName, oldMessage=false) {
     downloadBtn.innerText = message.fileName;
     downloadBtn.href = message.content;
     messageData.appendChild(downloadBtn);
-    if (oldMessage === false) fetchDataLink.click();
+    if (oldMessage === false && message.fileSize < fileSizeWarningThreshold) fetchDataLink.click();
   }
   
   messageBubble.appendChild(messageData);
@@ -446,10 +397,8 @@ function appendMessageRecieve(message, inName, oldMessage=false) {
       // For images, messageData may not always be fully loaded by the end of this function so scrollHeight can be innacurate.  So change the scrollTop in an event handler once messageData is fully loaded instead
       messageData.onload = () => messageContainer.scrollTop = messageContainer.scrollHeight;
     }
-    else{
-      // However, for other types of messages do the scrolling here, as div elements do not have an onload event
-      messageContainer.scrollTop = messageContainer.scrollHeight;
-    }
+    // However, for other types of messages do the scrolling here, as div elements do not have an onload event
+    messageContainer.scrollTop = messageContainer.scrollHeight;
   }
 
   
@@ -469,10 +418,35 @@ function appendMessageRecieve(message, inName, oldMessage=false) {
 function createFetchMessageLink(message, messageDataDiv){
   // Return HTML element to fetch file on click
   let fileDetails = document.createElement('a');
-  fileDetails.innerText = `Load ${message.fileName}`;
+  fileDetails.innerText = `Load ${message.fileName} (${bytesToBestUnit(message.fileSize)})`;
+  // Add warning if file is larger than 5mb as it may be too large for users browser
+  if (fileSizeWarningThreshold < message.fileSize){
+    fileDetails.innerText += " (File is very large, loading it could make your browser unstable)";
+  }
   fileDetails.className = "fetch-file-link";
-  fileDetails.onclick = () => fetchFile(message.type, message.fileName, message.content, fileDetails, messageDataDiv);
+  fileDetails.onclick = () => fetchFile(message.type, message.fileName, message.fileSize, message.content, fileDetails, messageDataDiv);
   return fileDetails
+}
+
+function bytesToBestUnit(size){
+  // Convert a number of bytes to the KB, MB, or GB (using base 10, not base 2 e.g. 1KB = 1000B not 1024)
+  // Limit to 2 decimal places
+  switch (Math.floor(Math.log10(size))){
+    case 0:
+    case 1:
+    case 2:
+      return `${size}B`;
+    case 3:
+    case 4:
+    case 5:
+      return `${(size / 1000).toFixed(2)}KB`;
+    case 6:
+    case 7:
+    case 8:
+      return `${(size / 1000000).toFixed(2)}MB`;
+    default:
+      return `${(size / 1000000000).toFixed(2)}GB`
+  }
 }
 
 function appendUserJoinOrDisconnect(message){
@@ -545,8 +519,8 @@ messageFileSelector.onchange = () => {
     fileSelectButton.innerText = "Cancel";
     fileSelectButton.onclick = exitSendFileMode;
 
-    // Override sendMessage to sendFile
-    sendMessage = sendFile;
+    // Override sendMessage to sendFileStream
+    sendMessage = sendFileStream;
   }
 };
 
@@ -639,10 +613,10 @@ function renewAuth(){
 
 var fetchFilePromise = Promise.resolve("");  // Promise for chaining fetch file operations
 var requestedFileDetails = {};  // The type and filename of the requested file
-function fetchFile(messageType, fileName, fileId, loadProgressDiv, elementToInsertFile){
+function fetchFile(messageType, fileName, fileSize, fileId, loadProgressDiv, elementToInsertFile){
   // Use a promise to allow requests to fetch files to be done one at a time (as the server does not allow the same client to fetch multiple at once)
   fetchFilePromise = fetchFilePromise.then(() => {return new Promise((resolve, reject) => {
-    requestedFileDetails = {"type": messageType, "fileName": fileName, "loadProgressDiv": loadProgressDiv, "elementForFile": elementToInsertFile, "promiseRejector": reject, "promiseResolver": resolve};
+    requestedFileDetails = {"type": messageType, "fileName": fileName, "fileSize": fileSize, "loadProgressDiv": loadProgressDiv, "elementForFile": elementToInsertFile, "promiseRejector": reject, "promiseResolver": resolve};
     // Change the link for fetching the file into a progress message
     loadProgressDiv.onclick = () => {};  // Remove listener to prevent this being called again
     loadProgressDiv.className = "";
@@ -654,7 +628,30 @@ function fetchFile(messageType, fileName, fileId, loadProgressDiv, elementToInse
 }
 
 var fileToSend;
-function sendFileStream(file){  // Takes a JS file object and opens a stream to the server to send it
+function sendFileStream(){  // Takes a JS file object and opens a stream to the server to send it
+  if (0 < messageFileSelector.files.length){
+    var file = messageFileSelector.files[0];
+  }
+  else return;
+  // Client-side file extension blocking
+  var restrictedFiles = settings.restrictedFiles;
+
+  for (var i of restrictedFiles) {
+    
+    // Checks filename for the blacklisted file extensions
+    if (file.name.search(i) != -1) {
+
+      console.log("Invalid File Type");
+      msgAlert('Alert:', 'File type not allowed! Please choose another file.')
+      
+      
+      // User-friendliness
+      exitSendFileMode();
+      showFileSelector();
+
+      return;
+    }
+  }
   fileToSend = file;
   let base64Length = 4 * Math.ceil(file.size / 3);  // Calculate the size of the string once this is converted to base64
   // Must also take the descriptor string into account ("data:<content type>/<file type>;base64,")
@@ -670,7 +667,7 @@ function sendFileStream(file){  // Takes a JS file object and opens a stream to 
 
 socket.on('reject-send-stream', reason => {
   if (reason === "File is too large"){
-    msgAlert("Unable to send", `File must be less than ${settings.fileSizeLimit / 1000}KB`);
+    msgAlert("Unable to send", `File must be less than ${bytesToBestUnit(settings.fileSizeLimit)}`);
   }
   else{
     msgAlert("Unable to send", reason);
@@ -730,7 +727,10 @@ socket.on('reject-read-stream', reason => {
 ss(socket).on('accept-read-stream', stream => {
   // This still holds the entire file in the client's memory
   let fileData = "";
+  // Change load file link to cancel button
+  requestedFileDetails.loadProgressDiv.onclick = () => stream.end();
   stream.on('data', chunk => {
+    requestedFileDetails.loadProgressDiv.innerText = `Fetching (${Math.floor((fileData.length / requestedFileDetails.fileSize) * 100)}%).  Click to cancel`;
     fileData += chunk;
   });
   stream.on("finish", () => {
@@ -751,10 +751,6 @@ ss(socket).on('accept-read-stream', stream => {
     requestedFileDetails.promiseResolver();
   });
 });
-
-sendFile = () => {
-  sendFileStream(messageFileSelector.files[0]);
-};
 
 // Checking in with the server every X amount of times 
 const heartBeatReauth = setInterval(function() { renewAuth() }, 20000)
