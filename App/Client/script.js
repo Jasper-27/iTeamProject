@@ -303,20 +303,28 @@ function appendMessage(message, oldMessage=false) {
     messageData.innerText = message.content;
   }
   else if (message.type === "image"){
+    // Add file info to message bubble so user can choose whether to fetch from server (this is automatically done for new messages)
     messageData = document.createElement('img');
+    let fetchDataLink = createFetchMessageLink(message, messageData);
+    messageBubble.appendChild(fetchDataLink);
     messageData.className = "image-message msg-image";
-    // messageData.src = message.content;
-    fetchFile("image", message.fileName, message.content, messageData);
+    // If this is a new message then fetch it automatically
+    if (oldMessage === false) fetchDataLink.click();
   }
   else if (message.type === "file"){
     messageData = document.createElement('div');
     messageData.className = "msg-text";
     let downloadBtn = document.createElement('a');
+    // Hide downloadBtn until the file has been fetched from server
+    downloadBtn.hidden = true;
+    let fetchDataLink = createFetchMessageLink(message, downloadBtn);
+    messageBubble.appendChild(fetchDataLink);
     // Specify that the link is to download, and specify the file name
     downloadBtn.download = message.fileName;
     downloadBtn.innerText = message.fileName;
     downloadBtn.href = message.content;
     messageData.appendChild(downloadBtn);
+    if (oldMessage === false) fetchDataLink.click();
   }
 
   
@@ -406,19 +414,28 @@ function appendMessageRecieve(message, inName, oldMessage=false) {
     }
   }
   else if (message.type === "image"){
+    // Add file info to message bubble so user can choose whether to fetch from server (this is automatically done for new messages)
     messageData = document.createElement('img');
+    let fetchDataLink = createFetchMessageLink(message, messageData);
+    messageBubble.appendChild(fetchDataLink);
     messageData.className = "image-message msg-image";
-    messageData.src = message.content;
+    // If this is a new message then fetch it automatically
+    if (oldMessage === false) fetchDataLink.click();
   }
   else if (message.type === "file"){
     messageData = document.createElement('div');
     messageData.className = "msg-text";
     let downloadBtn = document.createElement('a');
-    // Specify that the link is for downloading, and specify the file name
+    // Hide downloadBtn until the file has been fetched from server
+    downloadBtn.hidden = true;
+    let fetchDataLink = createFetchMessageLink(message, downloadBtn);
+    messageBubble.appendChild(fetchDataLink);
+    // Specify that the link is to download, and specify the file name
     downloadBtn.download = message.fileName;
     downloadBtn.innerText = message.fileName;
     downloadBtn.href = message.content;
     messageData.appendChild(downloadBtn);
+    if (oldMessage === false) fetchDataLink.click();
   }
   
   messageBubble.appendChild(messageData);
@@ -447,6 +464,15 @@ function appendMessageRecieve(message, inName, oldMessage=false) {
 
     spamCounter = 0;
   }
+}
+
+function createFetchMessageLink(message, messageDataDiv){
+  // Return HTML element to fetch file on click
+  let fileDetails = document.createElement('a');
+  fileDetails.innerText = `Load ${message.fileName}`;
+  fileDetails.className = "fetch-file-link";
+  fileDetails.onclick = () => fetchFile(message.type, message.fileName, message.content, fileDetails, messageDataDiv);
+  return fileDetails
 }
 
 function appendUserJoinOrDisconnect(message){
@@ -611,11 +637,20 @@ function renewAuth(){
   socket.emit('renew-auth', {"token": sessionStorage.token, "username" : sessionStorage.username})
 }
 
+var fetchFilePromise = Promise.resolve("");  // Promise for chaining fetch file operations
 var requestedFileDetails = {};  // The type and filename of the requested file
-function fetchFile(messageType, fileName, fileId, elementToInsertFile){
-  requestedFileDetails = {"type": messageType, "fileName": fileName, "elementForFile": elementToInsertFile};
-  // Fetch the file from the server via a stream
-  socket.emit('request-read-stream', fileId);
+function fetchFile(messageType, fileName, fileId, loadProgressDiv, elementToInsertFile){
+  // Use a promise to allow requests to fetch files to be done one at a time (as the server does not allow the same client to fetch multiple at once)
+  fetchFilePromise = fetchFilePromise.then(() => {return new Promise((resolve, reject) => {
+    requestedFileDetails = {"type": messageType, "fileName": fileName, "loadProgressDiv": loadProgressDiv, "elementForFile": elementToInsertFile, "promiseRejector": reject, "promiseResolver": resolve};
+    // Change the link for fetching the file into a progress message
+    loadProgressDiv.onclick = () => {};  // Remove listener to prevent this being called again
+    loadProgressDiv.className = "";
+    loadProgressDiv.innerText = "Requesting file from server";
+    // Fetch the file from the server via a stream
+    socket.emit('request-read-stream', fileId);
+  })});
+  
 }
 
 var fileToSend;
@@ -689,6 +724,7 @@ ss(socket).on('accept-send-stream', stream => {
 
 socket.on('reject-read-stream', reason => {
   msgAlert("Unable to fetch file", reason);
+  requestedFileDetails.promiseRejector(reason);
 });
 
 ss(socket).on('accept-read-stream', stream => {
@@ -698,12 +734,21 @@ ss(socket).on('accept-read-stream', stream => {
     fileData += chunk;
   });
   stream.on("finish", () => {
+    // Remove the progress message
+    requestedFileDetails.loadProgressDiv.remove();
     if (requestedFileDetails.type === "file"){
+      requestedFileDetails.elementForFile.hidden = false;
       requestedFileDetails.elementForFile.href = fileData;
     }
     else if (requestedFileDetails.type === "image"){
       requestedFileDetails.elementForFile.src = fileData;
     }
+  });
+  socket.once('read-stream-allowed', () => {
+    // The server has indicated that it will now allow another stream
+    // Resolve the promise, allowing the next scheduled file to be fetched
+    console.log("Stream closed");
+    requestedFileDetails.promiseResolver();
   });
 });
 

@@ -139,6 +139,10 @@ html {
 	
 	/* rounded corners */
 	border-radius: 15px;
+}
 
+.fetch-file-link:hover{
+  cursor: pointer;
+}
 
 

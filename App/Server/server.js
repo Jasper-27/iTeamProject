@@ -366,6 +366,8 @@ io.on('connection', socket => {
           stream.on("finish", () => {
             stream.destroy();
             loggedInUsers[users[socket.id]].readStream = null;
+            // Notify client that the server will now permit another read stream (as this one has been fully closed)
+            socket.emit('read-stream-allowed');
           });
           loggedInUsers[users[socket.id]].readStream = stream;
           fileStream.pipe(stream);
