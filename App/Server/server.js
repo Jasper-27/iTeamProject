@@ -315,18 +315,22 @@ io.on('connection', socket => {
             blobAccess.getWritableStream(__dirname + "/data/test/testBlob.blb", addr).then(fileStream => {
               stream.pipe(fileStream);
               loggedInUsers[users[socket.id]].sendStream = fileStream;
+              let cancelled = false;
               fileStream.on("finish", () => {
-                // Add position and size to content field of message object
-                message.content = `${addr.toString()}:${details.size}`;
-                // Send message to users and save to file
-                processChatMessage(socket, message);
-                // Destroy the stream when finished
-                fileStream.destroy();
-                loggedInUsers[users[socket.id]].sendStream = null;
+                if (details.size <= fileStream.totalLifetimeBytesWritten && cancelled === false){
+                  // Add position and size to content field of message object
+                  message.content = `${addr.toString()}:${details.size}`;
+                  // Send message to users and save to file
+                  processChatMessage(socket, message);
+                  // Destroy the stream when finished
+                  fileStream.destroy();
+                  loggedInUsers[users[socket.id]].sendStream = null;
+                }
               });
               fileStream.on("close", () => {
                 // If stream is closed early, then deallocate the newly allocated space
                 if (fileStream.totalLifetimeBytesWritten < details.size){
+                  cancelled = true;
                   blobAccess.deallocate(__dirname + "/data/test/testBlob.blb", addr).then(() => {
                     if (loggedInUsers[users[socket.id]]){
                       // Only if the user hasn't already been destroyed
@@ -363,12 +367,15 @@ io.on('connection', socket => {
         // If fileId exists then stream that file from blob
         blobAccess.getReadableStream(__dirname + "/data/test/testBlob.blb", availableFiles[fileId]).then(fileStream => {
           let stream = ss.createStream();
-          stream.on("finish", () => {
+          let closeStream = () => {
             stream.destroy();
+            fileStream.destroy();
             loggedInUsers[users[socket.id]].readStream = null;
             // Notify client that the server will now permit another read stream (as this one has been fully closed)
             socket.emit('read-stream-allowed');
-          });
+          };
+          stream.on("finish", closeStream);
+          socket.once('close-read-stream-early', closeStream);
           loggedInUsers[users[socket.id]].readStream = stream;
           fileStream.pipe(stream);
           ss(socket).emit('accept-read-stream', stream);

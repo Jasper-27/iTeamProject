@@ -415,9 +415,9 @@ function appendMessageRecieve(message, inName, oldMessage=false) {
   }
 }
 
-function createFetchMessageLink(message, messageDataDiv){
+function createFetchMessageLink(message, messageDataDiv, fileDetails=document.createElement('a')){
   // Return HTML element to fetch file on click
-  let fileDetails = document.createElement('a');
+  //let fileDetails = document.createElement('a');
   fileDetails.innerText = `Load ${message.fileName} (${bytesToBestUnit(message.fileSize)})`;
   // Add warning if file is larger than 5mb as it may be too large for users browser
   if (fileSizeWarningThreshold < message.fileSize){
@@ -616,7 +616,7 @@ var requestedFileDetails = {};  // The type and filename of the requested file
 function fetchFile(messageType, fileName, fileSize, fileId, loadProgressDiv, elementToInsertFile){
   // Use a promise to allow requests to fetch files to be done one at a time (as the server does not allow the same client to fetch multiple at once)
   fetchFilePromise = fetchFilePromise.then(() => {return new Promise((resolve, reject) => {
-    requestedFileDetails = {"type": messageType, "fileName": fileName, "fileSize": fileSize, "loadProgressDiv": loadProgressDiv, "elementForFile": elementToInsertFile, "promiseRejector": reject, "promiseResolver": resolve};
+    requestedFileDetails = {"type": messageType, "fileName": fileName, "fileSize": fileSize, "fileId": fileId,"loadProgressDiv": loadProgressDiv, "elementForFile": elementToInsertFile, "promiseRejector": reject, "promiseResolver": resolve};
     // Change the link for fetching the file into a progress message
     loadProgressDiv.onclick = () => {};  // Remove listener to prevent this being called again
     loadProgressDiv.className = "";
@@ -727,11 +727,19 @@ socket.on('reject-read-stream', reason => {
 ss(socket).on('accept-read-stream', stream => {
   // This still holds the entire file in the client's memory
   let fileData = "";
+  let cancelled = false;
   // Change load file link to cancel button
-  requestedFileDetails.loadProgressDiv.onclick = () => stream.end();
+  requestedFileDetails.loadProgressDiv.onclick = () => {
+    cancelled = true;
+    socket.emit('close-read-stream-early');
+    requestedFileDetails.content = requestedFileDetails.fileId;
+    createFetchMessageLink(requestedFileDetails, requestedFileDetails.elementForFile, requestedFileDetails.loadProgressDiv)
+  };
   stream.on('data', chunk => {
-    requestedFileDetails.loadProgressDiv.innerText = `Fetching (${Math.floor((fileData.length / requestedFileDetails.fileSize) * 100)}%).  Click to cancel`;
-    fileData += chunk;
+    if (cancelled === false){
+      requestedFileDetails.loadProgressDiv.innerText = `Fetching (${Math.floor((fileData.length / requestedFileDetails.fileSize) * 100)}%).  Click to cancel`;
+      fileData += chunk;
+    }
   });
   stream.on("finish", () => {
     // Remove the progress message
