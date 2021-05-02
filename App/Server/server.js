@@ -228,7 +228,7 @@ io.on('connection', socket => {
       }
     }catch{
       socket.disconnect()
-    }
+    } 
 
   })
 
@@ -473,7 +473,9 @@ io.on('connection', socket => {
   })
 
 
-  // Registering users =====================================================================================================
+  // Admin =====================================================================================================
+
+  // Registering
 
   // When user tries to create account
   socket.on('create-account', async details => {
@@ -513,6 +515,39 @@ io.on('connection', socket => {
       }
     }
   })
+
+
+  // Deleting 
+
+  socket.on('delete-account', async details => {
+    // Make sure given values are valid
+    if (typeof details.username != "string"){
+      socket.emit('register-fail', 'Invalid username');
+    }else{
+      // Details are valid
+      try{
+        let deleteSuccessful = await Storage.deleteAccount(details.username);
+        if (deleteSuccessful === true){
+          socket.emit('delete-success');
+          Storage.log("Account deleted : " + details.username);
+          console.log("👍 Account deleted: " + details.username); 
+        }
+        else{
+          socket.emit('register-fail', 'Unable to create account');
+        }
+      }
+      catch (reason){
+        if (reason === "Username taken"){
+          socket.emit('register-fail', 'Username taken');
+        }
+        else{
+          socket.emit('register-fail', 'Unable to create account');
+        }
+      }
+    }
+  })
+
+
 
   //===========================================================================================================================
 

@@ -94,3 +94,29 @@ function register(){
 }
 
 // ===============================================================================
+
+
+// Tell the user when a registration has failed 
+socket.on('delete-fail', data => {
+    alert("Registration failed: " + data);
+});
+
+// If register success, notify user
+socket.on('delete-success', () => {
+    alert('Account Deleted')
+});
+
+// Checks to see if details are valid, then sends them on to the server. 
+function deleteUser(){
+	var usernameinput = document.getElementById("username_delete").value 
+
+	
+	//check 
+	if (usernameinput == null){
+		alert("UserName Empty");
+        return; 
+	}else{
+        console.log("Function running")
+        socket.emit('delete-account', {"username": usernameinput});
+    }
+}
