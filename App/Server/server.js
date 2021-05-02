@@ -533,16 +533,11 @@ io.on('connection', socket => {
           console.log("👍 Account deleted: " + details.username); 
         }
         else{
-          socket.emit('register-fail', 'Unable to create account');
+          socket.emit('delete-fail', 'Unable to delite account');
         }
       }
       catch (reason){
-        if (reason === "Username taken"){
-          socket.emit('register-fail', 'Username taken');
-        }
-        else{
-          socket.emit('register-fail', 'Unable to create account');
-        }
+        socket.emit('delete-fail', reason);
       }
     }
   })

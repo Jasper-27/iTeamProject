@@ -116,7 +116,6 @@ function deleteUser(){
 		alert("UserName Empty");
         return; 
 	}else{
-        console.log("Function running")
         socket.emit('delete-account', {"username": usernameinput});
     }
 }
