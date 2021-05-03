@@ -124,6 +124,9 @@ class blockAccess{
 
     static addEntry(indexFilePath, blockFolderPath, entryTimestamp, entryData){
         // Add a new entry to the currently unfinished block (creating a new block if necessary)
+        if (50000 < entryData.length){
+            return Promise.reject("Entry data is too large");
+        }
         return new Promise((resolve, reject) => {
             // Make sure timestamp of new entry is not lower than previous one, as searching relies on chronological ordering
             // The index will have the timestamp as a header, and indexAccess will most likely have a copy in memory so it makes sense to get it from there

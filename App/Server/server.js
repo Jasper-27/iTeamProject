@@ -457,6 +457,18 @@ async function processChatMessage(socket, message){
     }
     let name = users[socket.id];
 
+    //If message is blank. don't spam people 
+    //This is done client side as well for redundancy
+    if (message.content == ""){
+      console.log("🚨 An empty message got through");
+      return;
+    }
+
+    if (message.content.length > settings.messageLimit || message.content.length > 40000 || (message.fileName != undefined && 255 < message.fileName.length)){ // again, just for redundancy.  Absolute limit is 40000
+      console.log("🚨 A message that was too long got though");
+      return;
+    }
+
     // Write the new message to file
     let filteredMessage = message.content;
     // Only filter text based messages for profanity
@@ -490,19 +502,6 @@ async function processChatMessage(socket, message){
       name: name 
     });
 
-    // console.log("🟢 " + name + ": " + message); 
-
-    //If message is blank. don't spam people 
-    //This is done client side as well for redundancy
-    if (message.content == ""){
-      console.log("🚨 An empty message got through");
-      return;
-    }
-
-    if (message.type === "text" && message.content.length > settings.messageLimit){ // again, just for redundancy 
-      console.log("🚨 A message that was too long got though");
-      return;
-    }
 
     // Block blacklisted files
     if (message.type == "file") {

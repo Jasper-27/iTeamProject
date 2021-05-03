@@ -116,7 +116,7 @@ function sendText(){
     return;
   }
 
-  if (message.length > settings.messageLimit){  //Makes sure the message is not longer than the message limit 
+  if (message.length > settings.messageLimit || message.length > 40000){  //Makes sure the message is not longer than the message limit (or the absolute maximum of 40000)
     console.log("message is too long");
     msgAlert('Alert:', 'Message is too long.')
     return; 
@@ -623,6 +623,11 @@ function sendFileStream(){  // Takes a JS file object and opens a stream to the 
     var file = messageFileSelector.files[0];
   }
   else return;
+  // Prevent file names over 255 chars
+  if (255 < file.name.length){
+    msgAlert("Cant send file:", "File name must be under 255 characters");
+    return;
+  }
   // Client-side file extension blocking
   var restrictedFiles = settings.restrictedFiles;
 
