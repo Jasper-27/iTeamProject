@@ -20,6 +20,7 @@ Blob files are not designed to be searchable, as they are just large pools of sp
 */
 
 const fs = require('fs');
+const path = require('path');
 const { PassThrough } = require('stream');
 
 class blobAccess{
@@ -61,9 +62,17 @@ class blobAccess{
                             });
                         }
                         else{
-                            let dataLength = Number(data.readBigInt64BE());
-                            let stream = fs.createReadStream(filePath, {fd: descriptor, start: position + 17, end: position + 17 + dataLength - 1});
-                            resolve(stream);
+                            try{
+                                let dataLength = Number(data.readBigInt64BE());
+                                let stream = fs.createReadStream(filePath, {fd: descriptor, start: position + 17, end: position + 17 + dataLength - 1});
+                                resolve(stream);
+                            }
+                            catch(reason){
+                                fs.close(descriptor, e => {
+                                    if (e) reject(e);
+                                    else reject(reason);
+                                });
+                            };
                         }
                     });
                 }
@@ -86,6 +95,7 @@ class blobAccess{
                             });
                         }
                         else{
+                            try{
                             let maxLength = Number(data.readBigInt64BE()) * 128;
                             let stream = fs.createWriteStream(filePath, {start: position + 17, flags: "r+"});
                             // Create a PassThrough stream to monitor the data to close the stream if too much data is sent
@@ -115,6 +125,13 @@ class blobAccess{
                             monitorStream.pipe(stream);
                             resolve(monitorStream);
                         }
+                        catch(reason){
+                            fs.close(descriptor, e => {
+                                if (e) reject(e);
+                                else reject(reason);
+                            });
+                        }
+                    }
                     });
                 }
             });

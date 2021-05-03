@@ -8,15 +8,14 @@ const messagesIndexPath = __dirname + "/data/messages/messages_index.wdx";
 const logsFolderPath = __dirname + "/data/logs";
 const logsIndexPath = __dirname + "/data/logs/logs_index.wdx";
 const accountsFilePath = __dirname + "/data/accounts/accounts.wac";
+const attachmentsPath = __dirname + "/data/attachments/attachedFiles.blb";
 const profilePicturesFilePath = __dirname + "/not/implemented.yet";
 
-var Storage = new DataAccess(messagesFolderPath, messagesIndexPath, logsFolderPath, logsIndexPath, accountsFilePath, profilePicturesFilePath);
+var Storage = new DataAccess(messagesFolderPath, messagesIndexPath, logsFolderPath, logsIndexPath, accountsFilePath, attachmentsPath, profilePicturesFilePath);
 
 const users = {}  // Maps socket ids to usernames
 let loggedInUsers = {}  // Contains access token for user, uses usernames as keys
 
-const fs = require('fs');  // TESTING ONLY
-const blobAccess = require('./DataAccess/FileAccess/blobAccess');  // THIS ALSO
 //-----------------------------------------------------------------------------------------------------------------
 //// Login API 
 
@@ -218,12 +217,6 @@ io.on('connection', socket => {
 
         // Get previous 20 messages and send them to the user
         sendOldMessages(socket, 999999999999999);
-
-        let stream = ss.createStream();
-        ss(socket).emit('test-image', stream, {name: "overlayTest.jpg"});
-        fs.createReadStream(__dirname + "/data/test/jre-8u271-windows-i586-iftw.exe").pipe(stream);
-        console.log("👋 User " + username + " connected");
-
       }else{
         socket.leave('authorised')
         socket.emit('authentication-failed')
@@ -311,8 +304,8 @@ io.on('connection', socket => {
           // Create a stream and send it to the client, so they can use it to stream data to the server
           let stream = ss.createStream();
           // Allocate blob space
-          blobAccess.allocate(__dirname + "/data/test/testBlob.blb", details.size).then(addr => {
-            blobAccess.getWritableStream(__dirname + "/data/test/testBlob.blb", addr).then(fileStream => {
+          Storage.allocateAttachmentsFileSpace(details.size).then(addr => {
+            Storage.getAttachmentWriteStream(addr).then(fileStream => {
               stream.pipe(fileStream);
               loggedInUsers[users[socket.id]].sendStream = fileStream;
               let cancelled = false;
@@ -331,7 +324,7 @@ io.on('connection', socket => {
                 // If stream is closed early, then deallocate the newly allocated space
                 if (fileStream.totalLifetimeBytesWritten < details.size){
                   cancelled = true;
-                  blobAccess.deallocate(__dirname + "/data/test/testBlob.blb", addr).then(() => {
+                  Storage.deallocateAttachmentsFileSpace(addr).then(() => {
                     if (loggedInUsers[users[socket.id]]){
                       // Only if the user hasn't already been destroyed
                       loggedInUsers[users[socket.id]].sendStream = null;
@@ -340,7 +333,19 @@ io.on('connection', socket => {
                 }   
               });
               ss(socket).emit('accept-send-stream', stream);
+            },
+            reason => {
+              // An error occured when trying to get a write stream
+              Storage.log(`Unable to create write stream. User: ${users[socket.id]} : ${reason}`);
+              console.log(`Unable to create write stream. User: ${users[socket.id]} : ${reason}`);
+              socket.emit('reject-send-stream', 'Error Occured');
             });
+          },
+          reason => {
+            // An error occured when trying to allocate
+            Storage.log(`Unable to allocate attachment space. User: ${users[socket.id]} : ${reason}`);
+            console.log(`Unable to allocate attachment space. User: ${users[socket.id]} : ${reason}`);
+            socket.emit('reject-send-stream', 'Error Occured');
           });
           
         }
@@ -365,7 +370,7 @@ io.on('connection', socket => {
       }
       else if (availableFiles[fileId]){
         // If fileId exists then stream that file from blob
-        blobAccess.getReadableStream(__dirname + "/data/test/testBlob.blb", availableFiles[fileId]).then(fileStream => {
+        Storage.getAttachmentReadStream(availableFiles[fileId]).then(fileStream => {
           let stream = ss.createStream();
           let closeStream = () => {
             stream.destroy();
@@ -380,7 +385,9 @@ io.on('connection', socket => {
           fileStream.pipe(stream);
           ss(socket).emit('accept-read-stream', stream);
         }, 
-        () => {
+        reason => {
+          Storage.log(`Unable create read stream. User: ${users[socket.id]} : ${reason}`);
+          console.log(`Unable to create read stream: User ${users[socket.id]} : ${reason}`);
           socket.emit('reject-read-stream', 'Error Occured');
         });
       }
@@ -392,6 +399,7 @@ io.on('connection', socket => {
       socket.emit('reject-read-stream', 'Error Occured');
     }
   });
+
   socket.on('disconnect', () => {
 
   try{

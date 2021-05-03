@@ -8,6 +8,7 @@ const usersAccess = require('./usersAccess');
 const messagesAccess = require('./messagesAccess');
 const logAccess = require('./logAccess');
 const Log = require('../Log');
+const blobAccess = require('./FileAccess/blobAccess');
 
 /* 
 System can handle asynchronous read operations (unlike writes)
@@ -24,6 +25,7 @@ class DataAccess{
     logsFolderPath;
     logsIndexPath;
     accountsTreePath;
+    messageAttachmentsPath;
     profilePicturesPath;
     // Objects for handling file access
     users;
@@ -40,25 +42,30 @@ class DataAccess{
    asyncReadCount;
    readBacklog;
 
-    constructor(messagesFolderPath, messagesIndexPath, logsFolderPath, logsIndexPath, accountsTreePath, profilePicturesPath){
+    constructor(messagesFolderPath, messagesIndexPath, logsFolderPath, logsIndexPath, accountsTreePath, messageAttachmentsPath, profilePicturesPath){
         // Validate paths
         if (this._isValidPath(messagesFolderPath, true) === false) throw "messagesFolderPath is not a suitable directory path";
         if (this._isValidPath(messagesIndexPath) === false) throw "messagesIndexPath is not a suitable file path";
         if (this._isValidPath(logsFolderPath, true) === false) throw "logsFolderPath is not a suitable directory path";
         if (this._isValidPath(logsIndexPath) === false) throw "logsIndexPath is not a suitable file path";
         if (this._isValidPath(accountsTreePath) === false) throw "accountsTreePath is not a suitable file path";
+        if (this._isValidPath(messageAttachmentsPath) === false) throw "messageAttachmentsPath is not a suitable file path";
         if (this._isValidPath(profilePicturesPath) === false) throw "profilePicturesPath is not a suitable file path";
         this.messagesFolderPath = messagesFolderPath;
         this.messagesIndexPath = messagesIndexPath;
         this.logsFolderPath = logsFolderPath;
         this.logsIndexPath = logsIndexPath;
         this.accountsTreePath = accountsTreePath;
+        this.messageAttachmentsPath = messageAttachmentsPath;
         this.profilePicturesPath = profilePicturesPath;
 
         // Instatiate lower level classes
         this.users = new usersAccess(this.accountsTreePath, this.profilePicturesPath);
         this.messages = new messagesAccess(this.messagesFolderPath, this.messagesIndexPath);
         this.logs = new logAccess(this.logsFolderPath, this.logsIndexPath);
+
+        // Create attachments blob file if it doesn't already exist
+        blobAccess.createBlob(messageAttachmentsPath);
 
         // Setup readBacklog
         this.asyncReadCount = 0;
@@ -225,6 +232,26 @@ class DataAccess{
                 this.readBacklog = this.readBacklog.then(fetchMessages);
             }
         });
+    }
+
+    allocateAttachmentsFileSpace(size){
+        // Allocate space in the blob file for holding files and images
+        return blobAccess.allocate(this.messageAttachmentsPath, size);
+    }
+
+    deallocateAttachmentsFileSpace(position){
+        // Deallocate a space in the attachments file
+        return blobAccess.deallocate(this.messageAttachmentsPath, position);
+    }
+
+    getAttachmentWriteStream(position){
+        // Return writable stream for writing to allocated space in attachments file
+        return blobAccess.getWritableStream(this.messageAttachmentsPath, position);
+    }
+
+    getAttachmentReadStream(position){
+        // Return readable stream for reading from allocated space in attachments file
+        return blobAccess.getReadableStream(this.messageAttachmentsPath, position);
     }
 
     log(logText){

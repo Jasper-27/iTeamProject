@@ -29,16 +29,6 @@ getUsers();
 
 attemptAuth()
 
-let image = [];
-ss(socket).on('test-image', stream => {
-  stream.on('data', chunk => {
-    console.log(chunk);
-    for (let i in chunk){
-      image.push(i);
-    }
-  });
-});
-
 // gets a username sent from the server
 socket.on('send-username', data => {
   myUsername = data; 
