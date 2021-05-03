@@ -613,7 +613,7 @@ class blockAccess{
     }
 
 
-    static wipeEntries(blockPath, startTime, endTime){
+    static wipeEntries(blockPath, startTime, endTime, beforeWipeCallback=null){  // beforeWipeCallback is an optional callback which (if provided) will be executed for each entry just before it is wiped, it will be passed a Buffer object containing the entry data
         /* 
         Due to the way blocks are formatted, we cannot delete entries (or we would have to rewrite the whole file from the deleted entry)
         So instead we will leave the length field intact, set the timestamp to -1 (so it will never be returned by getEntries), and overwrite the rest of the entry with 0s
@@ -647,16 +647,40 @@ class blockAccess{
                                                 let wipedEntry = Buffer.alloc(currentEntrySize);
                                                 wipedEntry.writeBigInt64BE(BigInt(currentEntrySize));
                                                 wipedEntry.writeBigInt64BE(BigInt(-1), 8);
-                                                // Rewrite entry with timestamp set to -1 and data set to 0s
-                                                fs.write(descriptor, wipedEntry, 0, currentEntrySize, currentPos, err => {
-                                                    if (err){
-                                                        fs.close(descriptor, e => {
-                                                            if (e) rejectDelete(e);
-                                                            else rejectDelete(err);
+                                                let wipe = () => {
+                                                    // Rewrite entry with timestamp set to -1 and data set to 0s
+                                                    fs.write(descriptor, wipedEntry, 0, currentEntrySize, currentPos, err => {
+                                                        if (err){
+                                                            fs.close(descriptor, e => {
+                                                                if (e) rejectDelete(e);
+                                                                else rejectDelete(err);
+                                                            });
+                                                        }
+                                                        else resolveDelete(true);
+                                                    });
+                                                };
+                                                if (typeof beforeWipeCallback == "function"){
+                                                    // A callback has been provided to run before overwriting
+                                                    // Read in entire entry if it isn't already in the buffer
+                                                    if (!(bufferStartPos <= currentPos && currentPos + currentEntrySize <= bufferEndPos)){
+                                                        fs.read(descriptor, {position: currentPos, length: currentEntrySize, buffer: Buffer.alloc(currentEntrySize)}, (err, bytesRead, data) => {
+                                                            beforeWipeCallback(data);
+                                                            // Now wipe the data
+                                                            wipe();
                                                         });
                                                     }
-                                                    else resolveDelete(true);
-                                                });
+                                                    else{
+                                                        // All the needed data is in the buffer
+
+                                                        beforeWipeCallback(Buffer.from(data.subarray(positionWithinBuffer, positionWithinBuffer + currentEntrySize)));
+                                                        wipe();
+                                                    }
+                                                }
+                                                else{
+                                                    // No callback so wipe straight away
+                                                    wipe();
+                                                }
+                                                
                                             });
                                             deletedCount++;
                                         }

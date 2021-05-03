@@ -214,6 +214,7 @@ io.on('connection', socket => {
         }
 
         io.to(socket.id).emit('settings', settings); //Sends settings to the client
+        console.log("👋 User " + username + " connected");
 
         // Get previous 20 messages and send them to the user
         sendOldMessages(socket, 999999999999999);

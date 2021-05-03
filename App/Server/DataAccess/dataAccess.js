@@ -61,7 +61,7 @@ class DataAccess{
 
         // Instatiate lower level classes
         this.users = new usersAccess(this.accountsTreePath, this.profilePicturesPath);
-        this.messages = new messagesAccess(this.messagesFolderPath, this.messagesIndexPath);
+        this.messages = new messagesAccess(this.messagesFolderPath, this.messagesIndexPath, this.messageAttachmentsPath);
         this.logs = new logAccess(this.logsFolderPath, this.logsIndexPath);
 
         // Create attachments blob file if it doesn't already exist

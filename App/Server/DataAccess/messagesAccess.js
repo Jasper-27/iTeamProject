@@ -8,10 +8,12 @@ const indexAccess = require('./FileAccess/indexAccess');
 const blockAccess = require('./FileAccess/blockAccess');
 const treeAccess = require('./FileAccess/treeAccess');
 const message = require('./../Message');
+const blobAccess = require('./FileAccess/blobAccess');
 
 class messagesAccess{
     messagesIndexPath;
     messagesFolderPath;
+    attachmentsPath;
 
     /*
     The fileAccess logic works using node.js's asynchronous system of callbacks and promises to allow it to be non-blocking
@@ -37,9 +39,10 @@ class messagesAccess{
     */
    pendingWrites;
 
-    constructor(messagesFolderPath, messagesIndexPath){
+    constructor(messagesFolderPath, messagesIndexPath, attachmentsPath){
         this.messagesFolderPath = messagesFolderPath;
         this.messagesIndexPath = messagesIndexPath;
+        this.attachmentsPath = attachmentsPath;
         // Create the index file if it doesn't exist
         indexAccess.createIndex(messagesIndexPath);
         // Initialise pendingWrites for chaining write operations
@@ -102,7 +105,48 @@ class messagesAccess{
                     for (let i = 0; i < blocks.length; i++){
                         // Search each of the blocks for all messages in the given range
                         let blockPath = path.format({dir: this.messagesFolderPath, base: `${blocks[i]}.wki`});
-                        wipedCount += await blockAccess.wipeEntries(blockPath, startTime, endTime);
+                        wipedCount += await blockAccess.wipeEntries(blockPath, startTime, endTime, async entryData => {
+                            // Check if it is a file based message and deallocate the space if so
+                            let messageType = entryData.readInt8(48);
+                            if (messageType == 2 || messageType == 3){
+                                // It is an image or file so deallocate the blob space
+                                let contentLength = Number(entryData.readBigInt64BE(49));
+                                // Size and position stored in content field
+                                let positionInfo = entryData.subarray(57, 57 + contentLength).toString();
+                                let blobPosition = Number(positionInfo.split(":")[0]);
+                                let blobLength = Number(positionInfo.split(":")[1]);
+                                // Overwrite with 0's for confidentiality
+                                let stream = await blobAccess.getWritableStream(this.attachmentsPath, blobPosition);
+                                let cursor = 0;
+                                let zeroes = Buffer.alloc(16384);
+                                let overwrite = async () => {
+                                    // Try to write to stream if it isn't full
+                                    if (cursor < blobLength){
+                                        if (blobLength < cursor + 16384){
+                                            // Last write will be smaller unless blobLength is divisible by 16384
+                                            zeroes = Buffer.alloc(blobLength - cursor);
+                                        }
+                                        if (stream._writableState.needDrain === false){
+                                            // Otherwise wait until it drains
+                                            stream.write(zeroes, () => {
+                                                cursor += 16384;
+                                                overwrite();
+                                            });
+                                        }
+                                        else{
+                                            // Otherwise wait until it drains
+                                            stream.once('drain', overwrite);
+                                        }
+                                    }
+                                    else{
+                                        stream.end();
+                                        // Then deallocate the space
+                                        await blobAccess.deallocate(this.attachmentsPath, blobPosition);
+                                    }
+                                };
+                                overwrite();
+                            }
+                        });
                     }
                     resolve(wipedCount);
                 }
