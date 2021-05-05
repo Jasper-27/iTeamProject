@@ -249,6 +249,8 @@ io.on('connection', socket => {
         //Sending AES key to the server 
         let encrypted = cryptico.encrypt(plainKey, loggedInUsers[name].publicKey)        
         socket.emit('send-aes', encrypted.cipher)
+        
+        socket.emit('login-success');
 
         // Get previous 20 messages and send them to the user
         sendOldMessages(socket, 999999999999999);
@@ -323,27 +325,6 @@ io.on('connection', socket => {
   })
 
   socket.on('send-chat-message', message => processChatMessage(socket, message));
-
-  function messageChecks(message){
-    
-    // Make sure message has a suitable type value
-    if (!(typeof message.type == "string" && (message.type === "text" || message.type === "image" || message.type === "file"))){
-      console.log("🚨 An message with an invalid type was received");
-      return false
-    }
-
-    if (message.content == ""){
-      console.log("🚨 An empty message got through");
-      return false
-    }
-
-    if (message.type === "text" && message.content.length > settings.messageLimit || message.content.length > 40000 || (message.fileName != undefined && 255 < message.fileName.length)){ // again, just for redundancy.  Absolute limit is 40000 
-      console.log("🚨 A message that was too long got though");
-      return false
-    }
-
-    return true
-  }
 
   socket.on('request-send-stream', details => {
     // The client is requesting a stream with which they can send a file based message
@@ -468,10 +449,15 @@ io.on('connection', socket => {
       let fileStream = await Storage.getChangeProfilePictureStream(users[socket.id], imageDetails.fileSize);
       loggedInUsers[users[socket.id]].sendStream = userStream;
       userStream.pipe(fileStream);
-      fileStream.on("close", () => {
+      fileStream.on("close", async () => {
         // Destroy stream and allow user to open another one
         fileStream.destroy();
         userStream.destroy();
+        // Update loggedInUsers with the new picture location
+        let accountData = await Storage.getAccount(users[socket.id]);
+        if (accountData instanceof Account) {
+          loggedInUsers[users[socket.id]].profilePicturePos = accountData.profilePictureLocation;
+        }
         if (loggedInUsers[users[socket.id]] != undefined) loggedInUsers[users[socket.id]].sendStream = null;
       });
       ss(socket).emit('accept-change-pfp-stream', userStream);
@@ -580,10 +566,11 @@ io.on('connection', socket => {
           connected.splice(index, 1);
       }
       sendUsers(socket)
-    }catch{
+    }
+  }
+  catch{
       console.log("error removing user, could have been kicked")
     }
-   
   })
 
   // Client wants the 20 messages preceding the given timestamp
@@ -659,8 +646,8 @@ async function processChatMessage(socket, message){
     }
     
     // Decrypt content field
-    message.content = decrypt(message.content)
-    message.fileName = decrypt(message.fileName)
+    if (message.type === "text") message.content = decrypt(message.content)
+    if (message.fileName != undefined) message.fileName = decrypt(message.fileName)
     
     // Write the new message to file
     let filteredMessage = message.content;
@@ -681,7 +668,7 @@ async function processChatMessage(socket, message){
       // If a file, the message object will contain the postion within the blob file that the file can be found, not the file itself.  So add to list of available files so client can request the file if it needs it
       let splitFileDetails = message.content.split(":");  // Content field is in format: "<position in blob file>:<file size (bytes)>" so split
       message.fileSize = Number(splitFileDetails[1]);
-      filteredMessage = addToAvailableFiles(Number(splitFileDetails[0]));
+      filteredMessage = addToAvailableFiles(Number(splitFileDetails[0])).toString();
     }
     
     // Encrypt and send to users
@@ -692,7 +679,7 @@ async function processChatMessage(socket, message){
     socket.to('authorised').emit('chat-message', {
       message: {
         type: message.type, 
-        content: filteredMessage, 
+        content: content, 
         fileName: fileName,
         fileSize: message.fileSize  // This simply will be undefined if not a file
       }, 
@@ -718,7 +705,7 @@ async function processChatMessage(socket, message){
     socket.emit('chat-message', {
       message:{
         type: message.type, 
-        content: filteredMessage, 
+        content: content, 
         fileName: fileName,
         fileSize: message.fileSize
       }, 
@@ -766,6 +753,27 @@ async function processChatMessage(socket, message){
       }
     }
   }
+}
+
+function messageChecks(message){
+    
+  // Make sure message has a suitable type value
+  if (!(typeof message.type == "string" && (message.type === "text" || message.type === "image" || message.type === "file"))){
+    console.log("🚨 An message with an invalid type was received");
+    return false
+  }
+
+  if (message.content == ""){
+    console.log("🚨 An empty message got through");
+    return false
+  }
+
+  if (message.type === "text" && message.content.length > settings.messageLimit || message.content.length > 40000 || (message.fileName != undefined && 255 < message.fileName.length)){ // again, just for redundancy.  Absolute limit is 40000 
+    console.log("🚨 A message that was too long got though");
+    return false
+  }
+
+  return true
 }
 
 function sendOldMessages(socket, timestamp){

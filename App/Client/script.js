@@ -69,7 +69,7 @@ socket.on('settings', data => {
 
 //When a message is sent
 socket.on('chat-message', data => {  // Messages will be recieved in format: {name: "<username of sender>", message: {type: "<text/image/file>", content: "<data>", fileName: "<name of file sent (only for file / image messages)>"}}
-  if (data.message.type == 'text'){ data.message.content = decrypt(data.message.content) }
+  data.message.content = decrypt(data.message.content)
   addMessage(data.name, data.message)
 })
 
@@ -91,7 +91,7 @@ socket.on('user-connected', name => {
 
 //When a user disconnects 
 socket.on('user-disconnected', name => {
-  var message =(`${name} disconnected`);
+  var message =(`${decrypt(name)} disconnected`);
   appendUserJoinOrDisconnect(message);
   getUsers(); 
   // Destroy user's profile picture to save memory

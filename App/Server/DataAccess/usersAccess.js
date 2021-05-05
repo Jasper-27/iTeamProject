@@ -219,8 +219,15 @@ class usersAccess{
                         // If stream is closed early, then deallocate the newly allocated space
                         if (stream.totalLifetimeBytesWritten < imageSize){
                             cancelled = true;
-                            blobAccess.deallocate(this.profilePicturesBlobPath, position).catch(reason => {
-                                console.log(`Unable to deallocate new profile picture space: ${reason}`);
+                            // Change the user's profile picture location to 0 as the old one has already been deleted
+                            let rawBytes = Buffer.alloc(8);
+                            rawBytes.writeBigInt64BE(0n);
+                            treeAccess.modifyNode(this.accountsTreePath, username, 180, rawBytes).then(() => {
+                                blobAccess.deallocate(this.profilePicturesBlobPath, position).catch(reason => {
+                                    console.log(`Unable to deallocate new profile picture space: ${reason}`);
+                                });
+                            }, reason => {
+                                console.log(`Couldn't change user ${username} profile picture location to 0 after failure`);
                             });
                         }
                     });
