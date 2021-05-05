@@ -5,10 +5,17 @@ const messageInput = document.getElementById('message-input');
 const fileSelectButton = document.getElementById("choose-file-button");
 const messageFileSelector = document.getElementById("choose-file-dialog");  // The <input type="file"/> element for selecting a file to send
 
+
 var AESKey = ""
 
-var sendMessage;  // Holds a reference to the function for sending messages (will switch between sendText and sendFile)
+const defaultProfilePicture = "logo.png";
+
+const fileSizeWarningThreshold = 5000000;  // Bytes. A warning will be displayed before downloading files larger than this
+
+var sendMessage;  // Holds a reference to the function for sending messages (will switch between sendText and sendFileStream)
+
 var currentSendingUser;
+var oldestMessageTime;  // Holds the datetime of the oldest message in messageContainer (needed to fetch older messages)
 
 var myUsername = ""; 
 
@@ -19,6 +26,7 @@ var timeout = null;
 var settings 
 
 var connectedUsersList = document.getElementById('users');  // The HTML list that contains the connected users 
+profilePictures = {};  // Format {<username>:profile picture (as base64 string)}
 
 // Used for detecting spam
 var spamCounter = 0;
@@ -27,6 +35,7 @@ var spam = false;
 // getUsers();
 
 attemptAuth()
+
 
 socket.on('send-aes', data =>{
   
@@ -48,6 +57,8 @@ socket.on('disconnect', () => {
 // gets a username sent from the server
 socket.on('send-username', data => {
   myUsername = data; 
+  profilePictures[myUsername] = defaultProfilePicture;
+
 }) 
 
 //Syncing settings with the server
@@ -74,6 +85,8 @@ socket.on('user-connected', name => {
   var message = `${name} connected`;
   appendUserJoinOrDisconnect(message);
   getUsers(); 
+  // Request new user's profile picture
+  socket.emit('request-pfp-stream', name);
 })
 
 //When a user disconnects 
@@ -81,6 +94,8 @@ socket.on('user-disconnected', name => {
   var message =(`${name} disconnected`);
   appendUserJoinOrDisconnect(message);
   getUsers(); 
+  // Destroy user's profile picture to save memory
+  delete profilePictures[name];
 })
 
 
@@ -91,13 +106,46 @@ socket.on('send-users', connectedUsers => {
 })
 
 
+// When the client is sent old messages from before they connected
+socket.on('old-messages', messages => {
+  if (messages instanceof Array){
+    let oldScrollHeight = messageContainer.scrollHeight;
+    for (let i = 0; i < messages.length; i++){
+      let message = messages[i];
+      oldestMessageTime = message.message.time;
+      addMessage(message.name, message.message, true);
+    }
+    // Recalculate scrollTop so that it is still scrolled to the same place as before the old messages where added
+    messageContainer.scrollTop = messageContainer.scrollHeight - oldScrollHeight;
+  }
+});
+
+// Request older messages when scrollbar is brought all the way up
+messageContainer.onscroll = () => {
+  if (messageContainer.scrollTop == 0){
+    // If scrolled all the way to the top then request another 20 of the previous messages
+    // Wait until the user releases the mouse on the scrollbar, otherwise it will immediately scroll even further up once messages have loaded
+    let mouseReleased = () => {
+      // Only continue if still scrolled to the top
+      if (messageContainer.scrollTop == 0){
+        if (oldestMessageTime == undefined) oldestMessageTime = 999999999999999;
+        socket.emit('request-old-messages', oldestMessageTime);
+      }
+      // Clear listener for next time
+      messageContainer.removeEventListener("mouseup", mouseReleased);
+    };
+    messageContainer.addEventListener("mouseup", mouseReleased);
+  }
+}
+
+
 // Functions for sending messages
 function sendText(){
   let message = messageInput.value;
 
   if (message.trim() == ""){  return  } // stops blank messages
 
-  if (message.length > settings.messageLimit){  //Makes sure the message is not longer than the message limit 
+  if (message.length > settings.messageLimit || message.length > 40000){  //Makes sure the message is not longer than the message limit (or the absolute maximum of 40000)
     console.log("message is too long");
     msgAlert('Alert:', 'Message is too long.')
     return; 
@@ -120,50 +168,11 @@ function msgAlert(TITLE,MESSAGE) {
   msg.style.visibility = 'visible';
 }
 
-function sendFile(){
-  // Only proceed if a file has been selected
-  if (0 < messageFileSelector.files.length){
-    file = messageFileSelector.files[0];
-    message = {type: "", content: "", fileName: file.name};  // File messages also have a filename field
 
-    // Client-side file extension blocking
-    var restrictedFiles = settings.restrictedFiles;
-
-    for (var i of restrictedFiles) {
-      // Checks filename for the blacklisted file extensions
-      if (file.name.search(i) != -1) {
-        console.log("Invalid File Type");
-        msgAlert('Alert:', 'File type not allowed! Please chose another file.')
-        // User-friendliness
-        exitSendFileMode();
-        // showFileSelector(); 
-        return;
-      }
-    }
-
-    // Set message type 
-    if (file.type.split("/")[0] === "image") message.type = "image";
-    else message.type = "file";
-    // Convert file to base64 and send.  This should be done asyncronously to avoid large files blocking the UI thread
-    reader = new FileReader();
-    // Add code to event listener to run asyncronously when conversion to base64 is complete
-    reader.addEventListener("load", () => {
-      // Send message
-      message.content = reader.result;
-      // ISSUE: Disconnection issue occurs here when sending large files.  The client gets disconnected if the file is larger than the servers io.engine.maxHttpBufferSize
-      // TEMPORARY SOLUTION:
-      if (999900 < JSON.stringify(message).length){  // Limit is 1,000,000 but use 999,000 here to be safe
-        msgAlert('Alert:', ' File is too big.')
-        return;
-      }
-
-      socket.emit('send-chat-message', message);
-    });
-    // Start conversion to base64
-    reader.readAsDataURL(file);
-    // Return to normal text mode
-    exitSendFileMode();
-  }
+function updateUploadProgress(sent, total){
+  // Update the message in the message input box with the current progress while uploading a file
+  let percentage = Math.floor((sent / total) * 100);
+  messageInput.value = `Sending ${percentage}%`;
 }
 
 // Send text is the default
@@ -176,31 +185,62 @@ messageForm.addEventListener('submit', e => {
 })
 
 //Decides who sent a message, then adds it to chat
-function addMessage(inName, inMessage) {
+function addMessage(inName, inMessage, oldMessage=false) {
   if (inName == myUsername) {
-		appendMessage(inMessage);
+		appendMessage(inMessage, oldMessage);
   }
   else {
 		var message = inMessage;
-		appendMessageRecieve(message, inName);
+		appendMessageRecieve(message, inName, oldMessage);
   }    
 }
 
-//Adds a message you sent to that chat
-function appendMessage(message) {
-  // get current time
-  var current = new Date();
-  var current = current.toLocaleTimeString();
+function addMessageElement(element, insertAtBeginning=false){
+  /* 
+  Adds given HTML element to messageContainer
+  If insertAtBeginning is true it will be inserted at the start (rather than appended to the end)
+    - This is used when displaying old messages from before the user connected
+  */
+  if (insertAtBeginning === true){
+    let firstChild = messageContainer.children[0];
+    if (firstChild == undefined){
+      // The new element is the first one
+      messageContainer.append(element);
+    }
+    else{
+      messageContainer.insertBefore(element, firstChild);
+    }
+  }
+  else{
+    messageContainer.append(element);
+  }
+}
+
+//Adds a message you sent to that chat.  If oldMessage is true, the message will be inserted above all the other messages
+function appendMessage(message, oldMessage=false) {
+  // Need to take into account the current height of messageContainer before adding new element changes it, so do it up here
+  let needsScroll = true;
+  if (oldMessage === true || messageContainer.scrollTop != messageContainer.scrollHeight - messageContainer.offsetHeight) needsScroll = false;
+  // get message time
+  if (oldMessage === true){
+    // If oldMessage use the time from the message
+    var current = new Date(message.time);
+  }
+  else{
+    // Otherwise use time from user's machine, as this will use their timezone
+    var current = new Date();
+  }
+  current = current.toLocaleTimeString();
 	
   //create the message box (div to hold the bubble)
   var messageBox = document.createElement('div');
   messageBox.className = "msg right-msg";
-  messageContainer.append(messageBox);
+  addMessageElement(messageBox, oldMessage);
   
   //add user image
   var userImage = document.createElement('div');
   userImage.className = "msg-img";
-  userImage.style.backgroundImage = "url(https://image.flaticon.com/icons/svg/145/145867.svg)";
+  userImage.style.backgroundImage = `url(${profilePictures[myUsername]})`;
   messageBox.appendChild(userImage);
   
   //specify and add the actual bubble 
@@ -226,28 +266,40 @@ function appendMessage(message) {
     messageData.innerText = message.content;
   }
   else if (message.type === "image"){
+    // Add file info to message bubble so user can choose whether to fetch from server (this is automatically done for new messages)
     messageData = document.createElement('img');
+    let fetchDataLink = createFetchMessageLink(message, messageData);
+    messageBubble.appendChild(fetchDataLink);
+    if (messageContainer.scrollTop == messageContainer.scrollHeight - messageContainer.offsetHeight) messageData.onload = () => messageContainer.scrollTop = messageContainer.scrollHeight;
     messageData.className = "image-message msg-image";
-    messageData.src = message.content;
+    // If this is a new message then fetch it automatically
+    if (oldMessage === false && message.fileSize < fileSizeWarningThreshold) fetchDataLink.click();
   }
   else if (message.type === "file"){
     messageData = document.createElement('div');
     messageData.className = "msg-text";
     let downloadBtn = document.createElement('a');
+    // Hide downloadBtn until the file has been fetched from server
+    downloadBtn.hidden = true;
+    let fetchDataLink = createFetchMessageLink(message, downloadBtn);
+    messageBubble.appendChild(fetchDataLink);
     // Specify that the link is to download, and specify the file name
     downloadBtn.download = message.fileName;
     downloadBtn.innerText = message.fileName;
     downloadBtn.href = message.content;
     messageData.appendChild(downloadBtn);
+    if (oldMessage === false && message.fileSize < fileSizeWarningThreshold) fetchDataLink.click();
   }
 
   
   messageBubble.appendChild(messageData);
-  if (message.type === "image"){
-    // For images, messageData may not always be fully loaded by the end of this function so scrollHeight can be innacurate.  So change the scrollTop in an event handler once messageData is fully loaded instead
-    messageData.onload = () => messageContainer.scrollTop = messageContainer.scrollHeight;
-  }
-  else{
+  // Only scroll to the bottom on a new message being added if the user is already scrolled to the bottom (otherwise they may be trying to read old messages)
+  if (needsScroll){
+    // If this is a new message, then scroll down to the bottom
+    if (message.type === "image"){
+      // For images, messageData may not always be fully loaded by the end of this function so scrollHeight can be innacurate.  So change the scrollTop in an event handler once messageData is fully loaded instead
+      messageData.onload = () => messageContainer.scrollTop = messageContainer.scrollHeight;
+    }
     // However, for other types of messages do the scrolling here, as div elements fo not have an onload event
     messageContainer.scrollTop = messageContainer.scrollHeight;
   }
@@ -260,21 +312,33 @@ function appendMessage(message) {
 }
                                               
 //Adds a message someone else sent to the chat 
-function appendMessageRecieve(message, inName) {
-
-  // get current time
-  var current = new Date();
-  var current = current.toLocaleTimeString();
+function appendMessageRecieve(message, inName, oldMessage=false) {
+  // Need to take into account the current height of messageContainer before adding new element changes it, so do it up here
+  let needsScroll = true;
+  if (oldMessage === true || messageContainer.scrollTop != messageContainer.scrollHeight - messageContainer.offsetHeight) needsScroll = false;
+  // get message time
+  if (oldMessage === true){
+    // If oldMessage use the time from the message
+    var current = new Date(message.time);
+  }
+  else{
+    // Otherwise use time from user's machine, as this will use their timezone
+    var current = new Date();
+  }
+  current = current.toLocaleTimeString();
 	
   //create the message box (div to hold the bubble)
   var messageBox = document.createElement('div');
   messageBox.className = "msg left-msg";
-  messageContainer.append(messageBox);
+  addMessageElement(messageBox, oldMessage);
   
   //add user image
   var userImage = document.createElement('div');
   userImage.className = "msg-img";
-  userImage.style.backgroundImage = "url(https://image.flaticon.com/icons/svg/327/327779.svg)";
+  // If this user's pfp is not available (e.g. because this is an old message) then use the default
+  let profilePic = defaultProfilePicture;
+  if (profilePictures[inName] != undefined) profilePic = profilePictures[inName];
+  userImage.style.backgroundImage = `url(${profilePic})`;
   messageBox.appendChild(userImage);
   
   //specify and add the actual bubble 
@@ -314,28 +378,40 @@ function appendMessageRecieve(message, inName) {
     }
   }
   else if (message.type === "image"){
+    // Add file info to message bubble so user can choose whether to fetch from server (this is automatically done for new messages)
     messageData = document.createElement('img');
+    let fetchDataLink = createFetchMessageLink(message, messageData);
+    messageBubble.appendChild(fetchDataLink);
     messageData.className = "image-message msg-image";
-    messageData.src = message.content;
+    if (messageContainer.scrollTop == messageContainer.scrollHeight - messageContainer.offsetHeight) messageData.onload = () => messageContainer.scrollTop = messageContainer.scrollHeight;
+    // If this is a new message then fetch it automatically
+    if (oldMessage === false && message.fileSize < fileSizeWarningThreshold) fetchDataLink.click();
   }
   else if (message.type === "file"){
     messageData = document.createElement('div');
     messageData.className = "msg-text";
     let downloadBtn = document.createElement('a');
-    // Specify that the link is for downloading, and specify the file name
+    // Hide downloadBtn until the file has been fetched from server
+    downloadBtn.hidden = true;
+    let fetchDataLink = createFetchMessageLink(message, downloadBtn);
+    messageBubble.appendChild(fetchDataLink);
+    // Specify that the link is to download, and specify the file name
     downloadBtn.download = message.fileName;
     downloadBtn.innerText = message.fileName;
     downloadBtn.href = message.content;
     messageData.appendChild(downloadBtn);
+    if (oldMessage === false && message.fileSize < fileSizeWarningThreshold) fetchDataLink.click();
   }
   
   messageBubble.appendChild(messageData);
-  if (message.type === "image"){
-    // For images, messageData may not always be fully loaded by the end of this function so scrollHeight can be innacurate.  So change the scrollTop in an event handler once messageData is fully loaded instead
-    messageData.onload = () => messageContainer.scrollTop = messageContainer.scrollHeight;
-  }
-  else{
-    // However, for other types of messages do the scrolling here, as div elements fo not have an onload event
+  // Only scroll to the bottom on a new message being added if the user is already scrolled to the bottom (otherwise they may be trying to read old messages)
+  if (needsScroll){
+    // If this is a new message, then scroll down to the bottom
+    if (message.type === "image"){
+      // For images, messageData may not always be fully loaded by the end of this function so scrollHeight can be innacurate.  So change the scrollTop in an event handler once messageData is fully loaded instead
+      messageData.onload = () => messageContainer.scrollTop = messageContainer.scrollHeight;
+    }
+    // However, for other types of messages do the scrolling here, as div elements do not have an onload event
     messageContainer.scrollTop = messageContainer.scrollHeight;
   }
 
@@ -344,7 +420,44 @@ function appendMessageRecieve(message, inName) {
   if (spamCounter < 0) {  spamCounter = 0 }
 }
 
+function createFetchMessageLink(message, messageDataDiv, fileDetails=document.createElement('a')){
+  // Return HTML element to fetch file on click
+  //let fileDetails = document.createElement('a');
+  fileDetails.innerText = `Load ${message.fileName} (${bytesToBestUnit(message.fileSize)})`;
+  // Add warning if file is larger than 5mb as it may be too large for users browser
+  if (fileSizeWarningThreshold < message.fileSize){
+    fileDetails.innerText += " (File is very large, loading it could make your browser unstable)";
+  }
+  fileDetails.className = "fetch-file-link";
+  fileDetails.onclick = () => fetchFile(message.type, message.fileName, message.fileSize, message.content, fileDetails, messageDataDiv);
+  return fileDetails
+}
+
+function bytesToBestUnit(size){
+  // Convert a number of bytes to the KB, MB, or GB (using base 10, not base 2 e.g. 1KB = 1000B not 1024)
+  // Limit to 2 decimal places
+  switch (Math.floor(Math.log10(size))){
+    case 0:
+    case 1:
+    case 2:
+      return `${size}B`;
+    case 3:
+    case 4:
+    case 5:
+      return `${(size / 1000).toFixed(2)}KB`;
+    case 6:
+    case 7:
+    case 8:
+      return `${(size / 1000000).toFixed(2)}MB`;
+    default:
+      return `${(size / 1000000000).toFixed(2)}GB`
+  }
+}
+
 function appendUserJoinOrDisconnect(message){
+  // Need to take into account the current height of messageContainer before adding new element changes it, so do it up here
+  let needsScroll = true;
+  if (messageContainer.scrollTop != messageContainer.scrollHeight - messageContainer.offsetHeight) needsScroll = false;
 	// get current time
   var current = new Date();
   var current = current.toLocaleTimeString();
@@ -377,7 +490,11 @@ function appendUserJoinOrDisconnect(message){
   messageData.innerText = message;
   
   messageBubble.appendChild(messageData);
-  messageContainer.scrollTop = messageContainer.scrollHeight;
+
+  if (needsScroll){
+    // Only scroll down to the notification if the user is already fully scrolled down (otherwise they may be trying to read old messages)
+    messageContainer.scrollTop = messageContainer.scrollHeight;
+  }
 }
 // asks the server for a list of currently connected users 
 function getUsers(){
@@ -388,6 +505,8 @@ function getUsers(){
 function generateUserList(list){
   connectedUsersList.innerHTML = ""; 
   list.forEach((item, index) => {
+    // Add entry to profilePictures using default image
+    if (profilePictures[item] === undefined) profilePictures[item] = defaultProfilePicture;
     var entry = document.createElement('li');
     entry.appendChild(document.createTextNode(item));
     connectedUsersList.appendChild(entry);
@@ -405,8 +524,8 @@ messageFileSelector.onchange = () => {
     fileSelectButton.innerText = "Cancel";
     fileSelectButton.onclick = exitSendFileMode;
 
-    // Override sendMessage to sendFile
-    sendMessage = sendFile;
+    // Override sendMessage to sendFileStream
+    sendMessage = sendFileStream;
   }
 };
 
@@ -431,6 +550,10 @@ function showFileSelector(){
 }
 
 // Token authentication stuff ===========================================
+socket.on('login-success', () => {
+  // On successful login, request profile pictures of logged in users
+  socket.emit('request-pfp-stream', 'all');
+});
 
 socket.on('auth-maintained', () => {
   console.log("😊 Authentication successful")
@@ -511,6 +634,238 @@ function decrypt(data){
   decrypted = decodeURIComponent(escape(window.atob(decrypted)));
   return decrypted
 }
+
+var fetchFilePromise = Promise.resolve("");  // Promise for chaining fetch file operations
+var requestedFileDetails = {};  // The type and filename of the requested file
+function fetchFile(messageType, fileName, fileSize, fileId, loadProgressDiv, elementToInsertFile){
+  // Use a promise to allow requests to fetch files to be done one at a time (as the server does not allow the same client to fetch multiple at once)
+  fetchFilePromise = fetchFilePromise.then(() => {return new Promise((resolve, reject) => {
+    requestedFileDetails = {"type": messageType, "fileName": fileName, "fileSize": fileSize, "fileId": fileId,"loadProgressDiv": loadProgressDiv, "elementForFile": elementToInsertFile, "promiseRejector": reject, "promiseResolver": resolve};
+    // Change the link for fetching the file into a progress message
+    loadProgressDiv.onclick = () => {};  // Remove listener to prevent this being called again
+    loadProgressDiv.className = "";
+    loadProgressDiv.innerText = "Requesting file from server";
+    // Fetch the file from the server via a stream
+    socket.emit('request-read-stream', fileId);
+  })});
+  
+}
+
+var fileToSend;
+function sendFileStream(){  // Takes a JS file object and opens a stream to the server to send it
+  if (0 < messageFileSelector.files.length){
+    var file = messageFileSelector.files[0];
+  }
+  else return;
+  // Prevent file names over 255 chars
+  if (255 < file.name.length){
+    msgAlert("Cant send file:", "File name must be under 255 characters");
+    return;
+  }
+  // Client-side file extension blocking
+  var restrictedFiles = settings.restrictedFiles;
+
+  for (var i of restrictedFiles) {
+    
+    // Checks filename for the blacklisted file extensions
+    if (file.name.search(i) != -1) {
+
+      console.log("Invalid File Type");
+      msgAlert('Alert:', 'File type not allowed! Please choose another file.')
+      
+      
+      // User-friendliness
+      exitSendFileMode();
+      showFileSelector();
+
+      return;
+    }
+  }
+  fileToSend = file;
+  let base64Length = 4 * Math.ceil(file.size / 3);  // Calculate the size of the string once this is converted to base64
+  // Must also take the descriptor string into account ("data:<content type>/<file type>;base64,")
+  base64Length += file.type.length + 13;  // file.type will give the <content type>/<file type> part of the string, and 13 is length of "data:;base64,"
+  // Create a message details object in same format as normal text messages
+  let messageDetails = {"type": "", "fileName": ""};
+  if (file.type.split("/")[0] === "image") messageDetails.type = "image";
+  else messageDetails.type = "file";
+  messageDetails.fileName = file.name;
+  // Send a request to the server to open up a writeable stream so this file can be sent
+  socket.emit('request-send-stream', {"type": "file_message", "size": base64Length, "messageDetails": messageDetails});  // Type specifies whether this is part of a message or a profile picture
+}
+
+var newProfilePicture;
+function changeProfilePicture(){
+  if (0 < messageFileSelector.files.length){
+    newProfilePicture = messageFileSelector.files[0];
+    socket.emit('request-change-pfp-stream', {"fileSize": (4 * Math.ceil(newProfilePicture.size / 3)) + newProfilePicture.type.length + 13});
+  }
+}
+
+socket.on('reject-change-pfp-stream', reason => {
+  msgAlert("Unable to change profile picture", reason);
+});
+
+ss(socket).on('accept-change-pfp-stream', stream => {
+  let reader = new FileReader();
+  reader.onload = () => {
+    let cursor = 0;
+      // Function for writing data to the stream
+      let write = () => {
+        // Try to write to stream if it isn't full
+        if (cursor < reader.result.length){
+          if (stream._writableState.needDrain === false){
+            // Otherwise wait until it drains
+            stream.write(reader.result.slice(cursor, cursor + 16384), () => {
+              cursor += 16384;
+              // Update progress message
+              write();
+            });
+          }
+          else{
+            // Otherwise wait until it drains
+            stream.once('drain', write);
+          }
+        }
+        else{
+          // The file has been fully sent, so close the stream
+          stream.end();
+        }
+      };
+      write();
+  };
+  reader.readAsDataURL(newProfilePicture);
+});
+
+socket.on('reject-send-stream', reason => {
+  if (reason === "File is too large"){
+    msgAlert("Unable to send", `File must be less than ${bytesToBestUnit(settings.fileSizeLimit)}`);
+  }
+  else{
+    msgAlert("Unable to send", reason);
+  }
+});
+
+ss(socket).on('accept-send-stream', stream => {
+  // The server has accepted the write stream request and opened a stream, so send the file through it
+  // First convert to base64
+  if (fileToSend){
+    // Only continue if fileToSend is defined
+    let reader = new FileReader();
+    reader.addEventListener("load", () => {
+      // Once converted to base64, start sending to server
+
+      // First set the cancel button to close the stream early if pressed
+      fileSelectButton.onclick = () => {
+        stream.end(exitSendFileMode);
+      };
+      // Divide string into suitably sized chunks and send one after the other using the stream
+      let cursor = 0;
+      // Function for writing data to the stream
+      let write = () => {
+        // Try to write to stream if it isn't full
+        if (cursor < reader.result.length){
+          if (stream._writableState.needDrain === false){
+            // Otherwise wait until it drains
+            stream.write(reader.result.slice(cursor, cursor + 16384), () => {
+              cursor += 16384;
+              // Update progress message
+              updateUploadProgress(cursor, reader.result.length);
+              write();
+            });
+          }
+          else{
+            // Otherwise wait until it drains
+            stream.once('drain', write);
+          }
+        }
+        else{
+          // The file has been fully sent, so close the stream
+          stream.end();
+          exitSendFileMode();
+        }
+      };
+      write();
+    });
+    reader.readAsDataURL(fileToSend);
+  }
+});
+
+socket.on('reject-read-stream', reason => {
+  msgAlert("Unable to fetch file", reason);
+  requestedFileDetails.promiseRejector(reason);
+});
+
+ss(socket).on('accept-read-stream', stream => {
+  // This still holds the entire file in the client's memory
+  let fileData = "";
+  let cancelled = false;
+  // Change load file link to cancel button
+  requestedFileDetails.loadProgressDiv.onclick = () => {
+    cancelled = true;
+    socket.emit('close-read-stream-early');
+    requestedFileDetails.content = requestedFileDetails.fileId;
+    createFetchMessageLink(requestedFileDetails, requestedFileDetails.elementForFile, requestedFileDetails.loadProgressDiv)
+  };
+  stream.on('data', chunk => {
+    if (cancelled === false){
+      requestedFileDetails.loadProgressDiv.innerText = `Fetching (${Math.floor((fileData.length / requestedFileDetails.fileSize) * 100)}%).  Click to cancel`;
+      fileData += chunk;
+    }
+  });
+  stream.on("finish", () => {
+    // Remove the progress message
+    requestedFileDetails.loadProgressDiv.remove();
+    if (requestedFileDetails.type === "file"){
+      requestedFileDetails.elementForFile.hidden = false;
+      requestedFileDetails.elementForFile.href = fileData;
+    }
+    else if (requestedFileDetails.type === "image"){
+      requestedFileDetails.elementForFile.src = fileData;
+    }
+  });
+  socket.once('read-stream-allowed', () => {
+    // The server has indicated that it will now allow another stream
+    // Resolve the promise, allowing the next scheduled file to be fetched
+    console.log("Stream closed");
+    requestedFileDetails.promiseResolver();
+  });
+});
+
+ss(socket).on('accept-pfp-stream', stream => {
+  let currentUser;  // The username of the user whose profile picture is currently being sent
+  let data = "";
+
+  let endPfp = () => {
+    profilePictures[currentUser] = data;
+    socket.once('next-pfp', startNewPic);
+    // Acknowledge that we are ready for the next picture
+    socket.emit('ack-end-pfp');
+  };
+
+  let startNewPic = details => {
+    // Another profile pic
+    if (details.useDefault === true){
+      profilePictures[details.name] = defaultProfilePicture;
+      socket.once('next-pfp', startNewPic);
+      // Acknowledge that we have processed it, so server knows to start next one
+      socket.emit('ack-next-pfp');
+    }
+    else{
+      // The image will be sent using the stream
+      currentUser = details.name;
+      data = "";
+      socket.once('end-pfp', endPfp);
+      socket.emit('ack-next-pfp');
+    }
+  };
+  socket.once('next-pfp', startNewPic);
+  
+  
+  stream.on("data", chunk => {
+    data += chunk.toString();
+  });
+});
 
 
 function stringToBuffer(str){
