@@ -152,323 +152,367 @@ console.log(`📧 Message socket online at port: ${socketPort}` .green.bold)
 
 io.on('connection', socket => {
 
-  // Every min re-authenticate the clients. 
-  const heartBeatReauth = setInterval(function() { 
-    checkAuth(socket)
-  }, reauthInterval)
+    // Every min re-authenticate the clients.
+    const heartBeatReauth = setInterval(function () {
+        checkAuth(socket)
+    }, reauthInterval)
 
 
-  //checking the user is still who they are during
-  socket.on('renew-auth', async data => {
-    let username = data.username
-    let token = decrypt(data.token)
-    let timestamp = +new Date()
-    // console.log("⌚:  " + timestamp)
+    //checking the user is still who they are during
+    socket.on('renew-auth', async data => {
+        let username = data.username
+        let token = decrypt(data.token)
+        let timestamp = +new Date()
+        // console.log("⌚:  " + timestamp)
 
-    let name = await verifyToken(username, token) 
-    if (name == null){ return }
-
-    try{
-      if (loggedInUsers[name].token === token){ //if the token is valid
-        let newtoken = require('crypto').randomBytes(64).toString('hex'); 
-
-        io.to(socket.id).emit('refresh-token', encrypt(newtoken))  // sends the user their new token
-        loggedInUsers[name].token = newtoken
-        loggedInUsers[name].lastCheckIn = timestamp
-      }else{ // if it isn't 
-        socket.emit('auth-renew-failed')
-        console.log("🚨 " + username + " has used an invalid token" )
-        disconnectUser(socket, username)
-        socket.disconnect()
-      }
-    }catch{
-      socket.disconnect()
-    }
-
-  })
-
-
-  //checking the user credentials when signing in
-  socket.on('attempt-auth', async data =>{
-
-    try{
-      let username = data.username
-      let token = cryptico.decrypt(data.token, private).plaintext
-
-      //Checks the username and token are valid. Returns null if they are not
-      let name = await verifyToken(username, token)
-
-      if (name == null){
-        socket.emit('auth-failed')
-        return
-      }
-  
-      //Checks the username and token are for the user in question
-      if (loggedInUsers[name].token === token){
-        // Tell client that login was successful
-        io.to(socket.id).emit('auth-success');
-
-        // Add socket to the "authorised" room so they can receive messages
-        socket.join('authorised');
-        socket.to('authorised').emit('user-connected', username); // Announce that the user has connected
-        io.to(socket.id).emit("send-username", username); // tells the new user what their name is
-
-        users[socket.id] = name
-
-        // adds the username to list of connected users (provided it isn't there already)
-        if (connected.indexOf(username) < 0){
-          connected.push(username);     
-          spamTracker = {client: username, spamCounter: 0, spam: false};
-          clients.push(spamTracker);
+        let name = await verifyToken(username, token)
+        if (name == null) {
+            return
         }
 
-        sendUsers(socket) // Sends the new users list to everyone
+        try {
+            if (loggedInUsers[name].token === token) { //if the token is valid
+                let newtoken = require('crypto').randomBytes(64).toString('hex');
 
-        io.to(socket.id).emit('settings', settings); //Sends settings to the client 
-
-        console.log("👋 User " + username + " connected");
-       
-        //Sending AES key to the server 
-        let encrypted = cryptico.encrypt(plainKey, loggedInUsers[name].publicKey)        
-        socket.emit('send-aes', encrypted.cipher)
-
-      }else{
-        socket.leave('authorised')
-        socket.emit('authentication-failed')
-        console.log("😭 "+ username + " Had a failed authentication")
-      }
-    
-    }catch(e){
-      console.log(e)
-      socket.disconnect()
-      console.log("user was disconnected because of an error")
-    }
- 
-  })
-
-  // Broadcast to other users when someone is typing
-  socket.on('user_typing',  async myUsername => {
-    try{
-      if (loggedInUsers[myUsername] != null){ // stops users without a name from being set as typing. 
-        socket.to('authorised').emit('user_typing', myUsername);
-      }else{
-        console.log("🚨 Typing user is not logged in")
-      }
-    } catch{
-      console.log("🚨🚨 Typing user is not logged in")
-    }
-
-  })
-
-  /*
-    THIS NEEDS TO BE MOVED TO THE ADMIN INTERFACE AT SOME POINT
-  */
-  // When user tries to create account
-  socket.on('create-account', async details => {
-    // Make sure given values are valid
-    if (typeof details.username != "string"){
-      socket.emit('register-fail', 'Invalid username');
-    }
-    else if (typeof details.firstName != "string"){
-      socket.emit('register-fail', 'Invalid first name');
-    }
-    else if (typeof details.lastName != "string"){
-      socket.emit('register-fail', 'Invalid last name');
-    }
-    else if (typeof details.password != "string"){
-      socket.emit('register-fail', 'Invalid password');
-    }
-    else{
-      // Details are valid
-      try{
-        let creationSuccessful = await Storage.createAccount(details.username, details.firstName, details.lastName, details.password);
-        if (creationSuccessful === true){
-          socket.emit('register-success');
-          Storage.log("New account created: " + details.username);
-          console.log("👍 New account created: " + details.username); 
+                io.to(socket.id).emit('refresh-token', encrypt(newtoken))  // sends the user their new token
+                loggedInUsers[name].token = newtoken
+                loggedInUsers[name].lastCheckIn = timestamp
+            } else { // if it isn't
+                socket.emit('auth-renew-failed')
+                console.log("🚨 " + username + " has used an invalid token")
+                disconnectUser(socket, username)
+                socket.disconnect()
+            }
+        } catch {
+            socket.disconnect()
         }
-        else{
-          socket.emit('register-fail', 'Unable to create account');
+
+    })
+
+
+    //checking the user credentials when signing in
+    socket.on('attempt-auth', async data => {
+
+        try {
+            let username = data.username
+            let token = cryptico.decrypt(data.token, private).plaintext
+
+            //Checks the username and token are valid. Returns null if they are not
+            let name = await verifyToken(username, token)
+
+            if (name == null) {
+                socket.emit('auth-failed')
+                return
+            }
+
+            //Checks the username and token are for the user in question
+            if (loggedInUsers[name].token === token) {
+                // Tell client that login was successful
+                io.to(socket.id).emit('auth-success');
+
+                // Add socket to the "authorised" room so they can receive messages
+                socket.join('authorised');
+                socket.to('authorised').emit('user-connected', username); // Announce that the user has connected
+                io.to(socket.id).emit("send-username", username); // tells the new user what their name is
+
+                users[socket.id] = name
+
+                // adds the username to list of connected users (provided it isn't there already)
+                if (connected.indexOf(username) < 0) {
+                    connected.push(username);
+                    spamTracker = {client: username, spamCounter: 0, spam: false};
+                    clients.push(spamTracker);
+                }
+
+                sendUsers(socket) // Sends the new users list to everyone
+
+                io.to(socket.id).emit('settings', settings); //Sends settings to the client
+
+                console.log("👋 User " + username + " connected");
+
+                //Sending AES key to the server
+                let encrypted = cryptico.encrypt(plainKey, loggedInUsers[name].publicKey)
+                socket.emit('send-aes', encrypted.cipher)
+
+            } else {
+                socket.leave('authorised')
+                socket.emit('authentication-failed')
+                console.log("😭 " + username + " Had a failed authentication")
+            }
+
+        } catch (e) {
+            console.log(e)
+            socket.disconnect()
+            console.log("user was disconnected because of an error")
         }
-      }
-      catch (reason){
-        if (reason === "Username taken"){
-          socket.emit('register-fail', 'Username taken');
+
+    })
+
+    // Broadcast to other users when someone is typing
+    socket.on('user_typing', async myUsername => {
+        try {
+            if (loggedInUsers[myUsername] != null) { // stops users without a name from being set as typing.
+                socket.to('authorised').emit('user_typing', myUsername);
+            } else {
+                console.log("🚨 Typing user is not logged in")
+            }
+        } catch {
+            console.log("🚨🚨 Typing user is not logged in")
         }
-        else{
-          socket.emit('register-fail', 'Unable to create account');
+
+    })
+
+    /*
+      THIS NEEDS TO BE MOVED TO THE ADMIN INTERFACE AT SOME POINT
+    */
+    // When user tries to create account
+    socket.on('create-account', async details => {
+        // Make sure given values are valid
+        if (typeof details.username != "string") {
+            socket.emit('register-fail', 'Invalid username');
+        } else if (typeof details.firstName != "string") {
+            socket.emit('register-fail', 'Invalid first name');
+        } else if (typeof details.lastName != "string") {
+            socket.emit('register-fail', 'Invalid last name');
+        } else if (typeof details.password != "string") {
+            socket.emit('register-fail', 'Invalid password');
+        } else {
+            // Details are valid
+            try {
+                let creationSuccessful = await Storage.createAccount(details.username, details.firstName, details.lastName, details.password);
+                if (creationSuccessful === true) {
+                    socket.emit('register-success');
+                    Storage.log("New account created: " + details.username);
+                    console.log("👍 New account created: " + details.username);
+                } else {
+                    socket.emit('register-fail', 'Unable to create account');
+                }
+            } catch (reason) {
+                if (reason === "Username taken") {
+                    socket.emit('register-fail', 'Username taken');
+                } else {
+                    socket.emit('register-fail', 'Unable to create account');
+                }
+            }
         }
-      }
-    }
-  })
+    })
 
 
-  socket.on('send-chat-message', message => {
-    let name = users[socket.id];
+    socket.on('send-chat-message', message => {
+        let name = users[socket.id];
 
-    if (name == null || name == undefined || name == "") { socket.disconnect() } // Think this line is redundent
+        if (name == null || name == undefined || name == "") {
+            socket.disconnect()
+        } // Think this line is redundent
 
-    // Checks if user sending message has spam flag
-    for (let i of clients) {
-      if (i.client == name && i.spam == true) {
-        console.log("A message from " + i.client + " was detected as spam!");
-        return;
-      }
-    }
-    if (messageChecks(message) == false){
-      console.log("🚨 message failed checks")
-      return
-    }
-    // handeling text messages
-    if (message.type == "text"){
-      message.content = decrypt(message.content)
-      message.content = profanityFilter.filter(message.content)
+        // Checks if user sending message has spam flag
+        for (let i of clients) {
+            if (i.client == name && i.spam == true) {
+                console.log("A message from " + i.client + " was detected as spam!");
+                return;
+            }
+        }
+        if (messageChecks(message) == false) {
+            console.log("🚨 message failed checks")
+            return
+        }
+        // handeling text messages
+        if (message.type == "text") {
+            message.content = decrypt(message.content)
+            message.content = profanityFilter.filter(message.content)
 
-      // The @ing code 
-      if (message.content.includes("@")){
-        message.content.split(" ").forEach((item, index) => {
-          if (item.charAt(0) == "@"){
-            socket.to('authorised').emit('mentioned', { target: item.substring(1), sender: name} );
-          }
+            // The @ing code
+            if (message.content.includes("@")) {
+                message.content.split(" ").forEach((item, index) => {
+                    if (item.charAt(0) == "@") {
+                        socket.to('authorised').emit('mentioned', {target: item.substring(1), sender: name});
+                    }
+                });
+            }
+        }
+        if (message.type == "image") {
+        }
+
+        if (message.type == "file") {
+            // Restriced files
+            for (let i of settings.restrictedFiles) {
+                if (message.fileName.includes(i)) {
+                    return
+                }
+            }
+        }
+
+        // storing the message
+        Storage.addMessage(new Message(name, message.type, message.content, message.fileName))
+
+        if (message.type == 'text') {
+            message.content = encrypt(message.content)
+        } // only encrypt text for now
+
+        // Sending message back to everyone
+        socket.to('authorised').emit('chat-message', {
+            message: message,
+            name: name
         });
-      }
-    }
-    if (message.type == "image"){ }
 
-    if (message.type == "file") {
-      // Restriced files 
-      for (let i of settings.restrictedFiles) {
-        if (message.fileName.includes(i)) { return }
-      }
-    }
-  
-    // storing the message 
-    Storage.addMessage(new Message(name, message.type, message.content, message.fileName))
+        // Also send the message back to the user that sent it
+        io.to(socket.id).emit('chat-message', {
+            message: message,
+            name: name
+        })
 
-    if (message.type == 'text') { message.content = encrypt(message.content) } // only encrypt text for now
 
-    // Sending message back to everyone 
-    socket.to('authorised').emit('chat-message', {
-      message: message, 
-      name: name 
-    });
+        // Marks a user as spam if they sent > 10 messagesone after the other
+        for (let i of clients) {
+            if (i.client == name) {
+                i.spamCounter++
+                if (i.spamCounter > 10) {
+                    i.spam == true
+                } else {
+                    i.spam == false
+                }
+            } else {
+                i.spamCounter--
+            }
+        }
 
-    // Also send the message back to the user that sent it 
-    io.to(socket.id).emit('chat-message',{ 
-      message: message, 
-      name: name 
     })
 
-    
-    // Marks a user as spam if they sent > 10 messagesone after the other 
-    for (let i of clients){
-      if (i.client == name){
-        i.spamCounter++ 
-        if (i.spamCounter > 10 ){
-          i.spam == true
-        }else{
-          i.spam == false
+    function messageChecks(message) {
+
+        // Make sure message has a suitable type value
+        if (!(typeof message.type == "string" && (message.type === "text" || message.type === "image" || message.type === "file"))) {
+            console.log("🚨 An message with an invalid type was received");
+            return false
         }
-      }else{
-        i.spamCounter -- 
-      }
-    }
-    
-  })
 
-  function messageChecks(message){
-    
-    // Make sure message has a suitable type value
-    if (!(typeof message.type == "string" && (message.type === "text" || message.type === "image" || message.type === "file"))){
-      console.log("🚨 An message with an invalid type was received");
-      return false
-    }
-
-    if (message.content == ""){
-      console.log("🚨 An empty message got through");
-      return false
-    }
-
-    if (message.type === "text" && message.content.length > settings.messageLimit){ // again, just for redundancy 
-      console.log("🚨 A message that was too long got though");
-      return false
-    }
-
-    return true
-  }
-
-  socket.on('disconnect', () => {
-
-    try{
-      let name = users[socket.id];
-      // Only continue if name exists (meaning user was properly connected and logged in)
-      if (typeof name == "string"){
-        socket.to('authorised').emit('user-disconnected', name);
-        //logs that the user disconnected at this time
-        Storage.log(name + " disconnected"); 
-        console.log("💔 " + name + " disconnected"); 
-
-        delete users[socket.id]; // remove the user from the connected users (but doesn't delete them, sets to null i think)
-
-        //removes the users name from the client list when they log out
-        var index = connected.indexOf(name);
-        if (index > -1) {
-            connected.splice(index, 1);
+        if (message.content == "") {
+            console.log("🚨 An empty message got through");
+            return false
         }
-        // socket.to('authorised').emit('send-users', encrypt(connected));
 
+        if (message.type === "text" && message.content.length > settings.messageLimit) { // again, just for redundancy
+            console.log("🚨 A message that was too long got though");
+            return false
+        }
+
+        return true
+    }
+
+    socket.on('disconnect', () => {
+
+        try {
+            let name = users[socket.id];
+            // Only continue if name exists (meaning user was properly connected and logged in)
+            if (typeof name == "string") {
+                socket.to('authorised').emit('user-disconnected', name);
+                //logs that the user disconnected at this time
+                Storage.log(name + " disconnected");
+                console.log("💔 " + name + " disconnected");
+
+                delete users[socket.id]; // remove the user from the connected users (but doesn't delete them, sets to null i think)
+
+                //removes the users name from the client list when they log out
+                var index = connected.indexOf(name);
+                if (index > -1) {
+                    connected.splice(index, 1);
+                }
+                // socket.to('authorised').emit('send-users', encrypt(connected));
+
+                sendUsers(socket)
+            }
+        } catch {
+            console.log("error removing user, could have been kicked")
+        }
+
+    })
+
+    // allows the client to request a list of new users. tried to remove this but everything broke
+    socket.on('get-users', out => {
         sendUsers(socket)
-      }
-    }catch{
-      console.log("error removing user, could have been kicked")
-    }
-   
-  })
-
-  // allows the client to request a list of new users. tried to remove this but everything broke
-  socket.on('get-users', out => {
-    sendUsers(socket)
-  })
-
-  var toggle;
-
-  socket.on('profanityToggle', (profanitySettings) => {
-
-    if (profanitySettings.profanitySettings == 1) {
-
-      profanityFilter.toggleCustom()
-      profanityFilter.load();
-      socket.emit('toggle-update');
-      toggle == 1;
-      profanityFilter.savePreset(toggle);
-      var emitWords = profanityFilter.readBanlistFromFile();
-      socket.emit('get-Profanity', {"words": emitWords});
-    }else if (profanitySettings.profanitySettings == 0) {
-
-      profanityFilter.toggleDefault()
-      profanityFilter.load();
-      socket.emit('toggle-update');
-      toggle == 0;
-      profanityFilter.savePreset(toggle)
-      var emitWords = profanityFilter.readBanlistFromFile();
-      socket.emit('get-Profanity' , {"words": emitWords});
-    }
-
-  })
-
-  socket.on('profanityCustomWords', (wordsCustom) => {
-    // takes wordsCustom and creates a response to be file written in a 1d array
-    var res = wordsCustom.wordsCustom.split(" ").join("\n")
-    const fs = require("fs") // !This shouldn't be here - Jasper 
-
-    s.writeFile("bannedWordsCustom.txt", res, function (err) {
-      if(err){
-          return console.log(err);
-      }
     })
-  })
-})
 
+    var toggle;
+
+    socket.on('profanityToggle', (profanitySettings) => {
+
+        if (profanitySettings.profanitySettings == 1) {
+
+            profanityFilter.toggleCustom()
+            profanityFilter.load();
+            socket.emit('toggle-update');
+            toggle == 1;
+            profanityFilter.savePreset(toggle);
+            var emitWords = profanityFilter.readBanlistFromFile();
+            socket.emit('get-Profanity', {"words": emitWords});
+        } else if (profanitySettings.profanitySettings == 0) {
+
+            profanityFilter.toggleDefault()
+            profanityFilter.load();
+            socket.emit('toggle-update');
+            toggle == 0;
+            profanityFilter.savePreset(toggle)
+            var emitWords = profanityFilter.readBanlistFromFile();
+            socket.emit('get-Profanity', {"words": emitWords});
+        }
+
+    })
+
+    socket.on('profanityCustomWords', (wordsCustom) => {
+        // takes wordsCustom and creates a response to be file written in a 1d array
+        var res = wordsCustom.wordsCustom.split(" ").join("\n")
+        const fs = require("fs") // !This shouldn't be here - Jasper
+
+        s.writeFile("bannedWordsCustom.txt", res, function (err) {
+            if (err) {
+                return console.log(err);
+            }
+        })
+    })
+
+    socket.on('update-Password', (user) => {
+
+        let account = Storage.checkAccountCredentials(user.userName, user.oldPass)
+        let passwordUpdate = 0;
+        account.then(account => {
+            if (account !== false) {
+
+                console.log(account);
+                console.log("Updating Password!");
+                Storage.changePassword(user.userName, user.newPass);
+                passwordUpdate = 1;
+
+            } else {
+                console.log("account doesnt exist");
+            }
+
+            socket.emit('update-Password-Status', passwordUpdate);
+        });
+
+
+    })
+
+    socket.on('update-Name' , (user) => {
+
+        let accountFirst = Storage.changeFirstName(user.userId, user.firstName);
+        let nameUpdate = 0;
+
+        accountFirst.then(accountFirst => {
+         if (accountFirst !== false){
+             nameUpdate = 1; 
+            let accountLast = Storage.changeLastName(user.userId, user.lastName)
+            accountLast.then(accountLast => {
+
+            })
+
+
+            socket.emit('update-Name-Status' , nameUpdate)
+
+        }})
+
+
+    })
+});
 
 async function verifyToken(username, token) {
   if (username == null){
@@ -499,16 +543,16 @@ function disconnectUser(socket, username){
 
   delete users[socket.id]; // remove the user from the connected users (but doesn't delete them, sets to null i think)
 
-  // you know, just to be extra sure 
+  // you know, just to be extra sure
   socket.leave('authorised')
-  socket.disconnect(); 
- 
+  socket.disconnect();
+
   //removes the users name from the client list when they log out
   var index = connected.indexOf(username);
   if (index > -1) {
     connected.splice(index, 1);
   }
-  sendUsers(socket) 
+  sendUsers(socket)
 }
 
 function sendUsers(socket){
@@ -519,14 +563,14 @@ function sendUsers(socket){
 function checkAuth(socket){
   try{
     let username = users[socket.id]
-    if ( username == null ) { 
+    if ( username == null ) {
       socket.disconnect()
-      return 
+      return
     }
 
     let currentTime = +new Date()
-    
-    if (currentTime - loggedInUsers[username].lastCheckIn > checkInWindow){ // If there has been x time between checking in 
+
+    if (currentTime - loggedInUsers[username].lastCheckIn > checkInWindow){ // If there has been x time between checking in
       console.log("🚨 " + username + " did not check in soon enough")
       disconnectUser(socket, username)
     }else{
@@ -556,7 +600,7 @@ function bufferToString(buffer){
   // Convert a Buffer array to a string
   let outputStr = "";
   for (let i of buffer.values()){
-      outputStr += String.fromCharCode(i);   
+      outputStr += String.fromCharCode(i);
   }
   return outputStr;
 
