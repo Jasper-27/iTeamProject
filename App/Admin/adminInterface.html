@@ -70,7 +70,7 @@
                             <div class="col"><input class="form-control" type="text"></div>
                         </div>
                         <div class="form-row">
-                            <div class="col d-xl-flex justify-content-xl-center"><button class="btn btn-primary" id="userSubmit" type="submit">Button</button></div>
+                            <div class="col d-xl-flex justify-content-xl-center"><button class="btn btn-primary" id="userSubmit" type="button">Button</button></div>
                         </div>
                     </form>
                 </div>
@@ -79,10 +79,66 @@
                         <h3>Settings</h3>
                         <div class="row">
                             <div class="col">
-                                <h5>Theme Select:</h5>
+                                <h5>Change Password</h5>
+                    </div>
+                    <form>
+                        <div class="form-row">
+                            <div class="col">
+                                <h5>User Name:</h5>
                             </div>
-                            <div class="col"><button class="btn btn-light" type="button">Button</button><button class="btn btn-dark" type="button">Button</button></div>
+                            <div class="col"><input class="form-control" type="text" id="userNameText"></div>
                         </div>
+                        <div class="form-row">
+                            <div class="col">
+                                <h5>Old Password:</h5>
+                            </div>
+                            <div class="col"><input class="form-control" type="password" id="oldPassText"></div>
+                        </div>
+                        <div class="form-row">
+                            <div class="col">
+                                <h5>New Password: </h5>
+                            </div>
+                            <div class="col"><input class="form-control" type="Password" id="newPassText"></div>
+                        </div>
+                        <div class="form-row">
+                            <div class="col">
+                            </div>
+                            <div class="form-row">
+                                <div class="col d-xl-flex justify-content-xl-center"><button class="btn btn-primary" id="UpdatePassword" type="button" onclick="updatePassword()">update Password</button></div>
+                            </div>
+                        <div>
+
+                        </div>
+
+                        </div>
+                        <h5>Change Name</h5>
+                            <div class="form-row">
+                                <div class="col">
+                                    <h5>User Name:</h5>
+                                </div>
+                                <div class="col"><input class="form-control" type="text" id="userIdText"></div>
+                            </div>
+                            <div class="form-row">
+                                <div class="col">
+                                    <h5>First Name:</h5>
+                                </div>
+                                <div class="col"><input class="form-control" type="text" id="userFirstText"></div>
+                            </div>
+                            <div class="form-row">
+                                <div class="col">
+                                    <h5>Last Name:</h5>
+                                </div>
+                                <div class="col"><input class="form-control" type="text" id="userLastText"></div>
+                            </div>
+                            <div class="form-row">
+                                <div class="col">
+                                </div>
+                                <div class="form-row">
+                                    <div class="col d-xl-flex justify-content-xl-center"><button class="btn btn-primary" id="UpdateName" type="button" onclick="updateName()">update Name</button></div>
+                                </div>
+                        </div>
+                    </form>
+                </div>
                     </div>
                 </div>
                 <div class="col" id="right" style="border-width: 1.5px;border-style: solid;border-radius: 5px;padding-top: 10px;">

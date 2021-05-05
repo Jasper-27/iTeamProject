@@ -42,5 +42,54 @@ function bannedWordsCustom() {
 
 }
 
+function updatePassword(){
+    let userName = document.getElementById("userNameText").value;
+    let oldPass = document.getElementById("oldPassText").value;
+    let newPass = document.getElementById("newPassText").value;
+
+    if (userName === "" || oldPass === "" || newPass === ""){
+        alert("missing inputs");
+    }
+
+    socket.emit('update-Password', {"userName":userName, "oldPass":oldPass, "newPass":newPass});
+
+    socket.on('update-Password-Status' , (passStatus) => {
+
+        if (passStatus === 1){
+            alert("Password Updated");
+        }
+        if (passStatus === 0){
+            alert("Password Failed to update");
+        }
+
+    })
+}
+
+function updateName(){
+
+    let userId = document.getElementById("userIdText").value;
+    let firstName = document.getElementById("userFirstText").value;
+    let lastName = document.getElementById("userLastText").value;
+
+    if (userId === "" || firstName === "" || lastName === ""){
+        alert("Missing Inputs");
+    }
+
+    socket.emit('update-Name', {"userId":userId, "firstName":firstName, "lastName":lastName});
+
+
+    socket.on('update-Name-Status' , (nameStatus) => {
+
+
+        if (nameStatus === 1){
+            alert("Name updated!");
+        }
+        if (nameStatus === 0){
+            alert("Name failed to update!");
+        }
+    })
+
+
+}
 
 
