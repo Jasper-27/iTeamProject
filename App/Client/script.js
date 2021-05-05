@@ -5,6 +5,8 @@ const messageInput = document.getElementById('message-input');
 const fileSelectButton = document.getElementById("choose-file-button");
 const messageFileSelector = document.getElementById("choose-file-dialog");  // The <input type="file"/> element for selecting a file to send
 
+const defaultProfilePicture = "logo.png";
+
 const fileSizeWarningThreshold = 5000000;  // Bytes. A warning will be displayed before downloading files larger than this
 
 var sendMessage;  // Holds a reference to the function for sending messages (will switch between sendText and sendFileStream)
@@ -20,6 +22,7 @@ var timeout = null;
 var settings 
 
 var connectedUsersList = document.getElementById('users');  // The HTML list that contains the connected users 
+profilePictures = {};  // Format {<username>:profile picture (as base64 string)}
 
 // Used for detecting spam
 var spamCounter = 0;
@@ -33,6 +36,7 @@ attemptAuth()
 socket.on('send-username', data => {
   myUsername = data; 
   console.log("My username is: " + myUsername)
+  profilePictures[myUsername] = defaultProfilePicture;
 }) 
 
 //Syncing settings with the server
@@ -58,6 +62,8 @@ socket.on('user-connected', name => {
   var message = `${name} connected`;
   appendUserJoinOrDisconnect(message);
   getUsers(); 
+  // Request new user's profile picture
+  socket.emit('request-pfp-stream', name);
 })
 
 //When a user disconnects 
@@ -65,6 +71,8 @@ socket.on('user-disconnected', name => {
   var message =(`${name} disconnected`);
   appendUserJoinOrDisconnect(message);
   getUsers(); 
+  // Destroy user's profile picture to save memory
+  delete profilePictures[name];
 })
 
 
@@ -218,7 +226,7 @@ function appendMessage(message, oldMessage=false) {
   //add user image
   var userImage = document.createElement('div');
   userImage.className = "msg-img";
-  userImage.style.backgroundImage = "url(https://image.flaticon.com/icons/svg/145/145867.svg)";
+  userImage.style.backgroundImage = `url(${profilePictures[myUsername]})`;
   messageBox.appendChild(userImage);
   
   //specify and add the actual bubble 
@@ -313,7 +321,10 @@ function appendMessageRecieve(message, inName, oldMessage=false) {
   //add user image
   var userImage = document.createElement('div');
   userImage.className = "msg-img";
-  userImage.style.backgroundImage = "url(https://image.flaticon.com/icons/svg/327/327779.svg)";
+  // If this user's pfp is not available (e.g. because this is an old message) then use the default
+  let profilePic = defaultProfilePicture;
+  if (profilePictures[inName] != undefined) profilePic = profilePictures[inName];
+  userImage.style.backgroundImage = `url(${profilePic})`;
   messageBox.appendChild(userImage);
   
   //specify and add the actual bubble 
@@ -491,6 +502,8 @@ function getUsers(){
 function generateUserList(list){
   connectedUsersList.innerHTML = ""; 
   list.forEach((item, index) => {
+    // Add entry to profilePictures using default image
+    if (profilePictures[item] === undefined) profilePictures[item] = defaultProfilePicture;
     var entry = document.createElement('li');
     entry.appendChild(document.createTextNode(item));
     connectedUsersList.appendChild(entry);
@@ -537,6 +550,10 @@ function showFileSelector(){
 }
 
 // Token authentication stuff ===========================================
+socket.on('login-success', () => {
+  // On successful login, request profile pictures of logged in users
+  socket.emit('request-pfp-stream', 'all');
+});
 
 socket.on('auth-maintained', () => {
   console.log("😊 Authentication successful")
@@ -660,6 +677,49 @@ function sendFileStream(){  // Takes a JS file object and opens a stream to the 
   socket.emit('request-send-stream', {"type": "file_message", "size": base64Length, "messageDetails": messageDetails});  // Type specifies whether this is part of a message or a profile picture
 }
 
+var newProfilePicture;
+function changeProfilePicture(){
+  if (0 < messageFileSelector.files.length){
+    newProfilePicture = messageFileSelector.files[0];
+    socket.emit('request-change-pfp-stream', {"fileSize": (4 * Math.ceil(newProfilePicture.size / 3)) + newProfilePicture.type.length + 13});
+  }
+}
+
+socket.on('reject-change-pfp-stream', reason => {
+  msgAlert("Unable to change profile picture", reason);
+});
+
+ss(socket).on('accept-change-pfp-stream', stream => {
+  let reader = new FileReader();
+  reader.onload = () => {
+    let cursor = 0;
+      // Function for writing data to the stream
+      let write = () => {
+        // Try to write to stream if it isn't full
+        if (cursor < reader.result.length){
+          if (stream._writableState.needDrain === false){
+            // Otherwise wait until it drains
+            stream.write(reader.result.slice(cursor, cursor + 16384), () => {
+              cursor += 16384;
+              // Update progress message
+              write();
+            });
+          }
+          else{
+            // Otherwise wait until it drains
+            stream.once('drain', write);
+          }
+        }
+        else{
+          // The file has been fully sent, so close the stream
+          stream.end();
+        }
+      };
+      write();
+  };
+  reader.readAsDataURL(newProfilePicture);
+});
+
 socket.on('reject-send-stream', reason => {
   if (reason === "File is too large"){
     msgAlert("Unable to send", `File must be less than ${bytesToBestUnit(settings.fileSizeLimit)}`);
@@ -752,6 +812,41 @@ ss(socket).on('accept-read-stream', stream => {
     // Resolve the promise, allowing the next scheduled file to be fetched
     console.log("Stream closed");
     requestedFileDetails.promiseResolver();
+  });
+});
+
+ss(socket).on('accept-pfp-stream', stream => {
+  let currentUser;  // The username of the user whose profile picture is currently being sent
+  let data = "";
+
+  let endPfp = () => {
+    profilePictures[currentUser] = data;
+    socket.once('next-pfp', startNewPic);
+    // Acknowledge that we are ready for the next picture
+    socket.emit('ack-end-pfp');
+  };
+
+  let startNewPic = details => {
+    // Another profile pic
+    if (details.useDefault === true){
+      profilePictures[details.name] = defaultProfilePicture;
+      socket.once('next-pfp', startNewPic);
+      // Acknowledge that we have processed it, so server knows to start next one
+      socket.emit('ack-next-pfp');
+    }
+    else{
+      // The image will be sent using the stream
+      currentUser = details.name;
+      data = "";
+      socket.once('end-pfp', endPfp);
+      socket.emit('ack-next-pfp');
+    }
+  };
+  socket.once('next-pfp', startNewPic);
+  
+  
+  stream.on("data", chunk => {
+    data += chunk.toString();
   });
 });
 

@@ -66,6 +66,7 @@ class DataAccess{
 
         // Create attachments blob file if it doesn't already exist
         blobAccess.createBlob(messageAttachmentsPath);
+        blobAccess.createBlob(profilePicturesPath);
 
         // Setup readBacklog
         this.asyncReadCount = 0;
@@ -143,6 +144,14 @@ class DataAccess{
                 this.readBacklog = this.readBacklog.then(fetchAccount);
             }
         });
+    }
+
+    getChangeProfilePictureStream(username, imageSize){
+        return this.users.getChangeProfilePictureStream(username, imageSize);
+    }
+
+    getReadProfilePictureStream(position){
+        return blobAccess.getReadableStream(this.profilePicturesPath, position);
     }
 
     addMessage(messageObject){

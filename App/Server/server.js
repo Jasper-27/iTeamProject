@@ -9,7 +9,7 @@ const logsFolderPath = __dirname + "/data/logs";
 const logsIndexPath = __dirname + "/data/logs/logs_index.wdx";
 const accountsFilePath = __dirname + "/data/accounts/accounts.wac";
 const attachmentsPath = __dirname + "/data/attachments/attachedFiles.blb";
-const profilePicturesFilePath = __dirname + "/not/implemented.yet";
+const profilePicturesFilePath = __dirname + "/data/accounts/profilePictures.blb";
 
 var Storage = new DataAccess(messagesFolderPath, messagesIndexPath, logsFolderPath, logsIndexPath, accountsFilePath, attachmentsPath, profilePicturesFilePath);
 
@@ -59,7 +59,8 @@ app.post('/login', async (req, res) => {  // Function must be async to allow use
           "lastCheckIn" : +new Date(),
           "lastOldMessageRequest": 0,
           "sendStream": null,
-          "readStream": null
+          "readStream": null,
+          "profilePicturePos": user.profilePictureLocation  // The position in the profile pictures blob file where the user's picture can be found
         }
 
         res.send({
@@ -401,6 +402,100 @@ io.on('connection', socket => {
     }
   });
 
+  socket.on('request-change-pfp-stream', async imageDetails => {
+    try{    // Client is requesting a stream with which they can change the user's profile picture
+      if (100000 < imageDetails.fileSize){
+        socket.emit('reject-change-pfp-stream', "Must be less than 100Kb");
+        return;
+      }
+      let userStream = ss.createStream();
+      let fileStream = await Storage.getChangeProfilePictureStream(users[socket.id], imageDetails.fileSize);
+      loggedInUsers[users[socket.id]].sendStream = userStream;
+      userStream.pipe(fileStream);
+      fileStream.on("close", () => {
+        // Destroy stream and allow user to open another one
+        fileStream.destroy();
+        userStream.destroy();
+        if (loggedInUsers[users[socket.id]] != undefined) loggedInUsers[users[socket.id]].sendStream = null;
+      });
+      ss(socket).emit('accept-change-pfp-stream', userStream);
+    }
+    catch(reason){
+      Storage.log(`Unable to change profile picture for ${users[socket.id]}: ${reason}`);
+      console.log(`Unable to change profile picture for ${users[socket.id]}: ${reason}`)
+    }
+  });
+
+  socket.on('request-pfp-stream', requestedUsers => {
+    try{
+      // Client is requesting a stream to access profile pictures of logged in users
+      if (loggedInUsers[users[socket.id]] == undefined){
+        return;  // User not logged in
+      }
+
+      let pictureLocations = [];
+      if (requestedUsers === "all"){
+        // Send for all
+        for (let usr in loggedInUsers){
+          pictureLocations.push([usr, loggedInUsers[usr].profilePicturePos])
+        }
+      }
+      else{
+        // Requesting the picture for a specific user
+        if (loggedInUsers[requestedUsers] == undefined){
+          socket.emit('reject-pfp-stream', 'User not found');
+        }
+        else{
+          pictureLocations.push([requestedUsers, loggedInUsers[requestedUsers].profilePicturePos]);
+        }
+      }
+      let userStream = ss.createStream({allowHalfOpen: true});
+      // For each in pictureLocations, get a stream from Storage and pipe it to userStream
+      
+      let sendPictures = async () => {
+        if (0 < pictureLocations.length){
+          let thisPicture = pictureLocations.pop();
+          let useDefault = false;
+          if (thisPicture[1] == 0){
+            // If location is 0 then tell client to use default
+            useDefault = true;
+          }
+          socket.emit('next-pfp', {"name": thisPicture[0], "useDefault": useDefault});  // Announce start of new user's pic, and send the username
+          socket.once('ack-next-pfp', async () => {
+            if (useDefault === true){
+              // Just move onto the next one straight away
+              sendPictures();
+            }
+            else{
+              let fileStream = await Storage.getReadProfilePictureStream(thisPicture[1]);
+              fileStream.on("end", () => {
+                fileStream.unpipe(userStream);
+                socket.emit('end-pfp');
+                socket.once('ack-end-pfp', () => {
+                  // Move on to the next user
+                  sendPictures();
+                });
+              });
+              fileStream.pipe(userStream, {"end": false});
+            }
+          });
+        }
+        else{
+          // All pictures have been read, so end stream
+          userStream.end();
+          if (loggedInUsers[users[socket.id]] != undefined) loggedInUsers[users[socket.id]].sendStream = null;
+        }
+      };
+      loggedInUsers[users[socket.id]].sendStream = userStream;
+      ss(socket).emit('accept-pfp-stream', userStream);
+      sendPictures();
+    }
+    catch(err){
+      Storage.log(err);
+      console.log(err);
+    }
+  });
+
   socket.on('disconnect', () => {
 
   try{
@@ -622,6 +717,9 @@ function sendOldMessages(socket, timestamp){
     });
   }
 }
+
+
+
 
 async function verifyToken(username, token) {
   if (username == null){

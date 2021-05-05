@@ -106,7 +106,7 @@ class blobAccess{
                                 monitorStream.totalLifetimeBytesWritten += chunk.length;
                                 if (maxLength <= monitorStream.totalLifetimeBytesWritten){
                                     // Producer attempted to write too much data, so close the stream
-                                    monitorStream.close();
+                                    monitorStream.end();
                                 }
                             });
                             // Listen on stream close to update length field in blob
