@@ -113,6 +113,10 @@ socket.on('old-messages', messages => {
     for (let i = 0; i < messages.length; i++){
       let message = messages[i];
       oldestMessageTime = message.message.time;
+      // Decrypt
+      message.name = decrypt(message.name);
+      message.message.content = decrypt(message.message.content);
+      message.message.fileName = decrypt(message.message.fileName);
       addMessage(message.name, message.message, true);
     }
     // Recalculate scrollTop so that it is still scrolled to the same place as before the old messages where added

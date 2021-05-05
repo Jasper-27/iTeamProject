@@ -789,9 +789,9 @@ function sendOldMessages(socket, timestamp){
         // Add to list of available files
         let splitFileDetails = previousMessages[i].content.split(":");
         fileSize = Number(splitFileDetails[1]);
-        content = addToAvailableFiles(Number(splitFileDetails[0]));
+        content = addToAvailableFiles(Number(splitFileDetails[0])).toString();
       }
-      messagesToSend.push({"name": previousMessages[i].senderUsername, "message": {"type": previousMessages[i].type, "content": content, "time": +previousMessages[i].timeStamp, "fileName": previousMessages[i].fileName, "fileSize": fileSize}});
+      messagesToSend.push({"name": encrypt(previousMessages[i].senderUsername), "message": {"type": previousMessages[i].type, "content": encrypt(content), "time": +previousMessages[i].timeStamp, "fileName": encrypt(previousMessages[i].fileName), "fileSize": fileSize}});
     }
     // Record time of this request to prevent user sending another for 1 second
     loggedInUsers[users[socket.id]].lastOldMessageRequest = Date.now();
