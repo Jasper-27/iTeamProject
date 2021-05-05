@@ -10,6 +10,10 @@ installation instructions will follow.
 ### Configuration instructions ###
 configuration instructions will follow.
 
+### Stuff we used 
+[Cryptico for implementing RSA encryption](https://github.com/wwwtyro/cryptico "Their website")
+
+
 
 ### Credits ###
 Hannah Brown - https://github.com/hannahmaebrown <br>

@@ -16,17 +16,20 @@ var Storage = new DataAccess(messagesFolderPath, messagesIndexPath, logsFolderPa
 const users = {}  // Maps socket ids to usernames
 let loggedInUsers = {}  // Contains access token for user, uses usernames as keys
 
-//-----------------------------------------------------------------------------------------------------------------
-//// Login API 
 
-const cors = require('cors')
-const express = require('express');
-
-const Account = require("./Account");
+const colour = require("colors")
+const cryptico = require("cryptico")
 
 
-const app = express()
-const APIport = 8080
+// RSA Encrypion (for key exchange)
+const PassPhrase = "This password needs to be different for each install"; 
+var private = cryptico.generateRSAKey(PassPhrase, 1024);
+var public = cryptico.publicKeyString(private);       
+
+// AES Encryption (for messages)
+// var AESPassword = require('crypto').randomBytes(256).toString('hex'); 
+var AESKey = cryptico.generateAESKey(PassPhrase, 1024)
+var plainKey = bufferToString(AESKey)// convert string to plain text 
 
 
 //production
@@ -38,54 +41,84 @@ const checkInWindow = 40000 //the time window the client has to check in (needs 
 // const checkInWindow = 10000
 
 
+
+//-----------------------------------------------------------------------------------------------------------------
+//// API 
+
+const cors = require('cors')
+const express = require('express');
+
+
+const Account = require("./Account");
+
+
+const app = express()
+const APIport = 8080
+
+
 app.use ( express.json() )
 app.use( cors() ) 
 
+
+
+app.get("/PublicKey", async(req, res) => {
+  res.writeHead(200, {"Content-Type": "application/json"});
+  res.write(public);
+});
+
+
 app.post('/login', async (req, res) => {  // Function must be async to allow use of await
-    try{
-      const { password } = req.body; 
-      const { username } = req.body;
+  try{
+    const { hashed_password } = req.body; 
+    const { username } = req.body;
+    const { client_public_key } = req.body; 
 
-      // Checks to see if the user is in the file. 
-      let user = await Storage.checkAccountCredentials(username, password);   // Returns an account object if credentials match 
-      if (user instanceof Account){
-        let name = user.userName;
+    // console.log(client_public_key)
 
-        // generate the users token
-        let token = require('crypto').randomBytes(64).toString('hex'); 
+    let password = cryptico.decrypt(hashed_password, private).plaintext
 
-        loggedInUsers[name] = { 
-          "token" : token, 
-          "lastCheckIn" : +new Date(),
-          "lastOldMessageRequest": 0,
-          "sendStream": null,
-          "readStream": null,
-          "profilePicturePos": user.profilePictureLocation  // The position in the profile pictures blob file where the user's picture can be found
-        }
+    let user = await Storage.checkAccountCredentials(username, password);   // Returns an account object if credentials match 
+    if (user instanceof Account){
+      let name = user.userName;
 
-        res.send({
-          message: `Authentication success`,
-          token: `${ token }`,    // the response 
-        })
+      // generate the users token
+      let token = require('crypto').randomBytes(64).toString('hex'); 
+      let encrypted_token = cryptico.encrypt(token, client_public_key).cipher // encrypted cipher for sending 
 
-        console.log("🔑 User: " + username + " has logged in")
-        Storage.log("User: " + username + " has logged in")
-
-      }else{
-        res.status(406).send({message: 'Incorrect credentials'})
+      loggedInUsers[name] = { 
+        "token" : token, 
+        "lastCheckIn" : +new Date(), 
+        "publicKey" : client_public_key,
+        "lastOldMessageRequest": 0,
+        "sendStream": null,
+        "readStream": null,
+        "profilePicturePos": user.profilePictureLocation  // The position in the profile pictures blob file where the user's picture can be found
       }
+
+      res.send({
+        message: `Authentication success`,
+        token: `${ encrypted_token }`,    // the response
+      })
+
+      console.log("🔑 User: " + username + " has logged in")
+      Storage.log("User: " + username + " has logged in")
+
+    }else{
+      res.status(406).send({message: 'Incorrect credentials'})
     }
+  }
     catch (err){
-      res.status(500).send({message: 'An internal error occurred'});
-      console.log("⚠ An unexpected error occurred on login attempt");
-      Storage.log("An unexpected error occured on login attempt");
-    }
+    res.status(500).send({message: 'An internal error occurred'});
+    console.log("⚠ An unexpected error occurred on login attempt");
+    Storage.log("An unexpected error occured on login attempt");
+  }
+
 })
 
 //Start the API listening on PORT
 app.listen( 
   APIport, 
-  () => console.log(`🔐 Login API online: http://localhost:${APIport}`)
+  () => console.log(`🔐 Login API online at port: ${APIport} \n` .green.bold)
 )
 
 //-----------------------------------------------------------------------------------------------------------------
@@ -128,40 +161,36 @@ var availableFiles = [];
 var availableFilesNextPos = -1;  // Start from -1 so first one will be 0
 var availableFilesIndeces = {};  // Like availableFiles but does the opposite- maps file positions to indeces in availableFiles
 
-console.log("*****************************************");
-console.log("*          😉 WINKI SERVER 😉           *");      
-console.log("*****************************************");
+console.log("*****************************************" .blue);
+console.log("*          😉 WINKI SERVER 😉           *" .blue);      
+console.log("*****************************************" .blue);
 console.log(); 
 
-console.log(`📧 Message socket online: http://localhost:${socketPort}`)
+console.log(`📧 Message socket online at port: ${socketPort}` .green.bold)
 
 io.on('connection', socket => {
-
 
   // Every min re-authenticate the clients. 
   const heartBeatReauth = setInterval(function() { 
     checkAuth(socket)
   }, reauthInterval)
 
+
   //checking the user is still who they are during
   socket.on('renew-auth', async data => {
     let username = data.username
-    let token = data.token
+    let token = decrypt(data.token)
     let timestamp = +new Date()
     // console.log("⌚:  " + timestamp)
 
     let name = await verifyToken(username, token) 
-    
-
-    // console.log("👵 " + token)
-    let newtoken = require('crypto').randomBytes(64).toString('hex'); 
-    // console.log("👶 " + newtoken)
-
     if (name == null){ return }
 
     try{
       if (loggedInUsers[name].token === token){ //if the token is valid
-        io.to(socket.id).emit('refresh-token', newtoken)  // sends the user their new token
+        let newtoken = require('crypto').randomBytes(64).toString('hex'); 
+
+        io.to(socket.id).emit('refresh-token', encrypt(newtoken))  // sends the user their new token
         loggedInUsers[name].token = newtoken
         loggedInUsers[name].lastCheckIn = timestamp
       }else{ // if it isn't 
@@ -173,49 +202,53 @@ io.on('connection', socket => {
     }catch{
       socket.disconnect()
     }
-    
 
   })
 
 
   //checking the user credentials when signing in
   socket.on('attempt-auth', async data =>{
-    let username = data.username
-    let token = data.token
-
-    //Checks the username and token are valid. Returns null if they are not
-    let name = await verifyToken(username, token)
-
-    if (name == null){
-      socket.emit('auth-failed')
-      return
-    }
 
     try{
+      let username = data.username
+      let token = cryptico.decrypt(data.token, private).plaintext
+
+      //Checks the username and token are valid. Returns null if they are not
+      let name = await verifyToken(username, token)
+
+      if (name == null){
+        socket.emit('auth-failed')
+        return
+      }
+  
       //Checks the username and token are for the user in question
       if (loggedInUsers[name].token === token){
         // Tell client that login was successful
-        io.to(socket.id).emit('login-success');
+        io.to(socket.id).emit('auth-success');
 
         // Add socket to the "authorised" room so they can receive messages
         socket.join('authorised');
         socket.to('authorised').emit('user-connected', username); // Announce that the user has connected
         io.to(socket.id).emit("send-username", username); // tells the new user what their name is
 
-        users[socket.id] = name;
+        users[socket.id] = name
 
         // adds the username to list of connected users (provided it isn't there already)
         if (connected.indexOf(username) < 0){
-          connected.push(username); 
-          socket.to('authorised').emit('send-users', connected);  
-
-
+          connected.push(username);     
           spamTracker = {client: username, spamCounter: 0, spam: false};
           clients.push(spamTracker);
         }
 
-        io.to(socket.id).emit('settings', settings); //Sends settings to the client
+
+        sendUsers(socket) // Sends the new users list to everyone
+
+        io.to(socket.id).emit('settings', settings); //Sends settings to the client 
         console.log("👋 User " + username + " connected");
+       
+        //Sending AES key to the server 
+        let encrypted = cryptico.encrypt(plainKey, loggedInUsers[name].publicKey)        
+        socket.emit('send-aes', encrypted.cipher)
 
         // Get previous 20 messages and send them to the user
         sendOldMessages(socket, 999999999999999);
@@ -225,14 +258,16 @@ io.on('connection', socket => {
         console.log("😭 "+ username + " Had a failed authentication")
       }
     
-    }catch(err){
+    }catch(e){
+      console.log(e)
       socket.disconnect()
+      console.log("user was disconnected because of an error")
     }
  
   })
 
   // Broadcast to other users when someone is typing
-  socket.on('user_typing', myUsername => {
+  socket.on('user_typing',  async myUsername => {
     try{
       if (loggedInUsers[myUsername] != null){ // stops users without a name from being set as typing. 
         socket.to('authorised').emit('user_typing', myUsername);
@@ -288,6 +323,27 @@ io.on('connection', socket => {
   })
 
   socket.on('send-chat-message', message => processChatMessage(socket, message));
+
+  function messageChecks(message){
+    
+    // Make sure message has a suitable type value
+    if (!(typeof message.type == "string" && (message.type === "text" || message.type === "image" || message.type === "file"))){
+      console.log("🚨 An message with an invalid type was received");
+      return false
+    }
+
+    if (message.content == ""){
+      console.log("🚨 An empty message got through");
+      return false
+    }
+
+    if (message.type === "text" && message.content.length > settings.messageLimit || message.content.length > 40000 || (message.fileName != undefined && 255 < message.fileName.length)){ // again, just for redundancy.  Absolute limit is 40000 
+      console.log("🚨 A message that was too long got though");
+      return false
+    }
+
+    return true
+  }
 
   socket.on('request-send-stream', details => {
     // The client is requesting a stream with which they can send a file based message
@@ -511,7 +567,7 @@ io.on('connection', socket => {
         loggedInUsers[name].readStream.destroy();
         loggedInUsers[name].readStream = null;
       }
-      socket.to('authorised').emit('user-disconnected', name);
+      socket.to('authorised').emit('user-disconnected', encrypt(name));
       //logs that the user disconnected at this time
       Storage.log(name + " disconnected"); 
       console.log("💔 " + name + " disconnected"); 
@@ -523,8 +579,7 @@ io.on('connection', socket => {
       if (index > -1) {
           connected.splice(index, 1);
       }
-      socket.to('authorised').emit('send-users', connected);
-    }
+      sendUsers(socket)
     }catch{
       console.log("error removing user, could have been kicked")
     }
@@ -536,39 +591,81 @@ io.on('connection', socket => {
 
   // allows the client to request a list of new users. tried to remove this but everything broke
   socket.on('get-users', out => {
-    socket.to('authorised').emit('send-users', connected);
+    sendUsers(socket)
+  })
+
+  var toggle;
+
+  socket.on('profanityToggle', (profanitySettings) => {
+
+    if (profanitySettings.profanitySettings == 1) {
+
+      profanityFilter.toggleCustom()
+      profanityFilter.load();
+      socket.emit('toggle-update');
+      toggle == 1;
+      profanityFilter.savePreset(toggle);
+      var emitWords = profanityFilter.readBanlistFromFile();
+      socket.emit('get-Profanity', {"words": emitWords});
+    }else if (profanitySettings.profanitySettings == 0) {
+
+      profanityFilter.toggleDefault()
+      profanityFilter.load();
+      socket.emit('toggle-update');
+      toggle == 0;
+      profanityFilter.savePreset(toggle)
+      var emitWords = profanityFilter.readBanlistFromFile();
+      socket.emit('get-Profanity' , {"words": emitWords});
+    }
+
+  })
+
+  socket.on('profanityCustomWords', (wordsCustom) => {
+    // takes wordsCustom and creates a response to be file written in a 1d array
+    var res = wordsCustom.wordsCustom.split(" ").join("\n")
+    const fs = require("fs") // !This shouldn't be here - Jasper 
+
+    s.writeFile("bannedWordsCustom.txt", res, function (err) {
+      if(err){
+          return console.log(err);
+      }
+    })
   })
 
 })
 
 async function processChatMessage(socket, message){
   // Check that the client is logged in, and discard their messages otherwise
+  let name = users[socket.id]
+  if (name == null || name == undefined || name == "") {
+    socket.disconnect()
+    return
+  }
+  
   if (typeof users[socket.id] == "string"){
-    // Make sure message has a suitable type value
-    if (!(typeof message.type == "string" && (message.type === "text" || message.type === "image" || message.type === "file"))){
-      // Ignore the message
-      console.log("🚨 An message with an invalid type was received");
-      return;
+    
+    if (messageChecks(message) == false){
+      console.log("🚨 message failed checks")
+      return
     }
-    let name = users[socket.id];
+    
+    // Checks if user sending message has spam flag
+    for (var j of clients) {
 
-    //If message is blank. don't spam people 
-    //This is done client side as well for redundancy
-    if (message.content == ""){
-      console.log("🚨 An empty message got through");
-      return;
+      if (j.client == name && j.spam == true) {
+        console.log("A message from " + j.client + " was detected as spam!");
+        return;
+      }
     }
-
-    if (message.content.length > settings.messageLimit || message.content.length > 40000 || (message.fileName != undefined && 255 < message.fileName.length)){ // again, just for redundancy.  Absolute limit is 40000
-      console.log("🚨 A message that was too long got though");
-      return;
-    }
-
+    
+    // Decrypt content field
+    message.content = decrypt(message.content)
+    message.fileName = decrypt(message.fileName)
+    
     // Write the new message to file
     let filteredMessage = message.content;
     // Only filter text based messages for profanity
     if (message.type === "text") filteredMessage = profanityFilter.filter(filteredMessage);
-    if (name == null || name == undefined || name == "") name = "unknown";
 
     let messageObj = new Message(name, message.type, filteredMessage, message.fileName);
     // Although async, this should not be awaited as we don't need to know the result.  This means we can just run addMessage in the background and move on
@@ -586,12 +683,17 @@ async function processChatMessage(socket, message){
       message.fileSize = Number(splitFileDetails[1]);
       filteredMessage = addToAvailableFiles(Number(splitFileDetails[0]));
     }
+    
+    // Encrypt and send to users
+    let content = encrypt(filteredMessage)
+    let fileName;
+    if (message.fileName != undefined) fileName = encrypt(message.fileName)
 
     socket.to('authorised').emit('chat-message', {
       message: {
         type: message.type, 
         content: filteredMessage, 
-        fileName: message.fileName,
+        fileName: fileName,
         fileSize: message.fileSize  // This simply will be undefined if not a file
       }, 
       name: name 
@@ -611,22 +713,13 @@ async function processChatMessage(socket, message){
         }
       }
     }
-
-    // Checks if user sending message has spam flag
-    for (var j of clients) {
-
-      if (j.client == name && j.spam == true) {
-        console.log("A message from " + j.client + " was detected as spam!");
-        return;
-      }
-    }
     
     // Must also send message to user that sent it
     socket.emit('chat-message', {
       message:{
         type: message.type, 
         content: filteredMessage, 
-        fileName: message.fileName,
+        fileName: fileName,
         fileSize: message.fileSize
       }, 
       name: name
@@ -745,25 +838,27 @@ async function verifyToken(username, token) {
 
 
 function disconnectUser(socket, username){
-
-
   console.log("🚨 " + username + " failed authentication" )
   logger.log("🚨 " + username + " failed authentication ")
 
   delete users[socket.id]; // remove the user from the connected users (but doesn't delete them, sets to null i think)
 
-   // you know, just to be extra sure 
-   socket.leave('authorised')
-   socket.disconnect(); 
+  // you know, just to be extra sure 
+  socket.leave('authorised')
+  socket.disconnect(); 
  
   //removes the users name from the client list when they log out
   var index = connected.indexOf(username);
   if (index > -1) {
-      connected.splice(index, 1);
+    connected.splice(index, 1);
   }
-  socket.to('authorised').emit('send-users', connected); 
+  sendUsers(socket) 
 }
 
+function sendUsers(socket){
+  let con = JSON.stringify(connected);
+  socket.to('authorised').emit('send-users', encrypt(con));
+}
 
 function checkAuth(socket){
   try{
@@ -787,6 +882,36 @@ function checkAuth(socket){
   }
 }
 
+function encrypt(data){
+  data = Buffer.from(data).toString('base64')
+  let encrypted = cryptico.encryptAESCBC(data, AESKey)
+  return encrypted
+}
+
+function decrypt(data){
+  let decrypted = cryptico.decryptAESCBC(data, AESKey)
+  decrypted = Buffer.from(decrypted, 'base64').toString()
+  return decrypted
+}
+
+function bufferToString(buffer){
+  // Convert a Buffer array to a string
+  let outputStr = "";
+  for (let i of buffer.values()){
+      outputStr += String.fromCharCode(i);   
+  }
+  return outputStr;
+
+}
+function stringToBuffer(str){
+  // Convert string to buffer
+  let buffer = []
+  for (let i = 0; i < str.length; i++){
+      buffer.push(str.charCodeAt(i))
+  }
+  return buffer
+}
+
 function addToAvailableFiles(position){
   // Add a file position to the list of available files
   if (availableFilesIndeces[position] == undefined){
@@ -808,3 +933,4 @@ function addToAvailableFiles(position){
   }
   else return availableFilesIndeces[position];
 }
+

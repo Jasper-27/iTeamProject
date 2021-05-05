@@ -12,15 +12,35 @@
 	    	<!-- Links for the style sheets Layout -->
 	<link rel="stylesheet" href="assets/css/layout/normal/styles.css">
 
-
-		<script defer src="http://localhost:4500/socket.io/socket.io.js"></script>
-        <script defer src="register.js"></script>
 </head>
 
 
-    <body>
+<!-- This section loads in the script file, and socket.io using the IP address of the server. -->
+<script> 
+
+    console.log(sessionStorage.getItem('ip'))
+
+    let ioAddress = "http://" + self.location.host.split(':')[0] + ":4500/socket.io/socket.io.js"
+    console.log(ioAddress)
+
+    const socket_script = document.createElement("script")
+    socket_script.src = ioAddress
+    socket_script.async = false
+    socket_script.defer = true
+    document.head.appendChild(socket_script)
+
+
+    const script = document.createElement("script")
+    script.src = "register.js"
+    script.async = false
+    script.defer = true
+    document.head.appendChild(script)
+
+</script>
+
+<body>
 	
-	    <nav class="navbar navbar-light navbar-expand-md">
+	<nav class="navbar navbar-light navbar-expand-md">
         <div class="container-fluid"><a class="navbar-brand" href="index.html">WinkiMessenger</a><button data-toggle="collapse" class="navbar-toggler" data-target="#navcol-1"><span class="sr-only">Toggle navigation</span><span class="navbar-toggler-icon"></span></button>
             <div class="collapse navbar-collapse" id="navcol-1">
                 <ul class="nav navbar-nav">
@@ -32,24 +52,24 @@
         </div>
     </nav>
 	
-	    <div></div>
+	<div></div>
     <div id="credentials">
 	
 	<section class="login-clean">
 	
 	<div class="login-clean"  style="width: 35%; margin: auto;">
 	
-            <h2 style="text-align: center;">Register Form</h2>
-            <div id="credentials" class="illustration"><img src="logo.png" height="220"></div>
-            <div class="form-group"><input class="form-control" type="text" id="usernameEntry" placeholder="Username" name="username"></div>
-            <div class="form-group"><input class="form-control" type="password" id="password1Entry" name="password1" placeholder="Password"></div>
-			<div class="form-group"><input class="form-control" type="password" id="password2Entry" name="password2" placeholder="Repeat Password"></div>
-			
-			<h3>Optional Data</h3>
-			<div class="form-group"><input class="form-control" type="text" id="firstName" name="firstName" placeholder="First Name"></div>
-			<div class="form-group"><input class="form-control" type="text" id="lastName" name="lastName" placeholder="Last Name"></div>
-			
-			<div class="form-group"><button class="btn btn-primary btn-block" id="submit"  type="submit" onclick = "register()" style="background: var(--right-msg-bg); ">Register</button></div>
+        <h2 style="text-align: center;">Register Form</h2>
+        <div id="credentials" class="illustration"><img src="logo.png" height="220"></div>
+        <div class="form-group"><input class="form-control" type="text" id="usernameEntry" placeholder="Username" name="username"></div>
+        <div class="form-group"><input class="form-control" type="password" id="password1Entry" name="password1" placeholder="Password"></div>
+        <div class="form-group"><input class="form-control" type="password" id="password2Entry" name="password2" placeholder="Repeat Password"></div>
+        
+        <h3>Optional Data</h3>
+        <div class="form-group"><input class="form-control" type="text" id="firstName" name="firstName" placeholder="First Name"></div>
+        <div class="form-group"><input class="form-control" type="text" id="lastName" name="lastName" placeholder="Last Name"></div>
+        
+        <div class="form-group"><button class="btn btn-primary btn-block" id="submit"  type="submit" onclick = "register()" style="background: var(--right-msg-bg); ">Register</button></div>
 			
 	</div>
 		

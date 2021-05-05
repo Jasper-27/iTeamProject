@@ -4,7 +4,9 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
-    <title>New Wiki Design</title>
+    <title>Winki-login</title>
+    <link rel="shortcut icon" type="image/png" href="./logo.png"/>
+
     <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css">
 	
 	    	<!-- Links for the style sheets Colour -->
@@ -12,12 +14,14 @@
 	
 	    	<!-- Links for the style sheets Layout -->
 	<link rel="stylesheet" href="assets/css/layout/normal/styles.css">
-	
 
+            <!-- encryption (https://github.com/wwwtyro/cryptico)-->
+    <script src="assets/js/cryptico.min.js"></script>
 
 </head>
 
-<body>
+<body class="login-page">
+    
     <nav class="navbar navbar-light navbar-expand-md">
         <div class="container-fluid"><a class="navbar-brand" href="index.html">WinkiMessenger</a><button data-toggle="collapse" class="navbar-toggler" data-target="#navcol-1"><span class="sr-only">Toggle navigation</span><span class="navbar-toggler-icon"></span></button>
             <div class="collapse navbar-collapse" id="navcol-1">
@@ -31,15 +35,21 @@
 
     <section class="login-clean" >
 	
-        <div class="login-clean"  style="width: 35%; margin: auto;">
+        <div class="login-box" >
             <h2 class="sr-only">Login Form</h2>
     
-            <div id="credentials" class="illustration"><img src="logo.png" height="220"></div>
+            <!-- Logo -->
+            <div id="credentials" class="illustration"><img src="logo.png" height="220" width="220"></div>
+
+            <!-- Alert for if the login fails -->
+            <div class="alert" id="login_failed_alert" style="visibility: hidden;" onclick="closePopup()"></div> 
+            <div id="alert_spacer" style="visibility: hidden;"></div>
+
+            <!-- The logins fields  -->
             <div class="form-group"><input class="form-control" type="text" id="user" placeholder="Username" name="username"></div>
             <div class="form-group"><input class="form-control" type="password" id="pass" name="password" placeholder="Password"></div>
-    
             <div class="form-group"><button class="btn btn-primary btn-block"  onclick="login()" style="background: var(--right-msg-bg);">Log In</button></div>
-                
+
         </div>
                     
     </section>   
@@ -47,48 +57,120 @@
 	
     <script>
 
-        let API = "http://localhost:8080/login/"
+        let API = "http://" + self.location.host.split(':')[0] + ":8080/"
+
+        function login(){
+            getPublicKey()
+        }
+    
+        function getPublicKey(){
+            console.log(API + "PublicKey/")
+            var xmlHttp = new XMLHttpRequest();
+            xmlHttp.onreadystatechange = function() { 
+                if (xmlHttp.status == 200){
+                    if (xmlHttp.responseText.length > 1){
+                        APILogin(xmlHttp.responseText)
+                    }
+                }
+            }
+            xmlHttp.open("GET", API + "PublicKey/", true); // true for asynchronous 
+            xmlHttp.send(null);
+        }
+
+
+        // Posts the user details to the server so the server can check them 
+        function APILogin(serverPublic){
+
+            let rsaNum = crypto.getRandomValues(new Uint32Array(1)) /2**64
+            let rsaPass = rsaNum.toString()
+            console.log(rsaPass)
+
+            // Generating keys
+            var private = cryptico.generateRSAKey(rsaPass, 1024); 
+            var public = cryptico.publicKeyString(private);   
+
+            //Adding keys to session Storage 
+            sessionStorage.setItem(`rsaPass`, rsaPass) // can't seem to put the key in session storage
+            sessionStorage.setItem(`publicKey`, public)
+            sessionStorage.setItem(`serverPublic`, serverPublic)
+
+            var EncryptionResult = cryptico.encrypt(document.getElementById("pass").value, serverPublic); // encrypt password with server public key 
 
             
-        // Posts the user details to the server so the server can check them 
-        function login(){
-            console.log("user " + document.getElementById("user").value)
-            console.log("password " + document.getElementById("user").value)
-
             // POSTs the username and password to the server
             var xhr = new XMLHttpRequest();
-            xhr.open("POST", API, true);
+            xhr.open("POST", API + "Login/", true);
             xhr.setRequestHeader('Content-Type', 'application/json');
             xhr.send(JSON.stringify({
                 "username" : document.getElementById("user").value, 
-                "password" : document.getElementById("pass").value
+                "hashed_password" : EncryptionResult.cipher, 
+                "client_public_key" : public
             }));    
 
             // handles the response from the POST request
             xhr.onload = function() {
-                console.log(this.responseText);
                 var data = JSON.parse(this.responseText);
 
                 if (data.message === "Authentication success"){
-                    sessionStorage.setItem('token', data.token) // set's the token in session storage 
-                    sessionStorage.setItem('username',  document.getElementById("user").value)
-                    console.log("Login success")
-                    window.location.replace("./app.html"); //changes to the main app window 
+
+                    let decrypted_token = cryptico.decrypt(data.token, private)
+
+                    if (decrypted_token.status == "success"){
+                        sessionStorage.setItem('token', decrypted_token.plaintext) // set's the token in session storage 
+                        sessionStorage.setItem('username',  document.getElementById("user").value)
+                        console.log("Login success")
+                        window.location.replace("./app.html"); //changes to the main app window 
+                    }else{
+                        alert("🚨 Error decrypting token")
+                    }
+                   
                 }else{
-                    alert("Login failed")
+                    // alert("😭 Login failed")
+                    msgAlert("Error:", "login failed")
                 }
             }
         }
+
+        // Error message code
+        function msgAlert(TITLE,MESSAGE) {
+            "use strict";   
+
+            let alertBox = document.getElementById("login_failed_alert")
+            let alertSpacer = document.getElementById("alert_spacer")
+
+            alertBox.innerHTML = `<span class='closebtn' onclick="closePopup()"'>&times;</span><strong>   ${TITLE}  </strong>  ${MESSAGE}`;
+            alertBox.style.visibility = 'visible';
+
+            alertSpacer.innerHTML = `</br>`;
+            alertSpacer.style.visibility = 'visible';
+        }
+
+        function closePopup(){
+            let alertBox = document.getElementById("login_failed_alert")
+            let alertSpacer = document.getElementById("alert_spacer")
+
+            alertBox.style.visibility = 'hidden'
+            alertBox.innerHTML = ""
+
+            alertSpacer.style.visibility = 'hidden'
+            alertSpacer.innerHTML = ""
+        }
+
+
+        //Allows the user to login with the Enter key
+        document.getElementById("pass").addEventListener("keydown", function (e) {
+            if (e.code === "Enter") {  
+                login()
+            }
+        })
+
+
     </script>
 	
 	
     <script src="assets/js/jquery.min.js"></script>
     <script src="assets/bootstrap/js/bootstrap.min.js"></script>
-	
-
-		
+			
 </body>
-
-
 
 </html>
