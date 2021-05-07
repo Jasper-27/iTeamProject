@@ -343,10 +343,15 @@ io.on('connection', socket => {
           let message =  {"type": details.messageDetails.type, "fileName": details.messageDetails.fileName};
           // Create a stream and send it to the client, so they can use it to stream data to the server
           let stream = ss.createStream();
+          // Create Transform stream to sit in between stream and fileStream and decrypt data
+          let decryptorStream = new Transform({transform: (data, encoding, callback) => {
+            callback(null, decrypt(data.toString()));  // (error, data)
+          }});
           // Allocate blob space
           Storage.allocateAttachmentsFileSpace(details.size).then(addr => {
             Storage.getAttachmentWriteStream(addr).then(fileStream => {
-              stream.pipe(fileStream);
+              stream.pipe(decryptorStream);
+              decryptorStream.pipe(fileStream);
               loggedInUsers[users[socket.id]].sendStream = fileStream;
               let cancelled = false;
               fileStream.on("finish", () => {
@@ -534,15 +539,6 @@ io.on('connection', socket => {
             }
             else{
               fileStream = await Storage.getReadProfilePictureStream(thisPicture[1]);
-              /*fileStream.on("end", () => {
-                fileStream.unpipe(encryptorStream);
-
-                socket.emit('end-pfp');
-                socket.once('ack-end-pfp', () => {
-                  // Move on to the next user
-                  sendPictures();
-                });
-              }); */
               // Attach custom callback to encryptorStream to run when it is finished with the current picture
               encryptorStream.onCurrentPipedStreamDone = () => {
                 fileStream.unpipe(encryptorStream);
@@ -682,7 +678,7 @@ async function processChatMessage(socket, message){
     
     // Decrypt content field
     if (message.type === "text") message.content = decrypt(message.content)
-    if (message.fileName != undefined) message.fileName = decrypt(message.fileName)
+    
     
     // Write the new message to file
     let filteredMessage = message.content;

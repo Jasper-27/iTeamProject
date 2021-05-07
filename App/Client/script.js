@@ -70,6 +70,7 @@ socket.on('settings', data => {
 //When a message is sent
 socket.on('chat-message', data => {  // Messages will be recieved in format: {name: "<username of sender>", message: {type: "<text/image/file>", content: "<data>", fileName: "<name of file sent (only for file / image messages)>"}}
   data.message.content = decrypt(data.message.content)
+  if (data.message.fileName) data.message.fileName = decrypt(data.message.fileName);
   addMessage(data.name, data.message)
 })
 
@@ -771,7 +772,7 @@ ss(socket).on('accept-send-stream', stream => {
         if (cursor < reader.result.length){
           if (stream._writableState.needDrain === false){
             // Otherwise wait until it drains
-            stream.write(reader.result.slice(cursor, cursor + 16384), () => {
+            stream.write(encrypt(reader.result.slice(cursor, cursor + 16384)), () => {
               cursor += 16384;
               // Update progress message
               updateUploadProgress(cursor, reader.result.length);
