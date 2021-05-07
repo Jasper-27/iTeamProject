@@ -102,6 +102,8 @@ class blobAccess{
                             let monitorStream = PassThrough();
                             // Create totalLifetimeBytesWritten attribute of monitorStream to record total bytes sent through stream
                             monitorStream.totalLifetimeBytesWritten = 0;
+                            // Create maxAllowedWriteLength attribute of monitorStream to show how much data can be written
+                            monitorStream.maxAllowedWriteLength = maxLength;
                             monitorStream.on("data", chunk => {
                                 monitorStream.totalLifetimeBytesWritten += chunk.length;
                                 if (maxLength <= monitorStream.totalLifetimeBytesWritten){

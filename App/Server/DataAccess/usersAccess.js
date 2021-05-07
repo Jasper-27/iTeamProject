@@ -256,26 +256,33 @@ class usersAccess{
         return new Promise(async (resolve, reject) => {
             try{
                 let stream = await blobAccess.getWritableStream(this.profilePicturesBlobPath, position);
-                stream.on("close", () => {
-                    // Once the stream closes, deallocate
-                    blobAccess.deallocate(this.profilePicturesBlobPath, position).then(() => {
-                        resolve(true);
-                    }, reason => {
-                        console.log(`Failed to deallocate profile picture: ${reason}`);
-                    })
-                });
                 let zeroes = Buffer.alloc(16384);
+                let cursor = 0;
                 let overwrite = async () => {
-                    // Try to write to stream if it isn't full
-                    if (stream._writableState.needDrain === false){
-                        // Otherwise wait until it drains
-                        stream.write(zeroes, () => {
-                            overwrite();
-                        });
+                    if (cursor < stream.maxAllowedWriteLength){
+                        // Try to write to stream if not full
+                        if (stream._writableState.needDrain === false){
+                            if (stream.maxAllowedWriteLength < cursor + 16384){
+                                zeroes = Buffer.alloc(stream.maxAllowedWriteLength - cursor);
+                            }
+                            stream.write(zeroes, () => {
+                                cursor += 16384;
+                                overwrite();
+                            });
+                        }
+                        else{
+                            // Otherwise wait until it drains
+                            stream.once('drain', overwrite);
+                        }
                     }
                     else{
-                        // Otherwise wait until it drains
-                        stream.once('drain', overwrite);
+                        // End stream and deallocate
+                        stream.end();
+                        blobAccess.deallocate(this.profilePicturesBlobPath, position).then(() => {
+                            resolve(true);
+                        }, reason => {
+                            console.log(`Failed to deallocate profile picture: ${reason}`);
+                        })
                     }
                 };
                 overwrite();

@@ -133,6 +133,7 @@ const io = require('socket.io')(socketPort, {
 });
 
 const ss = require('socket.io-stream');
+const { Transform } = require("stream");
 
 Storage.log("Server started")
 
@@ -446,12 +447,21 @@ io.on('connection', socket => {
         return;
       }
       let userStream = ss.createStream();
+      // Create transformer stream to decrpyt data as it comes through
+      let decryptorStream = new Transform({
+        transform: (data, undefined, callback) => {
+          callback(null, decrypt(data.toString()));  // (error, transformed data)
+        }
+      })
+      // Pipe all data from user stream through the decryptor stream, then pipe it to the fileStream
       let fileStream = await Storage.getChangeProfilePictureStream(users[socket.id], imageDetails.fileSize);
       loggedInUsers[users[socket.id]].sendStream = userStream;
-      userStream.pipe(fileStream);
+      decryptorStream.pipe(fileStream);
+      userStream.pipe(decryptorStream);
       fileStream.on("close", async () => {
         // Destroy stream and allow user to open another one
         fileStream.destroy();
+        decryptorStream.destroy();
         userStream.destroy();
         // Update loggedInUsers with the new picture location
         let accountData = await Storage.getAccount(users[socket.id]);
