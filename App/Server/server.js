@@ -417,8 +417,13 @@ io.on('connection', socket => {
         // If fileId exists then stream that file from blob
         Storage.getAttachmentReadStream(availableFiles[fileId]).then(fileStream => {
           let stream = ss.createStream();
+          // Create Transform stream to sit in between stream and fileStream and encrypt data
+          let encryptorStream = new Transform({transform: (data, encoding, callback) => {
+            callback(null, encrypt(data));
+          }});
           let closeStream = () => {
             stream.destroy();
+            encryptorStream.destroy();
             fileStream.destroy();
             loggedInUsers[users[socket.id]].readStream = null;
             // Notify client that the server will now permit another read stream (as this one has been fully closed)
@@ -427,7 +432,8 @@ io.on('connection', socket => {
           stream.on("finish", closeStream);
           socket.once('close-read-stream-early', closeStream);
           loggedInUsers[users[socket.id]].readStream = stream;
-          fileStream.pipe(stream);
+          fileStream.pipe(encryptorStream);
+          encryptorStream.pipe(stream);
           ss(socket).emit('accept-read-stream', stream);
         }, 
         reason => {

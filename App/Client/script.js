@@ -815,7 +815,7 @@ ss(socket).on('accept-read-stream', stream => {
   stream.on('data', chunk => {
     if (cancelled === false){
       requestedFileDetails.loadProgressDiv.innerText = `Fetching (${Math.floor((fileData.length / requestedFileDetails.fileSize) * 100)}%).  Click to cancel`;
-      fileData += chunk;
+      fileData += decrypt(chunk.toString());
     }
   });
   stream.on("finish", () => {
