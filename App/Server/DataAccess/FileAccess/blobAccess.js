@@ -65,6 +65,8 @@ class blobAccess{
                             try{
                                 let dataLength = Number(data.readBigInt64BE());
                                 let stream = fs.createReadStream(filePath, {fd: descriptor, start: position + 17, end: position + 17 + dataLength - 1});
+                                // Add attribute to stream to show the amount of data to be read
+                                stream.maxAllowedReadLength = dataLength;
                                 resolve(stream);
                             }
                             catch(reason){

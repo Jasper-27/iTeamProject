@@ -839,25 +839,43 @@ ss(socket).on('accept-read-stream', stream => {
 ss(socket).on('accept-pfp-stream', stream => {
   let currentUser;  // The username of the user whose profile picture is currently being sent
   let data = "";
+  let currentPictureTotalSize;
+  let onCurrentImageComplete;
 
-  let endPfp = () => {
-    profilePictures[currentUser] = data;
-    socket.once('next-pfp', startNewPic);
-    // Acknowledge that we are ready for the next picture
-    socket.emit('ack-end-pfp');
+  let endPfp = (totalSize) => {
+    // Make sure picture has been fully sent first
+    if (totalSize.totalSize <= data.length){
+      profilePictures[currentUser] = data;
+      socket.once('next-pfp', startNewPic);
+      // Acknowledge that we are ready for the next picture
+      socket.emit('ack-end-pfp');
+    }
+    else{
+      // Otherwise set up callback to be run when it has been fully sent
+      currentPictureTotalSize = totalSize.totalSize;
+      onCurrentImageComplete = () => {
+        currentPictureTotalSize = null;
+        onCurrentImageComplete = null;
+        profilePictures[currentUser] = data;
+        socket.once('next-pfp', startNewPic);
+        // Acknowledge that we are ready for the next picture
+        socket.emit('ack-end-pfp');
+      };
+    }
+    
   };
 
   let startNewPic = details => {
     // Another profile pic
     if (details.useDefault === true){
-      profilePictures[details.name] = defaultProfilePicture;
+      profilePictures[decrypt(details.name)] = defaultProfilePicture;
       socket.once('next-pfp', startNewPic);
       // Acknowledge that we have processed it, so server knows to start next one
       socket.emit('ack-next-pfp');
     }
     else{
       // The image will be sent using the stream
-      currentUser = details.name;
+      currentUser = decrypt(details.name);
       data = "";
       socket.once('end-pfp', endPfp);
       socket.emit('ack-next-pfp');
@@ -867,7 +885,11 @@ ss(socket).on('accept-pfp-stream', stream => {
   
   
   stream.on("data", chunk => {
-    data += chunk.toString();
+    data += decrypt(chunk.toString());
+    if (currentPictureTotalSize && currentPictureTotalSize <= data.length){
+      // Run callback if it has been defined
+      if (onCurrentImageComplete) onCurrentImageComplete();
+    }
   });
 });
 

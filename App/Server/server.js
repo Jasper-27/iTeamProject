@@ -502,6 +502,20 @@ io.on('connection', socket => {
         }
       }
       let userStream = ss.createStream({allowHalfOpen: true});
+      let fileStream;
+      // Create a Tranform stream to sit in between fileStreams and userStream and encrypt the data
+
+      let encryptorStream = new Transform({transform: (data, encoding, callback) => {
+        callback(null, encrypt(data));  // (error, data)
+        // Create an attribute to record how much data has been written for the current fileStream
+        if (encryptorStream.currentStreamAmountWritten == undefined) encryptorStream.currentStreamAmountWritten = 0;
+        encryptorStream.currentStreamAmountWritten += data.length;
+        // If all data has been read from the current fileStream, then run a custom callback
+        if (fileStream && fileStream.maxAllowedReadLength <= encryptorStream.currentStreamAmountWritten){
+          encryptorStream.currentStreamAmountWritten = 0;  // Reset ready for new stream
+          if (encryptorStream.onCurrentPipedStreamDone != undefined) encryptorStream.onCurrentPipedStreamDone();
+        }
+      }});
       // For each in pictureLocations, get a stream from Storage and pipe it to userStream
       
       let sendPictures = async () => {
@@ -512,23 +526,33 @@ io.on('connection', socket => {
             // If location is 0 then tell client to use default
             useDefault = true;
           }
-          socket.emit('next-pfp', {"name": thisPicture[0], "useDefault": useDefault});  // Announce start of new user's pic, and send the username
+          socket.emit('next-pfp', {"name": encrypt(thisPicture[0]), "useDefault": useDefault});  // Announce start of new user's pic, and send the username
           socket.once('ack-next-pfp', async () => {
             if (useDefault === true){
               // Just move onto the next one straight away
               sendPictures();
             }
             else{
-              let fileStream = await Storage.getReadProfilePictureStream(thisPicture[1]);
-              fileStream.on("end", () => {
-                fileStream.unpipe(userStream);
+              fileStream = await Storage.getReadProfilePictureStream(thisPicture[1]);
+              /*fileStream.on("end", () => {
+                fileStream.unpipe(encryptorStream);
+
                 socket.emit('end-pfp');
                 socket.once('ack-end-pfp', () => {
                   // Move on to the next user
                   sendPictures();
                 });
-              });
-              fileStream.pipe(userStream, {"end": false});
+              }); */
+              // Attach custom callback to encryptorStream to run when it is finished with the current picture
+              encryptorStream.onCurrentPipedStreamDone = () => {
+                fileStream.unpipe(encryptorStream);
+                socket.emit('end-pfp', {"totalSize": fileStream.maxAllowedReadLength});
+                socket.once('ack-end-pfp', () => {
+                  // Move on to the next user
+                  sendPictures();
+                });
+              };
+              fileStream.pipe(encryptorStream, {"end": false});
             }
           });
         }
@@ -538,6 +562,7 @@ io.on('connection', socket => {
           if (loggedInUsers[users[socket.id]] != undefined) loggedInUsers[users[socket.id]].sendStream = null;
         }
       };
+      encryptorStream.pipe(userStream);
       loggedInUsers[users[socket.id]].sendStream = userStream;
       ss(socket).emit('accept-pfp-stream', userStream);
       sendPictures();
