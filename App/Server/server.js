@@ -458,21 +458,12 @@ io.on('connection', socket => {
         return;
       }
       let userStream = ss.createStream();
-      // Create transformer stream to decrpyt data as it comes through
-      let decryptorStream = new Transform({
-        transform: (data, undefined, callback) => {
-          callback(null, decrypt(data.toString()));  // (error, transformed data)
-        }
-      })
-      // Pipe all data from user stream through the decryptor stream, then pipe it to the fileStream
       let fileStream = await Storage.getChangeProfilePictureStream(users[socket.id], imageDetails.fileSize);
       loggedInUsers[users[socket.id]].sendStream = userStream;
-      decryptorStream.pipe(fileStream);
-      userStream.pipe(decryptorStream);
+      userStream.pipe(fileStream);
       fileStream.on("close", async () => {
         // Destroy stream and allow user to open another one
         fileStream.destroy();
-        decryptorStream.destroy();
         userStream.destroy();
         // Update loggedInUsers with the new picture location
         let accountData = await Storage.getAccount(users[socket.id]);
@@ -514,17 +505,17 @@ io.on('connection', socket => {
       }
       let userStream = ss.createStream({allowHalfOpen: true});
       let fileStream;
-      // Create a Tranform stream to sit in between fileStreams and userStream and encrypt the data
+      // Create a Tranform stream to sit in between fileStreams and userStream and determine when a particular image is complete
 
-      let encryptorStream = new Transform({transform: (data, encoding, callback) => {
-        callback(null, encrypt(data));  // (error, data)
+      let monitorStream = new Transform({transform: (data, encoding, callback) => {
+        callback(null, data);  // (error, data)
         // Create an attribute to record how much data has been written for the current fileStream
-        if (encryptorStream.currentStreamAmountWritten == undefined) encryptorStream.currentStreamAmountWritten = 0;
-        encryptorStream.currentStreamAmountWritten += data.length;
+        if (monitorStream.currentStreamAmountWritten == undefined) monitorStream.currentStreamAmountWritten = 0;
+        monitorStream.currentStreamAmountWritten += data.length;
         // If all data has been read from the current fileStream, then run a custom callback
-        if (fileStream && fileStream.maxAllowedReadLength <= encryptorStream.currentStreamAmountWritten){
-          encryptorStream.currentStreamAmountWritten = 0;  // Reset ready for new stream
-          if (encryptorStream.onCurrentPipedStreamDone != undefined) encryptorStream.onCurrentPipedStreamDone();
+        if (fileStream && fileStream.maxAllowedReadLength <= monitorStream.currentStreamAmountWritten){
+          monitorStream.currentStreamAmountWritten = 0;  // Reset ready for new stream
+          if (monitorStream.onCurrentPipedStreamDone != undefined) monitorStream.onCurrentPipedStreamDone();
         }
       }});
       // For each in pictureLocations, get a stream from Storage and pipe it to userStream
@@ -545,16 +536,16 @@ io.on('connection', socket => {
             }
             else{
               fileStream = await Storage.getReadProfilePictureStream(thisPicture[1]);
-              // Attach custom callback to encryptorStream to run when it is finished with the current picture
-              encryptorStream.onCurrentPipedStreamDone = () => {
-                fileStream.unpipe(encryptorStream);
+              // Attach custom callback to monitorStream to run when it is finished with the current picture
+              monitorStream.onCurrentPipedStreamDone = () => {
+                fileStream.unpipe(monitorStream);
                 socket.emit('end-pfp', {"totalSize": fileStream.maxAllowedReadLength});
                 socket.once('ack-end-pfp', () => {
                   // Move on to the next user
                   sendPictures();
                 });
               };
-              fileStream.pipe(encryptorStream, {"end": false});
+              fileStream.pipe(monitorStream, {"end": false});
             }
           });
         }
@@ -564,7 +555,7 @@ io.on('connection', socket => {
           if (loggedInUsers[users[socket.id]] != undefined) loggedInUsers[users[socket.id]].sendStream = null;
         }
       };
-      encryptorStream.pipe(userStream);
+      monitorStream.pipe(userStream);
       loggedInUsers[users[socket.id]].sendStream = userStream;
       ss(socket).emit('accept-pfp-stream', userStream);
       sendPictures();
@@ -855,9 +846,6 @@ function sendOldMessages(socket, timestamp){
     });
   }
 }
-
-
-
 
 async function verifyToken(username, token) {
   if (username == null){

@@ -721,7 +721,7 @@ ss(socket).on('accept-change-pfp-stream', stream => {
         if (cursor < reader.result.length){
           if (stream._writableState.needDrain === false){
             // Otherwise wait until it drains
-            stream.write(encrypt(reader.result.slice(cursor, cursor + 16384)), () => {
+            stream.write(reader.result.slice(cursor, cursor + 16384), () => {
               cursor += 16384;
               // Update progress message
               write();
@@ -886,7 +886,7 @@ ss(socket).on('accept-pfp-stream', stream => {
   
   
   stream.on("data", chunk => {
-    data += decrypt(chunk.toString());
+    data += chunk.toString();
     if (currentPictureTotalSize && currentPictureTotalSize <= data.length){
       // Run callback if it has been defined
       if (onCurrentImageComplete) onCurrentImageComplete();
