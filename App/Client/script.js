@@ -561,7 +561,10 @@ function showFileSelector(){
 }
 
 // Token authentication stuff ===========================================
-socket.on('login-success', () => {
+socket.on('login-success', (spamCount) => {
+  // Server sends users existing spam count on login, so client and serverside spam filters can be synchronised
+  spamCounter = spamCount;
+  if (10 <= spamCounter) spam = true;
   // On successful login, request profile pictures of logged in users
   socket.emit('request-pfp-stream', 'all');
 });

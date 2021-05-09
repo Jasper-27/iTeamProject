@@ -146,7 +146,7 @@ let settings = Settings.readSettings();
 var connected = []; 
 
 // Used for detecting spam
-var clients = [];
+var clients = {};
 var spamTracker;
 
 // List of the 20 most recent messages (to avoid needing to read disk when sending old messages every time a user connects)
@@ -235,10 +235,10 @@ io.on('connection', socket => {
         users[socket.id] = name
 
         // adds the username to list of connected users (provided it isn't there already)
-        if (connected.indexOf(username) < 0){
+        if (connected.indexOf(username) < 0 && clients[username] == undefined){
           connected.push(username);     
           spamTracker = {client: username, spamCounter: 0, spam: false};
-          clients.push(spamTracker);
+          clients[username] = spamTracker;
         }
 
 
@@ -251,7 +251,10 @@ io.on('connection', socket => {
         let encrypted = cryptico.encrypt(plainKey, loggedInUsers[name].publicKey)        
         socket.emit('send-aes', encrypted.cipher)
         
-        socket.emit('login-success');
+        // Tell client that login was successful, and send the user's spam count
+        let userSpamCount = 0;
+        if (clients[username] != undefined) userSpamCount = clients[username].spamCounter;
+        socket.emit('login-success', userSpamCount);
 
         // Get previous 20 messages and send them to the user
         sendOldMessages(socket, 999999999999999);
@@ -665,13 +668,13 @@ async function processChatMessage(socket, message){
     }
     
     // Checks if user sending message has spam flag
-    for (var j of clients) {
-
-      if (j.client == name && j.spam == true) {
-        console.log("A message from " + j.client + " was detected as spam!");
+    
+      var client = clients[name];
+      if (client != undefined && client.spam == true) {
+        console.log("A message from " + name + " was detected as spam!");
         return;
       }
-    }
+    
     
     // Decrypt content field
     if (message.type === "text") message.content = decrypt(message.content)
@@ -752,8 +755,8 @@ async function processChatMessage(socket, message){
     }
 
     // Finds the client who has just sent a message
-    for (var i of clients) {
-
+    for (var c in clients) {
+      var i = clients[c];
       if (i.client == name) {
 
         // Increments spam counter
