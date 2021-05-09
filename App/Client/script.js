@@ -130,16 +130,19 @@ messageContainer.onscroll = () => {
   if (messageContainer.scrollTop == 0){
     // If scrolled all the way to the top then request another 20 of the previous messages
     // Wait until the user releases the mouse on the scrollbar, otherwise it will immediately scroll even further up once messages have loaded
-    let mouseReleased = () => {
+    let loadOlderMessages = () => {
       // Only continue if still scrolled to the top
       if (messageContainer.scrollTop == 0){
         if (oldestMessageTime == undefined) oldestMessageTime = 999999999999999;
         socket.emit('request-old-messages', oldestMessageTime);
       }
       // Clear listener for next time
-      messageContainer.removeEventListener("mouseup", mouseReleased);
+      messageContainer.removeEventListener("mouseup", loadOlderMessages);
     };
-    messageContainer.addEventListener("mouseup", mouseReleased);
+    // Wait 0.5s and then load older messages if still scrolled to the top (prevents scrolling too far when using scrollwheel / touchscreen)
+    setTimeout(loadOlderMessages, 500);
+    // Scroll when the mouse is released on the scrollbar if still scrolled to the top (prevents scrolling too far if using scroll bar)
+    messageContainer.addEventListener("mouseup", loadOlderMessages);
   }
 }
 
