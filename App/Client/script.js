@@ -597,7 +597,7 @@ const heartBeatReauth = setInterval(function() { renewAuth() }, 20000)
 
 
 // Listen for when client starts typing
-messageInput.addEventListener('keypress', inUsername => { 
+messageInput.addEventListener('keydown', inUsername => { 
   // If user presses a key, system recognises that the variable is set to false
   if(typingTimer == false){
     inUsername = myUsername;
