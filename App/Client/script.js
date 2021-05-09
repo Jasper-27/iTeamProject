@@ -312,10 +312,11 @@ function appendMessage(message, oldMessage=false) {
     messageContainer.scrollTop = messageContainer.scrollHeight;
   }
 
-  spamCounter++;
-
-  if (spamCounter > 9) {
-    spam = true;
+  if (oldMessage === false){
+    spamCounter++;
+    if (spamCounter > 9) {
+      spam = true;
+    }
   }
 }
                                               
@@ -423,9 +424,11 @@ function appendMessageRecieve(message, inName, oldMessage=false) {
     messageContainer.scrollTop = messageContainer.scrollHeight;
   }
 
-  spamCounter--
-  if (spamCounter < 10) { spam = false  }
-  if (spamCounter < 0) {  spamCounter = 0 }
+  if (oldMessage === false) {
+    spamCounter--
+    if (spamCounter < 10) { spam = false  }
+    if (spamCounter < 0) {  spamCounter = 0 }
+  }
 }
 
 function createFetchMessageLink(message, messageDataDiv, fileDetails=document.createElement('a')){
