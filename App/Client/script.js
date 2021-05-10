@@ -4,6 +4,7 @@ const messageForm = document.getElementById('send-container');
 const messageInput = document.getElementById('message-input'); 
 const fileSelectButton = document.getElementById("choose-file-button");
 const messageFileSelector = document.getElementById("choose-file-dialog");  // The <input type="file"/> element for selecting a file to send
+const feedback = document.getElementById("feedback");
 
 
 var AESKey = ""
@@ -172,8 +173,8 @@ function sendText(){
 // function which creates an alert that doesn't pause JS
 function msgAlert(TITLE,MESSAGE) {
   "use strict";   
-  document.getElementById("msg").innerHTML = `<span class='closebtn' onclick="this.parentElement.style.visibility='hidden';"'>&times;</span><strong>   ${TITLE}  </strong>  ${MESSAGE}`;
-  msg.style.visibility = 'visible';
+  document.getElementById("errormessage").innerHTML = `<span class='closebtn' onclick="this.parentElement.style.visibility='hidden';"'>&times;</span><strong>   ${TITLE}  </strong>  ${MESSAGE}`;
+  errormessage.style.visibility = 'visible';
 }
 
 
@@ -475,12 +476,10 @@ function appendUserJoinOrDisconnect(message){
 	
   //create the message box (div to hold the bubble)
   var messageBox = document.createElement('div');
-  messageBox.className = "msg-System";
-  messageContainer.append(messageBox);
+  messageBox.className = "msg middle-msg";
+  messageContainer.appendChild(messageBox);
   
-  //add user image
-  var userImage = document.createElement('div');
-  messageBox.appendChild(userImage);
+
   
   //specify and add the actual bubble 
   var messageBubble = document.createElement('div');
@@ -514,13 +513,56 @@ function getUsers(){
 
 // Fills up the connected users list on the client interface 
 function generateUserList(list){
-  connectedUsersList.innerHTML = ""; 
+	
+  // get current time
+  var current = new Date();
+  var current = current.toLocaleTimeString();
+	
+  connectedUsersList.innerHTML = " ";
+
   list.forEach((item, index) => {
     // Add entry to profilePictures using default image
     if (profilePictures[item] === undefined) profilePictures[item] = defaultProfilePicture;
     var entry = document.createElement('li');
-    entry.appendChild(document.createTextNode(item));
-    connectedUsersList.appendChild(entry);
+	
+	connectedUsersList.appendChild(entry);
+	
+	var chatList = document.createElement('div');
+	chatList.className = "chatList";
+	
+	entry.appendChild(chatList);
+	
+	var img = document.createElement('div');
+	img.className = "img";
+	
+	chatList.appendChild(img);
+	
+	var icon = document.createElement('i');
+	icon.className ="fa fa-circle";
+	var image1 = document.createElement('img');
+	image1.src ="https://image.flaticon.com/icons/svg/145/145867.svg";
+	
+	img.appendChild(icon);
+	img.appendChild(image1);
+	
+	
+	var desc = document.createElement('div');
+	desc.className = "feedback";
+	
+	var name = document.createElement('h5')
+	name.innerText = item;
+	
+	desc.appendChild(name);
+	
+	var small = document.createElement('small');
+	small.innerText = "Last seen: " + current;
+	
+	desc.appendChild(small);
+		
+	chatList.appendChild(desc);
+	
+    //entry.appendChild(document.createTextNode(item));
+    //connectedUsersList.appendChild(entry);
   });
 }
 
@@ -548,7 +590,12 @@ function exitSendFileMode(){
   messageInput.disabled = false;
   
   // Change "choose file" button back to its usual functionality (displaying file selector)
-  fileSelectButton.innerText = "Choose File";
+  
+  var icon = document.createElement('i');
+  icon.className ="fa fa-photo";
+	
+  fileSelectButton.innerText = "";
+  fileSelectButton.appendChild(icon);
   fileSelectButton.onclick = showFileSelector;
 
   // Override sendMessage back to sendText
@@ -618,10 +665,11 @@ messageInput.addEventListener('keydown', inUsername => {
 
 // Recieves broadcast from server about someone else typing and updates div
 socket.on('user_typing', myUsername => {
+  
   // Sets the div to visible
   feedback.style.visibility = 'visible';
   // Outputting which user is typing.
-  feedback.innerHTML = '<p><em>' + myUsername + ' is typing... </em></p>';
+  feedback.innerHTML =  myUsername + ' is typing...';
   // Sets a timer triggered by the original key press. 
   // After 4 seconds the div will become invisible until it is triggered again.
   clearTimeout(timeout)

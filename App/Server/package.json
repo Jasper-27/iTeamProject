@@ -1,19 +1,19 @@
 {
   "dependencies": {
     "all": "0.0.0",
-    "bcrypt": "^5.0.0",
+    "bcrypt": "^5.0.1",
     "colors": "^1.4.0",
     "cors": "^2.8.5",
     "cryptico": "^1.0.2",
     "express": "^4.17.1",
     "object-assign": "^4.1.1",
     "socket.io": "^3.1.0",
-    "socket.io-stream": "0.9.1"
+    "socket.io-stream": "^0.9.1"
   },
   "scripts": {
     "start": "node server.js"
   },
-  "name": "WinkiServer",
+  "name": "winkiserver",
   "version": "0.0.0",
   "description": "The winki message server",
   "main": "server.js",
