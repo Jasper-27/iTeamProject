@@ -8,7 +8,7 @@
     "express": "^4.17.1",
     "object-assign": "^4.1.1",
     "socket.io": "^3.1.0",
-    "socket.io-stream": "0.9.1"
+    "socket.io-stream": "^0.9.1"
   },
   "scripts": {
     "start": "node server.js"

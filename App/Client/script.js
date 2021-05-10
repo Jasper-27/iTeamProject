@@ -4,6 +4,7 @@ const messageForm = document.getElementById('send-container');
 const messageInput = document.getElementById('message-input'); 
 const fileSelectButton = document.getElementById("choose-file-button");
 const messageFileSelector = document.getElementById("choose-file-dialog");  // The <input type="file"/> element for selecting a file to send
+const feedback = document.getElementById("feedback");
 
 
 var AESKey = ""
@@ -664,6 +665,7 @@ messageInput.addEventListener('keydown', inUsername => {
 
 // Recieves broadcast from server about someone else typing and updates div
 socket.on('user_typing', myUsername => {
+  
   // Sets the div to visible
   feedback.style.visibility = 'visible';
   // Outputting which user is typing.
