@@ -52,7 +52,7 @@ class treeAccess {
                 fs.mkdirSync(path.dirname(filePath), {recursive: true});
             }
             catch{}
-            // Create the file with the headers containing, except the root pointer which should point to byte 24 (where the root would be if it existed)
+            // Create the file with the headers containing 0
             fs.writeFileSync(filePath, Buffer.alloc(24));
         }
     }

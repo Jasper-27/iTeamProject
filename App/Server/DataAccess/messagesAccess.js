@@ -8,10 +8,12 @@ const indexAccess = require('./FileAccess/indexAccess');
 const blockAccess = require('./FileAccess/blockAccess');
 const treeAccess = require('./FileAccess/treeAccess');
 const message = require('./../Message');
+const blobAccess = require('./FileAccess/blobAccess');
 
 class messagesAccess{
     messagesIndexPath;
     messagesFolderPath;
+    attachmentsPath;
 
     /*
     The fileAccess logic works using node.js's asynchronous system of callbacks and promises to allow it to be non-blocking
@@ -37,9 +39,10 @@ class messagesAccess{
     */
    pendingWrites;
 
-    constructor(messagesFolderPath, messagesIndexPath){
+    constructor(messagesFolderPath, messagesIndexPath, attachmentsPath){
         this.messagesFolderPath = messagesFolderPath;
         this.messagesIndexPath = messagesIndexPath;
+        this.attachmentsPath = attachmentsPath;
         // Create the index file if it doesn't exist
         indexAccess.createIndex(messagesIndexPath);
         // Initialise pendingWrites for chaining write operations
@@ -102,7 +105,48 @@ class messagesAccess{
                     for (let i = 0; i < blocks.length; i++){
                         // Search each of the blocks for all messages in the given range
                         let blockPath = path.format({dir: this.messagesFolderPath, base: `${blocks[i]}.wki`});
-                        wipedCount += await blockAccess.wipeEntries(blockPath, startTime, endTime);
+                        wipedCount += await blockAccess.wipeEntries(blockPath, startTime, endTime, async entryData => {
+                            // Check if it is a file based message and deallocate the space if so
+                            let messageType = entryData.readInt8(48);
+                            if (messageType == 2 || messageType == 3){
+                                // It is an image or file so deallocate the blob space
+                                let contentLength = Number(entryData.readBigInt64BE(49));
+                                // Size and position stored in content field
+                                let positionInfo = entryData.subarray(57, 57 + contentLength).toString();
+                                let blobPosition = Number(positionInfo.split(":")[0]);
+                                let blobLength = Number(positionInfo.split(":")[1]);
+                                // Overwrite with 0's for confidentiality
+                                let stream = await blobAccess.getWritableStream(this.attachmentsPath, blobPosition);
+                                let cursor = 0;
+                                let zeroes = Buffer.alloc(16384);
+                                let overwrite = async () => {
+                                    // Try to write to stream if it isn't full
+                                    if (cursor < blobLength){
+                                        if (blobLength < cursor + 16384){
+                                            // Last write will be smaller unless blobLength is divisible by 16384
+                                            zeroes = Buffer.alloc(blobLength - cursor);
+                                        }
+                                        if (stream._writableState.needDrain === false){
+                                            // Otherwise wait until it drains
+                                            stream.write(zeroes, () => {
+                                                cursor += 16384;
+                                                overwrite();
+                                            });
+                                        }
+                                        else{
+                                            // Otherwise wait until it drains
+                                            stream.once('drain', overwrite);
+                                        }
+                                    }
+                                    else{
+                                        stream.end();
+                                        // Then deallocate the space
+                                        await blobAccess.deallocate(this.attachmentsPath, blobPosition);
+                                    }
+                                };
+                                overwrite();
+                            }
+                        });
                     }
                     resolve(wipedCount);
                 }
@@ -124,7 +168,7 @@ class messagesAccess{
                 for (let i = 0; i < blocks.length; i++){
                     // Search each of the blocks for all messages in the given range
                     let blockPath = path.format({dir: this.messagesFolderPath, base: `${blocks[i]}.wki`});
-                    let blockMessages = await blockAccess.getEntries(blockPath, startTime, endTime);
+                    let blockMessages = await blockAccess.getEntriesBetween(blockPath, startTime, endTime);
                     // Convert each returned entry to a Message object
                     for (let j = 0; j < blockMessages.length; j++){
                         let currentMessage = blockMessages[j];
@@ -151,6 +195,89 @@ class messagesAccess{
                 reject(reason);
             }
             
+        });
+    }
+
+    getConsecutiveMessages(timeStamp, numberOfMessages, getPrecedingMessages=false){
+        // Get the specified number of messages from immediately before (if getPrecedingMessages = true) or after the given timeStamp (inclusive of timestamp)
+        return new Promise(async (resolve, reject) => {
+            try{
+                // Get block that contains given timestamp
+                let block = await indexAccess.getBlocks(this.messagesIndexPath, timeStamp, timeStamp, true);  // Use getNearby mode of getBlocks to get nearest block to the timestamp
+                let foundMessages = [];
+                let previousBlockFoundMessages = [];
+                if (block == false){
+                    // If the index is empty then there are no messages
+                    resolve([]);
+                    return;
+                }
+                if (getPrecedingMessages === true){
+                    // We are looking for messages before the given timestamp
+                    let entriesStillNeeded = numberOfMessages;
+                    while (0 < entriesStillNeeded && 0 < block){
+                        // May need to search multiple blocks until we have enough messages, so decrement block number on each loop if we don't have enough
+                        let blockPath = path.format({dir: this.messagesFolderPath, base: `${block}.wki`});
+                        let rawMessages = await blockAccess.getEntriesFromPositions(blockPath, await blockAccess.getEntriesNear(blockPath, timeStamp, entriesStillNeeded, true));
+                        for (let i = 0; i < rawMessages.length; i++){
+                            let currentMessage = rawMessages[i];
+                            let currentMessageTime = new Date(Number(currentMessage.readBigInt64BE(8)));
+                            let currentMessageUsername = treeAccess.bufferToString(currentMessage.subarray(16, 48));
+                            let currentMessageType = currentMessage.readInt8(48);
+                            // Convert back to string form
+                            if (currentMessageType === 1) currentMessageType = "text";
+                            else if (currentMessageType === 2) currentMessageType = "file";
+                            else if (currentMessageType === 3) currentMessageType = "image";
+                        
+                            let contentLength = Number(currentMessage.readBigInt64BE(49));
+                            let currentMessageContent = currentMessage.subarray(57, 57 + contentLength).toString();
+                            let filenameLength = Number(currentMessage.readBigInt64BE(57 + contentLength));
+                            let currentMessageFileName = currentMessage.subarray(57 + contentLength + 8, 57 + contentLength + 8 + filenameLength).toString();
+
+                            // Create message object
+                            foundMessages.push(new message(currentMessageUsername, currentMessageType, currentMessageContent, currentMessageFileName, currentMessageTime));
+                            entriesStillNeeded--;
+                        }
+                        previousBlockFoundMessages = foundMessages.concat(previousBlockFoundMessages);
+                        foundMessages = [];
+                        block--;
+                    }
+                    resolve(previousBlockFoundMessages);
+                }
+                else{
+                    // We are looking for messages after the given timestamp
+                    let lastBlock = await indexAccess.getLastBlockNumber(this.messagesIndexPath);
+                    let entriesStillNeeded = numberOfMessages;
+                    while (0 < entriesStillNeeded && block <= lastBlock){
+                        // May need to search multiple blocks until we have enough messages, so increment block number on each loop if we don't have enough
+                        let blockPath = path.format({dir: this.messagesFolderPath, base: `${block}.wki`});
+                        let rawMessages = await blockAccess.getEntriesFromPositions(blockPath, await blockAccess.getEntriesNear(blockPath, timeStamp, entriesStillNeeded));
+                        for (let i = 0; i < rawMessages.length; i++){
+                            let currentMessage = rawMessages[i];
+                            let currentMessageTime = new Date(Number(currentMessage.readBigInt64BE(8)));
+                            let currentMessageUsername = treeAccess.bufferToString(currentMessage.subarray(16, 48));
+                            let currentMessageType = currentMessage.readInt8(48);
+                            // Convert back to string form
+                            if (currentMessageType === 1) currentMessageType = "text";
+                            else if (currentMessageType === 2) currentMessageType = "file";
+                            else if (currentMessageType === 3) currentMessageType = "image";
+                        
+                            let contentLength = Number(currentMessage.readBigInt64BE(49));
+                            let currentMessageContent = currentMessage.subarray(57, 57 + contentLength).toString();
+                            let filenameLength = Number(currentMessage.readBigInt64BE(57 + contentLength));
+                            let currentMessageFileName = currentMessage.subarray(57 + contentLength + 8, 57 + contentLength + 8 + filenameLength).toString();
+
+                            // Create message object
+                            foundMessages.push(new message(currentMessageUsername, currentMessageType, currentMessageContent, currentMessageFileName, currentMessageTime));
+                            entriesStillNeeded--;
+                        }
+                        block++;
+                    }
+                    resolve(foundMessages);
+                }
+            }
+            catch(reason){
+                reject(reason);
+            }
         });
     }
 }
