@@ -1,7 +1,7 @@
 {
   "dependencies": {
     "all": "0.0.0",
-    "bcrypt": "^5.0.0",
+    "bcrypt": "^5.0.1",
     "colors": "^1.4.0",
     "cors": "^2.8.5",
     "cryptico": "^1.0.2",
@@ -13,7 +13,7 @@
   "scripts": {
     "start": "node server.js"
   },
-  "name": "WinkiServer",
+  "name": "winkiserver",
   "version": "0.0.0",
   "description": "The winki message server",
   "main": "server.js",
