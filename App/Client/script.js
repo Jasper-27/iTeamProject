@@ -27,7 +27,8 @@ var timeout = null;
 var settings 
 
 var connectedUsersList = document.getElementById('users');  // The HTML list that contains the connected users 
-profilePictures = {};  // Format {<username>:profile picture (as base64 string)}
+profilePictures = {};  // Format {<username>:<profile picture (as base64 string)>}
+usersListImageElements = {};  // Holds references to the HTML image elements for each user in the connected users list.  Format: {<username>: <HTML element>}
 
 // Used for detecting spam
 var spamCounter = 0;
@@ -540,11 +541,13 @@ function generateUserList(list){
 	var icon = document.createElement('i');
 	icon.className ="fa fa-circle";
 	var image1 = document.createElement('img');
-	image1.src ="https://image.flaticon.com/icons/svg/145/145867.svg";
+	image1.src = profilePictures[item];
 	
 	img.appendChild(icon);
 	img.appendChild(image1);
 	
+  // Add image reference to list so it can be changed if profile picture changes
+  usersListImageElements[item] = image1;
 	
 	var desc = document.createElement('div');
 	desc.className = "feedback";
@@ -904,6 +907,8 @@ ss(socket).on('accept-pfp-stream', stream => {
     // Make sure picture has been fully sent first
     if (totalSize.totalSize <= data.length){
       profilePictures[currentUser] = data;
+      // Update profile picture in connected users list
+      if (usersListImageElements[currentUser] != undefined) usersListImageElements[currentUser].src = data;
       socket.once('next-pfp', startNewPic);
       // Acknowledge that we are ready for the next picture
       socket.emit('ack-end-pfp');
@@ -915,6 +920,8 @@ ss(socket).on('accept-pfp-stream', stream => {
         currentPictureTotalSize = null;
         onCurrentImageComplete = null;
         profilePictures[currentUser] = data;
+        // Update profile picture in connected users list
+        if (usersListImageElements[currentUser] != undefined) usersListImageElements[currentUser].src = data;
         socket.once('next-pfp', startNewPic);
         // Acknowledge that we are ready for the next picture
         socket.emit('ack-end-pfp');
