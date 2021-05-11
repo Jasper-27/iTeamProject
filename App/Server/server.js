@@ -572,36 +572,35 @@ io.on('connection', socket => {
   });
 
   socket.on('disconnect', () => {
+    try{
+      let name = users[socket.id];
+      // Only continue if name exists (meaning user was properly connected and logged in)
+      if (typeof name == "string"){
+        // Close any streams the client had open
+        if (loggedInUsers[name].sendStream){
+          loggedInUsers[name].sendStream.destroy();
+          loggedInUsers[name].sendStream = null;
+        }
+        if (loggedInUsers[name].readStream){
+          loggedInUsers[name].readStream.destroy();
+          loggedInUsers[name].readStream = null;
+        }
+        socket.to('authorised').emit('user-disconnected', encrypt(name));
+        //logs that the user disconnected at this time
+        Storage.log(name + " disconnected"); 
+        console.log("💔 " + name + " disconnected"); 
 
-  try{
-    let name = users[socket.id];
-    // Only continue if name exists (meaning user was properly connected and logged in)
-    if (typeof name == "string"){
-      // Close any streams the client had open
-      if (loggedInUsers[name].sendStream){
-        loggedInUsers[name].sendStream.destroy();
-        loggedInUsers[name].sendStream = null;
-      }
-      if (loggedInUsers[name].readStream){
-        loggedInUsers[name].readStream.destroy();
-        loggedInUsers[name].readStream = null;
-      }
-      socket.to('authorised').emit('user-disconnected', encrypt(name));
-      //logs that the user disconnected at this time
-      Storage.log(name + " disconnected"); 
-      console.log("💔 " + name + " disconnected"); 
+        delete users[socket.id]; // remove the user from the connected users (but doesn't delete them, sets to null i think)
 
-      delete users[socket.id]; // remove the user from the connected users (but doesn't delete them, sets to null i think)
-
-      //removes the users name from the client list when they log out
-      var index = connected.indexOf(name);
-      if (index > -1) {
-          connected.splice(index, 1);
+        //removes the users name from the client list when they log out
+        var index = connected.indexOf(name);
+        if (index > -1) {
+            connected.splice(index, 1);
+        }
+        sendUsers(socket)
       }
-      sendUsers(socket)
     }
-  }
-  catch{
+    catch{
       console.log("error removing user, could have been kicked")
     }
   })
@@ -650,6 +649,61 @@ io.on('connection', socket => {
           return console.log(err);
       }
     })
+  })
+
+  //// Admin interface 
+
+  socket.on('update-Name' , (user) => {
+    try{
+      let accountFirst = Storage.changeFirstName(user.userId, user.firstName);
+      let nameUpdate = 0;
+  
+      accountFirst.then(accountFirst => {
+      if (accountFirst !== false){
+        nameUpdate = 1; 
+        let accountLast = Storage.changeLastName(user.userId, user.lastName)
+        accountLast.then(accountLast => {
+  
+        })
+  
+        socket.emit('update-Name-Status' , nameUpdate)
+      }})
+    }catch{
+      console.log("Error")
+    }
+
+   
+
+
+  })
+
+
+  socket.on('update-Password', (user) => {
+    try{
+      // let account = Storage.checkAccountCredentials(user.userName, user.oldPass)
+
+      let account = Storage.getAccount(user.userName)
+
+
+      let passwordUpdate = 0;
+      account.then(account => {
+          if (account !== false) {
+  
+            console.log(account);
+            console.log("Updating Password!");
+            Storage.changePassword(user.userName, user.newPass);
+            passwordUpdate = 1;
+  
+          } else {
+            console.log("account doesnt exist");
+          }
+  
+          socket.emit('update-Password-Status', passwordUpdate);
+      });
+    }catch{
+      console.log("error")
+    }
+    
   })
 
 })
