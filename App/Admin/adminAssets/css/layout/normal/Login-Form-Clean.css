@@ -1,0 +1,60 @@
+.login-clean .illustration {
+  text-align: center;
+  padding: 0 0 20px;
+  font-size: 100px;
+}
+
+
+.login-clean form .btn-primary:active { transform: translateY(1px); }
+
+.btn:hover { opacity: 0.7; }
+
+.btn { transition: 0.1s; }
+
+
+.login-box {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  -webkit-transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%);
+
+  background-color: rgb(255, 255, 255);
+  padding: 20px;
+
+  display: block;
+  width: 40%;
+  min-width: 300px;
+  margin: auto;
+
+  border-radius: 10px;
+  border: 2px solid #dad8d8;
+}
+
+.login-page { background-color: aliceblue; }
+
+
+
+.alert {
+  padding: 5px;
+  background-color: #fa554a;
+  color: white;
+  width: 70%;
+  margin: auto;
+  text-align: center;
+}
+
+.closebtn {
+  margin-left: 15px;
+  color: white;
+  font-weight: bold;
+  float: right;
+  font-size: 22px;
+  line-height: 20px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.closebtn:hover {
+  color: black; 
+}

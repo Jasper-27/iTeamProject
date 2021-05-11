@@ -2,7 +2,7 @@
 
 // this needs to be changed over to the seperate window at some point
 
-const socket = io('http://localhost:4500'); // sets the ip and port to use with socket.io
+const socket = io('http://' + self.location.host.split(':')[0] + ':4500'); // sets the ip and port to use with socket.io
 
 
 

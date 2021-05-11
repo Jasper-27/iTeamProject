@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" style="height: 100%;min-height: 100%;">
+<html>
 
 <head>
     <meta charset="utf-8">
@@ -13,42 +13,32 @@
 	
 	    	<!-- Links for the style sheets Layout -->
 	<link rel="stylesheet" href="assets/css/layout/normal/styles.css">
+	<link href="https://fonts.googleapis.com/css?family=Raleway" rel="stylesheet">
+	<link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
+
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/malihu-custom-scrollbar-plugin/3.1.5/jquery.mCustomScrollbar.css">
+
+	<link rel="stylesheet" href="assets/css/layout/new/new.css">
 
     <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css">
     <link rel="stylesheet" href="assets/fonts/ionicons.min.css">
 
-            <!-- encryption (https://github.com/wwwtyro/cryptico)-->
+    <!-- encryption (https://github.com/wwwtyro/cryptico)-->
     <script src="assets/js/cryptico.min.js"></script>
+    <!--Socket.io streams (https://github.com/nkzawa/socket.io-stream)-->
+    <script src="assets/js/socket.io-stream.js"></script>
+
     
     <link rel="manifest" href="manifest.json"> 
 
-    <style>
-        .alert {
-            padding: 10px;
-            background-color: #f44336;
-            color: white;
-        }
+    
+<body>
 
-        .closebtn {
-            margin-left: 15px;
-            color: white;
-            font-weight: bold;
-            float: right;
-            font-size: 22px;
-            line-height: 20px;
-            cursor: pointer;
-            transition: 0.3s;
-        }
-
-        .closebtn:hover {
-           color: black;
-        }
-    </style>
-
-</head>
+	
 
 
-<body style="height: 100%;min-height: 100%;">
+<body>
+
 
 
 
@@ -57,7 +47,7 @@
 
         console.log(sessionStorage.getItem('ip'))
 
-        let ioAddress = "http://localhost:4500/socket.io/socket.io.js"
+        let ioAddress = "http://" + self.location.host.split(':')[0] + ":4500/socket.io/socket.io.js"
         console.log(ioAddress)
 
         const socket_script = document.createElement("script")
@@ -76,94 +66,151 @@
     </script>
 
 
-    <nav class="navbar navbar-light navbar-expand-md">
+<body>
+
+	
+
+<div class="allItems">
+
+	<nav class="navbar navbar-light navbar-expand-md">
         <div class="container-fluid"><a class="navbar-brand" href="index.html">WinkiMessenger</a><button data-toggle="collapse" class="navbar-toggler" data-target="#navcol-1"><span class="sr-only">Toggle navigation</span><span class="navbar-toggler-icon"></span></button>
             <div class="collapse navbar-collapse" id="navcol-1">
                 <ul class="nav navbar-nav">
-                    <li class="nav-item"><a class="nav-link" href="index.html">home</a></li>
+                    <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
                     <li class="nav-item"><a class="nav-link" href="loginPage.html">Login</a></li>
-                    <li class="nav-item"><a class="nav-link" href="../Admin/adminInterface.html">Admin</a></li>
-                    <li class="nav-item"><a class="nav-link active" href="app.html">App</a></li>
-                </ul>
+                    <li class="nav-item"><a class="nav-link active" href="app.html">App</a></li>					
+				</ul> 
+				
+				
             </div>
+			
+			<img src="logo.png" alt="The winkiMessenger logo" id="lilwinki" style="width:40px;height:40px;float:right;visibility:visible">
+
         </div>
     </nav>
     <div></div>
-	
-	
-	
-    <div id="allItems" style="min-height: 100%;">
-        <div class="container">
-            <div class="row" style="height: 80%;min-height: 80%;">
-                <div class="col" id="left">
 
-                    <div class="item" id="LeftItems">
+	<div class="main-section">
+	
+	
+		<div class="head-section" >
+			<div class="headLeft-section" id="headsectionleft" style= "margin-bottom: 10px;">
+			
+			<h3>Users:</h3>
+			
+			<button class="open-button" onclick="closeUsers()">Close</button>
+			<button class="open-button" onclick="openUsers()">Open</button>
+				
+
+			</div>
+			
+			<div class="headRight-section" style= "margin-bottom: 10px;">
+				<div class="headRight-sub">
+				
+				<h3>Messages:</h3>
+				
+				<small id="feedback" style="visibility: hidden;"></small>
+				
+				<div id = "errormessage" style="visibility: visible"></div>
+
+
+				</div>
+			</div>
+		</div>
+		
+		
+		<div class="body-section">
+			<div class="left-section" data-mcs-theme="minimal-dark" id="channels" >
+			
+				<ul id="channels">
+					<li class="active">
+						<div class="chatList">
+							<div class="img">
+								<img src="https://contentmarketinginstitute.com/wp-content/uploads/2013/03/channels-230x230.jpg">
+							</div>
+							<div class="desc">
+								<small class="time">Channel 1</small>
+								<h5>Channel Name</h5>
+								<small >Channel Description</small>
+							</div>
+						</div>
+					</li>
+
+				</ul>
+			</div>
+			
+			<div class="left-section" id="usersList" style="display:none;">
+			
+				<ul id="users">
+				
+				<li class="active">
+						<div class="chatList">
+							<div class="img">
+								<img src="">
+							</div>
+							<div class="desc">
+								<small class="time">Current Time</small>
+								<h5>No Current Users</h5>
+								<small>There are no users</small>
+							</div>
+						</div>
+				</li>
+
+				</ul>
+			</div>
+			
+			<div class="right-section">
+				<div class="message" id="message-container" style = "overflow-y: scroll;"> 
+				
+				</div>
+				
+				<div class="right-section-bottom">
+			
+				
+					<form id="send-container">
 					
-                        <h1>Message Area</h1>
-                        
-                        <div class="flex-grow-1 justify-content-xl-start" id="message-container" style="height: 70vh;overflow-y: scroll;"> </div>
-                        <div id="feedback" style="visibility: hidden;"></div>
-                        <!-- Invisible file input to be triggered by choose-file-button -->
-                        <input type="file" id="choose-file-dialog" style="display: none;"/>
-                        
-                        <form id="send-container" class="msger-inputarea">
-                            <input class="msger-input" autocomplete="off" type="text" id="message-input">
-                            <button class="msger-send-btn" id="send-button" type="submit">Send Message</button>
-                            <button class="msger-send-btn" id="choose-file-button" type="button" onclick="showFileSelector()">Choose File</button>
-                        </form>
-                    </div>
-
-                </div>
-                <div class="col d-none d-lg-inline d-xl-inline box" id="right">
-                    <div id="rightItems">
-                        <input class="form-control-plaintext" type="text" value="Extra Item Desktop Area" readonly="">
-
-                        <h2>Connected users</h2>
+						<div class="upload-btn">
+						  	<button class="btn" id="choose-file-button" type="button" onclick="showFileSelector()"><i class="fa fa-photo"></i></button>
+						  	<!-- Invisible file input to be triggered by choose-file-button -->
+							<input type="file" id="choose-file-dialog" style="display: none;"/>
+						</div>
 						
+						<input type="text" name="" placeholder="type here..." autocomplete="off" id="message-input" class="msger-input">
+						<button class="btn-send" ><i class="fa fa-send"></i></button>
 						
-                        <ul id="users"></ul>
+					</form>
+					
+				</div>
+				
+			</div>
+		</div>
+	</div>
+	
+	</div>
+	</div>
+	</div>
+	<script>
+	function openUsers() {
+	  document.getElementById("channels").style.display = "none";
+	  document.getElementById("usersList").style.display = "block";
+	}
 
-                        <div class="alert" id="msg" style="visibility: hidden;"></div>
-						
-						<h2>Colour Picker</h2>
-						
-						<input type="text" id="cssSheet" name="css"><br><br>
+	function closeUsers() {
+	  document.getElementById("channels").style.display = "block";
+	  document.getElementById("usersList").style.display = "none";
+	}
+	
+	</script>
 
-						<button id="colourInput" type="submit" onclick="changeCSS();">Change</button>
-
-
-
-                    </div>
-
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="btn-toolbar"></div>
-    <div class="footer-basic">
-        <footer>
-            <div class="social"><a href="#"><i class="icon ion-social-instagram"></i></a><a href="#"><i class="icon ion-social-snapchat"></i></a><a href="#"><i class="icon ion-social-twitter"></i></a><a href="#"><i class="icon ion-social-facebook"></i></a></div>
-            <ul class="list-inline">
-                <li class="list-inline-item"><a href="#">Home</a></li>
-                <li class="list-inline-item"><a href="#">Services</a></li>
-                <li class="list-inline-item"><a href="#">About</a></li>
-                <li class="list-inline-item"><a href="#">Terms</a></li>
-                <li class="list-inline-item"><a href="#">Privacy Policy</a></li>
-            </ul>
-            <p class="copyright">Group I Project © 2020</p>
-        </footer>
-    </div>
-
-    <!-- Scripts -->
+	<!-- Scripts -->
     <script src="assets/js/jquery.min.js"></script>
     <script src="assets/bootstrap/js/bootstrap.min.js"></script>
 	<script src="assets/js/changeCss.js"></script>
 
 
-
-
+	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+	<!-- custom scrollbar plugin -->
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/malihu-custom-scrollbar-plugin/3.1.5/jquery.mCustomScrollbar.concat.min.js"></script>
 
 </body>
-
 </html>

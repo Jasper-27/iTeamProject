@@ -94,3 +94,19 @@ function convertTree(filePath, readablePath){
         });
     });
 }
+
+function convertBlob(filePath, readablePath){
+    fs.open(filePath, "r", (err, descriptor) => {
+        fs.read(descriptor, (err, bytesRead, data) => {
+            let newFile = "";
+            // Read headers to newFile
+            newFile += data.readBigInt64BE(0);
+            newFile += "|";
+            newFile += data.readBigInt64BE(8);
+            newFile += "||";
+           
+            fs.writeFileSync(readablePath, newFile);
+        });
+    });
+}
+convertBlob(__dirname + "/../../data/test/testBlob.blb", __dirname + "/../../data/test/testBlob_readable.blb")

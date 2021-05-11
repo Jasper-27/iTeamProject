@@ -111,7 +111,7 @@ class logAccess{
                 for (let i = 0; i < blocks.length; i++){
                     // Search each of the blocks for all entries in the given range
                     let blockPath = path.format({dir: this.logsFolderPath, base: `${blocks[i]}.wki`});
-                    let blockEntries = await blockAccess.getEntries(blockPath, startTime, endTime);
+                    let blockEntries = await blockAccess.getEntriesBetween(blockPath, startTime, endTime);
                     // Convert each returned entry to a Log object
                     for (let j = 0; j < blockEntries.length; j++){
                         let currentEntry = blockEntries[j];
