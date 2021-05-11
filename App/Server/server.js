@@ -654,48 +654,57 @@ io.on('connection', socket => {
   //// Admin interface 
 
   socket.on('update-Name' , (user) => {
-
-    let accountFirst = Storage.changeFirstName(user.userId, user.firstName);
-    let nameUpdate = 0;
-
-    accountFirst.then(accountFirst => {
-    if (accountFirst !== false){
+    try{
+      let accountFirst = Storage.changeFirstName(user.userId, user.firstName);
+      let nameUpdate = 0;
+  
+      accountFirst.then(accountFirst => {
+      if (accountFirst !== false){
         nameUpdate = 1; 
         let accountLast = Storage.changeLastName(user.userId, user.lastName)
         accountLast.then(accountLast => {
-
+  
         })
-
-
+  
         socket.emit('update-Name-Status' , nameUpdate)
+      }})
+    }catch{
+      console.log("Error")
+    }
 
-    }})
+   
 
 
   })
 
 
-socket.on('update-Password', (user) => {
+  socket.on('update-Password', (user) => {
+    try{
+      // let account = Storage.checkAccountCredentials(user.userName, user.oldPass)
 
-    let account = Storage.checkAccountCredentials(user.userName, user.oldPass)
-    let passwordUpdate = 0;
-    account.then(account => {
-        if (account !== false) {
+      let account = Storage.getAccount(user.userName)
 
+
+      let passwordUpdate = 0;
+      account.then(account => {
+          if (account !== false) {
+  
             console.log(account);
             console.log("Updating Password!");
             Storage.changePassword(user.userName, user.newPass);
             passwordUpdate = 1;
-
-        } else {
+  
+          } else {
             console.log("account doesnt exist");
-        }
-
-        socket.emit('update-Password-Status', passwordUpdate);
-    });
-
-
-})
+          }
+  
+          socket.emit('update-Password-Status', passwordUpdate);
+      });
+    }catch{
+      console.log("error")
+    }
+    
+  })
 
 })
 
