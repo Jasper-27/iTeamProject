@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
     <title>Winki - Admin</title>
-	
+
     <link rel="stylesheet" href="adminAssets/bootstrap/css/bootstrap.min.css">
     <link rel="stylesheet" href="adminAssets/css/layout/normal/messageBubble.css">
     <link rel="stylesheet" href="adminAssets/css/layout/normal/Navigation-with-Button-Layout.css">
@@ -13,9 +13,8 @@
 
 </head>
 
- <!-- This section loads in the script file, and socket.io using the IP address of the server. -->
- <script> 
-
+<!-- This section loads in the script file, and socket.io using the IP address of the server. -->
+<script>
     console.log(sessionStorage.getItem('ip'))
 
     let ioAddress = "http://" + self.location.host.split(':')[0] + ":4500/socket.io/socket.io.js"
@@ -33,7 +32,6 @@
     script.async = false
     script.defer = true
     document.head.appendChild(script)
-
 </script>
 
 <body>
@@ -69,59 +67,58 @@
                         <div class="row">
                             <div class="col">
                                 <h5>Change Password</h5>
-                    </div>
-                    <form>
-                        <div class="form-row">
-                            <div class="col">
-                                <h5>User Name:</h5>
                             </div>
-                            <div class="col"><input class="form-control" type="text" id="userNameText"></div>
-                        </div>
-                        <div class="form-row">
-                            <div class="col">
-                                <h5>New Password: </h5>
-                            </div>
-                            <div class="col"><input class="form-control" type="Password" id="newPassText"></div>
-                        </div>
-                        <div class="form-row">
-                            <div class="col">
-                            </div>
-                            <div class="form-row">
-                                <div class="col d-xl-flex justify-content-xl-center"><button class="btn btn-primary" id="UpdatePassword" type="button" onclick="updatePassword()">update Password</button></div>
-                            </div>
-                        <div>
-
-                        </div>
-
-                        </div>
-                        <h5>Change Name</h5>
-                            <div class="form-row">
-                                <div class="col">
-                                    <h5>User Name:</h5>
-                                </div>
-                                <div class="col"><input class="form-control" type="text" id="userIdText"></div>
-                            </div>
-                            <div class="form-row">
-                                <div class="col">
-                                    <h5>First Name:</h5>
-                                </div>
-                                <div class="col"><input class="form-control" type="text" id="userFirstText"></div>
-                            </div>
-                            <div class="form-row">
-                                <div class="col">
-                                    <h5>Last Name:</h5>
-                                </div>
-                                <div class="col"><input class="form-control" type="text" id="userLastText"></div>
-                            </div>
-                            <div class="form-row">
-                                <div class="col">
+                            <form>
+                                <div class="form-row">
+                                    <div class="col">
+                                        <h5>User Name:</h5>
+                                    </div>
+                                    <div class="col"><input class="form-control" type="text" id="userNameText"></div>
                                 </div>
                                 <div class="form-row">
-                                    <div class="col d-xl-flex justify-content-xl-center"><button class="btn btn-primary" id="UpdateName" type="button" onclick="updateName()">update Name</button></div>
+                                    <div class="col">
+                                        <h5>New Password: </h5>
+                                    </div>
+                                    <div class="col"><input class="form-control" type="Password" id="newPassText"></div>
                                 </div>
+                                <div class="form-row">
+                                    <div class="col">
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="col d-xl-flex justify-content-xl-center"><button class="btn btn-primary" id="UpdatePassword" type="button" onclick="updatePassword()">update Password</button></div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col">
+                                    <h5>Change name</h5>
+                                </div>
+                                <div class="form-row">
+                                    <div class="col">
+                                        <h5>User Name:</h5>
+                                    </div>
+                                    <div class="col"><input class="form-control" type="text" id="userIdText"></div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="col">
+                                        <h5>First Name:</h5>
+                                    </div>
+                                    <div class="col"><input class="form-control" type="text" id="userFirstText"></div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="col">
+                                        <h5>Last Name:</h5>
+                                    </div>
+                                    <div class="col"><input class="form-control" type="text" id="userLastText"></div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="col">
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="col d-xl-flex justify-content-xl-center"><button class="btn btn-primary" id="UpdateName" type="button" onclick="updateName()">update Name</button></div>
+                                    </div>
+                                </div>
+                            </form>
                         </div>
-                    </form>
-                </div>
                     </div>
                 </div>
                 <div class="col" id="right" style="border-width: 1.5px;border-style: solid;border-radius: 5px;padding-top: 10px;">
@@ -131,7 +128,7 @@
                         <button onclick="bannedWordsDefault()" class="btn btn-dark" type="button">Default</button>
                         <button onclick="bannedWordsCustom()" class="btn btn-light" type="button">Custom</button><br>
 
-                        <textarea rows = "15" cols = "50" name="profanityListCustom" id="profanityListCustom"></textarea>
+                        <textarea rows="15" cols="50" name="profanityListCustom" id="profanityListCustom"></textarea>
                         <button onclick="submitWordsCustom()" class="btn btn-dark" type="button">Submit</button>
                     </form>
                 </div>
