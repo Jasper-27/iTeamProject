@@ -235,10 +235,12 @@ io.on('connection', socket => {
         users[socket.id] = name
 
         // adds the username to list of connected users (provided it isn't there already)
-        if (connected.indexOf(username) < 0 && clients[username] == undefined){
+        if (connected.indexOf(username) < 0){
           connected.push(username);     
-          spamTracker = {client: username, spamCounter: 0, spam: false};
-          clients[username] = spamTracker;
+          if (clients[username] == undefined){
+            spamTracker = {client: username, spamCounter: 0, spam: false};
+            clients[username] = spamTracker;
+          }
         }
 
 
