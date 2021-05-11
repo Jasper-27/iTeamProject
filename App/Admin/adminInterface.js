@@ -4,6 +4,9 @@ var profanitySettings = 0;
 
 loadProfanity();
 
+
+// Banned words list ========================================================
+
 function bannedWordsDefault(){
     profanitySettings = 0;
     socket.emit('profanityToggle', {"profanitySettings": profanitySettings});
@@ -33,6 +36,8 @@ function bannedWordsCustom() {
     socket.emit('profanityToggle', {"profanitySettings": profanitySettings});
     console.log("profanity settings = " + profanitySettings);
 }
+
+// ======================================================================
 
 
 // Updating user details =================================================
