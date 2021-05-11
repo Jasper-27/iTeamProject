@@ -343,7 +343,7 @@ class indexAccess{
         });
     }
 
-    static getBlocks(filePath, startTime, endTime){
+    static getBlocks(filePath, startTime, endTime, getNearby=false){  // If getNearby is true it will find either the block containing startTime or, if no block contains startTime, the first block that is either smaller or larger than startTime
         // Return a promise containing the block numbers for every block that contains values between the provided timestamps
 
         // First set up a promise that the method will return
@@ -355,7 +355,37 @@ class indexAccess{
                 let indexLength = Number(indexAccess.headerData[filePath][indexAccess.INDEXLENGTHHEADER]);
                 let lowestTimestamp = Number(indexAccess.headerData[filePath][indexAccess.LOWESTTIMESTAMPHEADER]);
                 let highestTimestamp = Number(indexAccess.headerData[filePath][indexAccess.HIGHESTTIMESTAMPHEADER]);
-                if (indexLength === 0 || highestTimestamp < startTime || lowestTimestamp > endTime){
+                if (getNearby === true){
+                    if (indexLength === 0){
+                        // There are no blocks, so there cannot be a nearest block to the given timestamp
+                        fs.close(descriptor, e => {
+                            if (e) reject(e);
+                            else resolve(false);
+                        });
+                        return;
+                    }
+                    else if (startTime < lowestTimestamp){
+                        // If the lowestTimestamp is larger than startTime, we already know that the nearest block must be the first one
+                        fs.close(descriptor, e => {
+                            if (e) reject(e);
+                            else{
+                                resolve(1);
+                            }
+                        });
+                        return;
+                    }
+                    else if (highestTimestamp < startTime){
+                        // If the startTime is greater than the highest timestamp, we already know the nearest block must be the last one
+                        fs.close(descriptor, async e => {
+                            if (e) reject(e);
+                            else{
+                                resolve(await indexAccess.getLastBlockNumber(filePath));
+                            }
+                        });
+                        return;
+                    }
+                }
+                if (getNearby != true && (indexLength === 0 || highestTimestamp < startTime || lowestTimestamp > endTime)){  // If in getNearby mode these cases either don't matter or have already been checked
                     // Return empty list, as index does not contain what we are looking for
                     fs.close(descriptor, e => {
                         if (e) reject(e);
@@ -367,8 +397,8 @@ class indexAccess{
                     let blocks = [];  // Numbers of all the blocks that can contain timestamps in the given range
                     let firstEntry, currentEntry, lastEntry;
                     /*
-                    The "findFirstSuitableBlock" callback searches the file to find the first block that can contain timestamps in the range we are looking for
-                    The "findNextSuitableBlocks" callback then finds all the following blocks that can contain timestamps in the range we are looking for
+                    The "findFirstSuitableBlock" callback searches the file to find the first block that can contain timestamps in the range we are looking for (or finds one of the two nearest blocks to the given startTime in getNearby mode)
+                    The "findNextSuitableBlocks" callback then finds all the following blocks that can contain timestamps in the range we are looking for (not used in getNearby mode)
                     */
                     // First create a callback to be used "recursively" to find all blocks within the given timestamp range given the first suitable block (not really recursive, as the callback registers itself with fs.read rather than calling itself (this means the recursion limit won't be an issue))
                     let findNextSuitableBlocks = function(err, bytesRead, data){
@@ -419,11 +449,21 @@ class indexAccess{
                             let largestTime = Number(data.readBigInt64BE(entryPositionInBuffer + 8));
                             if (smallestTime <= startTime && startTime <= largestTime){
                                 // We have found the first block that contains timestamps in the given range
-                                blocks.push(Number(data.readBigInt64BE(16)));
-                                // We now need to find all following blocks that can contain timestamps in the given range
-                                // On most file systems cluster size is 4096 bytes, but 24 byte entries don't fit exactly into 4096 so get 4080 bytes instead
-                                fs.read(descriptor, {length: 4080, buffer: Buffer.alloc(4080), position: 24 + ((currentEntry + 1) * 24)}, findNextSuitableBlocks);
-                                return;
+                                if (getNearby === true){
+                                    // If getNearby then we only want one block, so can now exit
+                                    fs.close(descriptor, e => {
+                                        if (e) reject(e);
+                                        else resolve(Number(data.readBigInt64BE(entryPositionInBuffer + 16)));
+                                    });
+                                    return;
+                                }
+                                else{
+                                    blocks.push(Number(data.readBigInt64BE(entryPositionInBuffer + 16)));
+                                    // We now need to find all following blocks that can contain timestamps in the given range
+                                    // On most file systems cluster size is 4096 bytes, but 24 byte entries don't fit exactly into 4096 so get 4080 bytes instead
+                                    fs.read(descriptor, {length: 4080, buffer: Buffer.alloc(4080), position: 24 + ((currentEntry + 1) * 24)}, findNextSuitableBlocks);
+                                    return;
+                                }
                             }
                             else if (startTime <= smallestTime){
                                 // startTime is smaller than (or equal to) smallestTime, so we know the correct entries must be before this one
@@ -433,7 +473,13 @@ class indexAccess{
                                     // The entry is not in the index
                                     fs.close(descriptor, e => {
                                         if (e) reject(e);
-                                        else resolve([]);
+                                        else{
+                                            if (getNearby === true){
+                                                // No entry contains the timestamp, but this entry is the closest (actually one of the two closest (as the first block that is smaller than timestamp might be closer), but not worth the extra complexity to find which is closest)
+                                                resolve(Number(data.readBigInt64BE(entryPositionInBuffer + 16)));
+                                            }
+                                            else resolve([]);
+                                        }
                                     });
                                     return;
                                 }
@@ -446,7 +492,13 @@ class indexAccess{
                                     // The entry is not in the index
                                     fs.close(descriptor, e => {
                                         if (e) reject(e);
-                                        else resolve([]);
+                                        else{
+                                            if (getNearby === true){
+                                                // No entry contains the timestamp, but this is the closest (actually one of the two closest (as first block that is larger than timestamp might be closer), but not worth the extra complexity to find which is closest)
+                                                resolve(Number(data.readBigInt64BE(entryPositionInBuffer + 16)));
+                                            }
+                                            else resolve([]);
+                                        };
                                     });
                                     return;
                                 }
@@ -458,7 +510,7 @@ class indexAccess{
                         bufferEnd = details[1];
                         fs.read(descriptor, {length: details[2] * 24, buffer: Buffer.alloc(details[2] * 24), position: details[3]}, findFirstSuitableBlock);
                     }
-                    // Use binary search to find the first entry whose time range includes startTime
+                    // Use binary search to find the first entry whose time range includes startTime (or closest entry if getNearby is true)
                     firstEntry = 0;
                     lastEntry = indexLength;
                     currentEntry = Math.floor((firstEntry + lastEntry) / 2);

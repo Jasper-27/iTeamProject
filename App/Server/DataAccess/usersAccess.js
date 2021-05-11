@@ -186,12 +186,110 @@ class usersAccess{
         return new Promise((resolve, reject) => {
             this.pendingWrites = this.pendingWrites.then(async () => {
                 try{
+                    // Delete profile picture if necessary
+                    let account = await this.getAccount(username);
+                    if (account.profilePictureLocation != 0){
+                        await this.deleteProfilePicture(account.profilePictureLocation);
+                    }
                     resolve(await treeAccess.removeNode(this.accountsTreePath, username));
                 }
                 catch (reason){
                     reject(reason);
                 }
             });
+        });
+    }
+
+    getChangeProfilePictureStream(username, imageSize){
+        return new Promise((resolve, reject) => {
+            this.pendingWrites = this.pendingWrites.then(async () => {
+                try{
+                    // If there is an existing picture, delete it and overwrite with 0's
+                    let account = await this.getAccount(username);
+                    let profilePicturePos = account.profilePictureLocation;
+                    if (profilePicturePos != 0){
+                        // The account already has a profile picture, which must be deleted first
+                        await this.deleteProfilePicture(profilePicturePos);
+                    }
+                    // Allocate space for new picture
+                    let position = await blobAccess.allocate(this.profilePicturesBlobPath, imageSize);
+                    let stream = await blobAccess.getWritableStream(this.profilePicturesBlobPath, position);
+                    let cancelled = false;
+                    stream.on("close", () => {
+                        // If stream is closed early, then deallocate the newly allocated space
+                        if (stream.totalLifetimeBytesWritten < imageSize){
+                            cancelled = true;
+                            // Change the user's profile picture location to 0 as the old one has already been deleted
+                            let rawBytes = Buffer.alloc(8);
+                            rawBytes.writeBigInt64BE(0n);
+                            treeAccess.modifyNode(this.accountsTreePath, username, 180, rawBytes).then(() => {
+                                blobAccess.deallocate(this.profilePicturesBlobPath, position).catch(reason => {
+                                    console.log(`Unable to deallocate new profile picture space: ${reason}`);
+                                });
+                            }, reason => {
+                                console.log(`Couldn't change user ${username} profile picture location to 0 after failure`);
+                            });
+                        }
+                    });
+                    stream.on("finish", () => {
+                        if (imageSize <= stream.totalLifetimeBytesWritten && cancelled === false){
+                            // Update the user's account details with the new location
+                            let rawBytes = Buffer.alloc(8);
+                            rawBytes.writeBigInt64BE(BigInt(position));
+                            treeAccess.modifyNode(this.accountsTreePath, username, 180, rawBytes).catch(reason => {
+                                console.log(`Couldn't change user ${username} profile picture location`);
+                            });
+                        }
+                    });
+                    // Return stream to write new picture to file
+                    resolve(stream);
+                }
+                catch (reason){
+                    reject(reason);
+                }
+            });
+        });
+    }
+
+    deleteProfilePicture(position){
+        // Deallocate and zero out a user's profile picture in the blob file
+        return new Promise(async (resolve, reject) => {
+            try{
+                let stream = await blobAccess.getWritableStream(this.profilePicturesBlobPath, position);
+                let zeroes = Buffer.alloc(16384);
+                let cursor = 0;
+                let overwrite = async () => {
+                    if (cursor < stream.maxAllowedWriteLength){
+                        // Try to write to stream if not full
+                        if (stream._writableState.needDrain === false){
+                            if (stream.maxAllowedWriteLength < cursor + 16384){
+                                zeroes = Buffer.alloc(stream.maxAllowedWriteLength - cursor);
+                            }
+                            stream.write(zeroes, () => {
+                                cursor += 16384;
+                                overwrite();
+                            });
+                        }
+                        else{
+                            // Otherwise wait until it drains
+                            stream.once('drain', overwrite);
+                        }
+                    }
+                    else{
+                        // End stream and deallocate
+                        stream.end();
+                        blobAccess.deallocate(this.profilePicturesBlobPath, position).then(() => {
+                            resolve(true);
+                        }, reason => {
+                            console.log(`Failed to deallocate profile picture: ${reason}`);
+                        })
+                    }
+                };
+                overwrite();
+            }
+            catch(reason){
+                reject(reason);
+            }
         });
     }
 }

@@ -1,4 +1,5 @@
 {
     "messageLimit" : 200,
-    "restrictedFiles": ["js"]
+    "fileSizeLimit": 10000000,
+    "restrictedFiles": []
 }
