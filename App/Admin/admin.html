@@ -10,13 +10,10 @@
     <link rel="stylesheet" href="../Client/assets/css/layout/normal/Navigation-with-Button-Layout.css">
     <link rel="stylesheet" href="../Client/assets/css/layout/normal/styles.css">
 
-
-
 </head>
 
- <!-- This section loads in the script file, and socket.io using the IP address of the server. -->
- <script> 
-
+<!-- This section loads in the script file, and socket.io using the IP address of the server. -->
+<script>
     console.log(sessionStorage.getItem('ip'))
 
     let ioAddress = "http://" + self.location.host.split(':')[0] + ":4500/socket.io/socket.io.js"
@@ -59,20 +56,20 @@
                     <div class="form-group"><input class="form-control" type="text" id="usernameEntry" placeholder="Username" name="username"></div>
                     <div class="form-group"><input class="form-control" type="password" id="password1Entry" name="password1" placeholder="Password"></div>
                     <div class="form-group"><input class="form-control" type="password" id="password2Entry" name="password2" placeholder="Repeat Password"></div>
-                    
+
                     <h4>Optional Data</h4>
                     <div class="form-group"><input class="form-control" type="text" id="firstName" name="firstName" placeholder="First Name"></div>
                     <div class="form-group"><input class="form-control" type="text" id="lastName" name="lastName" placeholder="Last Name"></div>
-                    
-                    <div class="form-group"><button class="btn btn-primary btn-block" id="submit"  type="submit" onclick = "register()" style="background: var(--right-msg-bg); ">Register</button></div>
+
+                    <div class="form-group"><button class="btn btn-primary btn-block" id="submit" type="submit" onclick="register()" style="background: var(--right-msg-bg); ">Register</button></div>
                 </div>
 
                 <!-- delete user  -->
                 <div class="col" id="right" style="border-width: 1.5px;border-style: solid;border-radius: 5px;padding-top: 10px;">
                     <h3>Delete user</h3>
                     <div class="form-group"><input class="form-control" type="text" id="username_delete" placeholder="Username" name="username"></div>
-                    
-                    <div class="form-group"><button class="btn btn-primary btn-block" id="submit"  type="submit" onclick = "deleteUser()" style="background: var(--right-msg-bg); ">Delete</button></div>
+
+                    <div class="form-group"><button class="btn btn-primary btn-block" id="submit" type="submit" onclick="deleteUser()" style="background: var(--right-msg-bg); ">Delete</button></div>
                 </div>
 
                 <div class="col" id="middle" style="border-width: 1.5px;border-style: solid;border-radius: 5px;">
@@ -94,17 +91,13 @@
                         <button onclick="bannedWordsDefault()" class="btn btn-dark" type="button">Default</button>
                         <button onclick="bannedWordsCustom()" class="btn btn-light" type="button">Custom</button><br>
 
-                        <textarea rows = "15" cols = "50" name="profanityListCustom" id="profanityListCustom"></textarea>
+                        <textarea rows="15" cols="50" name="profanityListCustom" id="profanityListCustom"></textarea>
                         <button onclick="submitWordsCustom()" class="btn btn-dark" type="button">Submit</button>
                     </form>
                 </div>
 
-               
-
-
             </div>
         </div>
-            
 
     </div>
     <script src="../Client/assets/js/jquery.min.js"></script>
