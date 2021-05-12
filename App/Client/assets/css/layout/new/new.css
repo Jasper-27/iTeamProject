@@ -325,7 +325,7 @@ body{
 @media (hover: none) {
     /* behaviour for touch browsers */
     .message{
-        height: calc(81vh - 150px);
+        height: calc(79vh - 154px);
         font-family: sans-serif;
         overflow-y: scroll;
     }
@@ -334,6 +334,15 @@ body{
         font-family: sans-serif;
         overflow-y: scroll;
     }
+    #errormessage{
+        font-size: 12px;
+        
+    }
+    #feedback{
+        font-size: 12px;
+        
+    }
+
 
   }
 
