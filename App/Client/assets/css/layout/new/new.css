@@ -291,9 +291,7 @@ body{
 }
 
 @media only screen and (max-width: 1026px) {
-    #channels {
-        display: none;
-    }
+
     #usersList {
         display: none;
     }
@@ -310,6 +308,8 @@ body{
         background-color: #F6F6F6;
         position: relative;
     }
+
+
 }
 @media only screen and (max-height: 600px) {
 
@@ -320,4 +320,20 @@ body{
     }
 
 }
+/* if the user is using a phone */ 
+
+@media (hover: none) {
+    /* behaviour for touch browsers */
+    .message{
+        height: calc(81vh - 150px);
+        font-family: sans-serif;
+        overflow-y: scroll;
+    }
+    .main-section{
+        height: calc(97vh - 150px);
+        font-family: sans-serif;
+        overflow-y: scroll;
+    }
+
+  }
 
