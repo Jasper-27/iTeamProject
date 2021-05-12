@@ -217,9 +217,9 @@ console.log(`📧 Message socket online at port: ${socketPort}` .green.bold)
 io.on('connection', socket => {
 
   // Every min re-authenticate the clients. 
-  const heartBeatReauth = setInterval(function() {
+  /* const heartBeatReauth = setInterval(function() {
     checkAuth(socket)
-  }, reauthInterval)
+  }, reauthInterval) */  - /// TEMPORARILY DISABLED AS CAUSING ISSUES WITH ADMIN INTERFACE.  MUST BE RE-ENABLED
 
 
   //checking the user is still who they are during
@@ -334,7 +334,7 @@ io.on('connection', socket => {
   })
 
   socket.on('send-chat-message', message => processChatMessage(socket, message));
-  
+
   socket.on('request-send-stream', details => {
     // The client is requesting a stream with which they can send a file based message
     try{
