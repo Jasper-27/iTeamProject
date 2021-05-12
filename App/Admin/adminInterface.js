@@ -44,8 +44,7 @@ function bannedWordsCustom() {
 
 function updatePassword(){
     console.log("update-password")
-    let userName = document.getElementById("userNameText").value;
-    let oldPass = document.getElementById("oldPassText").value;
+    let userName = document.getElementById("userNameText").value
     let newPass = document.getElementById("newPassText").value;
 
     if (userName === "" || newPass === ""){
@@ -61,7 +60,6 @@ socket.on('update-Password-Status' , (passStatus) => {
     if (passStatus === 1){
         alert("Password Updated");
         document.getElementById("userNameText").value = ""
-        document.getElementById("oldPassText").value = ""
         document.getElementById("newPassText").value = ""
     }
     if (passStatus === 0){
@@ -87,7 +85,6 @@ socket.on('update-Name-Status' , (nameStatus) => {
     if (nameStatus === 1){
         alert("Name updated!");
         document.getElementById("userNameText").value = ""
-        document.getElementById("oldPassText").value = ""
         document.getElementById("newPassText").value = ""
     }
     if (nameStatus === 0){
