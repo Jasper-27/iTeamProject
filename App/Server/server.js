@@ -745,56 +745,29 @@ io.on('connection', socket => {
   socket.on('update-Name' , async (user) => {
     try{
       let accountFirst = await Storage.changeFirstName(user.userId, user.firstName);
-      let nameUpdate = 0;
+      let accountLast = await Storage.changeLastName(user.userId, user.lastName);
   
-      accountFirst.then(accountFirst => {
-      if (accountFirst !== false){
-        nameUpdate = 1; 
-        let accountLast = Storage.changeLastName(user.userId, user.lastName)
-        accountLast.then(accountLast => {
-  
-        })
-  
-        socket.emit('update-Name-Status' , nameUpdate)
-        console.log("📜 " + user.userId + " Name updated")
-        Storage.log(user.userId + " Name updated")
-      }})
+      // let account = await Storage.getAccount(user.userId)
+      // console.log(account)
+
+      console.log("📜 " + user.userId + " Name change ")
+      Storage.log("Name change: " + user.userId)
+
     }catch{
       console.log("⚠ Error updating name")
     }
-
-   
-
-
   })
 
 
   socket.on('update-Password', async (user) => {
     try{
-      // let account = Storage.checkAccountCredentials(user.userName, user.oldPass)
-
       let account = await Storage.getAccount(user.userName)
- 
-      console.log(account)
+      let passChange = await Storage.changePassword(user.userName, user.newPass);
 
-      let passwordUpdate = 0;
-      account.then(account => {
-          if (account !== false) {
-  
-            console.log(account);
-            console.log("Updating Password!");
-            Storage.changePassword(user.userName, user.newPass);
-            passwordUpdate = 1;
-  
-          } else {
-            console.log("account doesnt exist");
-          }
-  
-          socket.emit('update-Password-Status', passwordUpdate);
+      socket.emit('update-Password-Status', 1);
+      console.log("🔑 " + user.userName + " Password updated")
+      Storage.log(user.userName + " Password updated")
 
-          console.log("🔑 " + user.userName + " Password updated")
-          Storage.log(user.userId + " Password updated")
-      });
     }catch{
       console.log("⚠ Error changing password")
       socket.emit("update-Password-Status", 0)
