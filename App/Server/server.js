@@ -45,6 +45,9 @@ var adminSecret = require('crypto').randomBytes(256).toString('hex');
 
 var adminPassword = "password"
 
+let admins = [] // list of admin sockets 
+
+
 
 //-----------------------------------------------------------------------------------------------------------------
 //// API 
@@ -215,6 +218,15 @@ console.log();
 console.log(`📧 Message socket online at port: ${socketPort}` .green.bold)
 
 io.on('connection', socket => {
+  // Admin stuff auth
+
+  socket.on(`admin-auth`, data => {
+
+    if (data == adminSecret){
+      console.log("🎉🎉 " + socket.id)
+      admins.push(socket.id)
+    }
+  })
 
   // Every min re-authenticate the clients. 
   const heartBeatReauth = setInterval(function() { 
@@ -702,9 +714,10 @@ io.on('connection', socket => {
   // Deleting 
 
   socket.on('delete-account', async details => {
+    
     // Make sure given values are valid
     if (typeof details.username != "string"){
-      socket.emit('register-fail', 'Invalid username');
+      socket.emit('delete-fail', 'Invalid username');
     }else{
       // Details are valid
       try{
@@ -715,10 +728,11 @@ io.on('connection', socket => {
           console.log("👍 Account deleted: " + details.username); 
         }
         else{
-          socket.emit('delete-fail', 'Unable to delite account');
+          socket.emit('delete-fail', 'Unable to delete account');
         }
       }
       catch (reason){
+        console.log("⚠ delete fail " + reason)
         socket.emit('delete-fail', reason);
       }
     }
@@ -727,9 +741,9 @@ io.on('connection', socket => {
 
   // Updating 
 
-  socket.on('update-Name' , (user) => {
+  socket.on('update-Name' , async (user) => {
     try{
-      let accountFirst = Storage.changeFirstName(user.userId, user.firstName);
+      let accountFirst = await Storage.changeFirstName(user.userId, user.firstName);
       let nameUpdate = 0;
   
       accountFirst.then(accountFirst => {
@@ -741,9 +755,11 @@ io.on('connection', socket => {
         })
   
         socket.emit('update-Name-Status' , nameUpdate)
+        console.log("📜 " + user.userId + " Name updated")
+        Storage.log(user.userId + " Name updated")
       }})
     }catch{
-      console.log("Error")
+      console.log("⚠ Error updating name")
     }
 
    
@@ -752,12 +768,13 @@ io.on('connection', socket => {
   })
 
 
-  socket.on('update-Password', (user) => {
+  socket.on('update-Password', async (user) => {
     try{
       // let account = Storage.checkAccountCredentials(user.userName, user.oldPass)
 
-      let account = Storage.getAccount(user.userName)
-
+      let account = await Storage.getAccount(user.userName)
+ 
+      console.log(account)
 
       let passwordUpdate = 0;
       account.then(account => {
@@ -773,9 +790,13 @@ io.on('connection', socket => {
           }
   
           socket.emit('update-Password-Status', passwordUpdate);
+
+          console.log("🔑 " + user.userName + " Password updated")
+          Storage.log(user.userId + " Password updated")
       });
     }catch{
-      console.log("error")
+      console.log("⚠ Error changing password")
+      socket.emit("update-Password-Status", 0)
     }
     
   })
@@ -1029,6 +1050,14 @@ function sendUsers(socket){
 
 function checkAuth(socket){
   try{
+
+    // admin stuff
+
+    if (admins.includes(socket.id)){
+      console.log("🎉 " + socket.id)
+      return
+    }
+
     let username = users[socket.id]
     if ( username == null ) { 
       console.log("👢 " + socket.id + " Kicked as username was null ")

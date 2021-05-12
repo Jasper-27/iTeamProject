@@ -4,11 +4,17 @@ var profanitySettings = 0;
 
 loadProfanity();
 
+adminAuth()
 
 //When the server connection is lost 
 socket.on('disconnect', () => {
     document.location.href = "./index.html";
-  })
+})
+
+
+function adminAuth(){
+    socket.emit(`admin-auth`, sessionStorage.getItem('Admin_token'))
+}
 
 // Banned words list ========================================================
 
@@ -50,7 +56,6 @@ function bannedWordsCustom() {
 function updatePassword(){
     console.log("update-password")
     let userName = document.getElementById("userNameText").value;
-    let oldPass = document.getElementById("oldPassText").value;
     let newPass = document.getElementById("newPassText").value;
 
     if (userName === "" || newPass === ""){
@@ -159,7 +164,7 @@ function register(){
 
 // Tell the user when a registration has failed 
 socket.on('delete-fail', data => {
-    alert("Registration failed: " + data);
+    alert("Delete failed: " + data);
 });
 
 // If register success, notify user
