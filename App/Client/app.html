@@ -45,8 +45,6 @@
     <!-- This section loads in the script file, and socket.io using the IP address of the server. -->
     <script> 
 
-        console.log(sessionStorage.getItem('ip'))
-
         let ioAddress = "http://" + self.location.host.split(':')[0] + ":4500/socket.io/socket.io.js"
         console.log(ioAddress)
 

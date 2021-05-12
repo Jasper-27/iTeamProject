@@ -6,10 +6,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
     <title>Winki - Admin</title>
 
-    <link rel="stylesheet" href="adminAssets/bootstrap/css/bootstrap.min.css">
-    <link rel="stylesheet" href="adminAssets/css/layout/normal/messageBubble.css">
-    <link rel="stylesheet" href="adminAssets/css/layout/normal/Navigation-with-Button-Layout.css">
-    <link rel="stylesheet" href="adminAssets/css/layout/normal/styles.css">
+    <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css">
+	
+    <!-- Links for the style sheets Layout -->
+<link rel="stylesheet" href="assets/css/layout/normal/styles.css">
+
+    <!-- encryption (https://github.com/wwwtyro/cryptico)-->
+<script src="assets/js/cryptico.min.js"></script>
 
 </head>
 
@@ -39,10 +42,32 @@
         <div class="container"><a class="navbar-brand" href="index.html">Winki Messenger</a><button data-toggle="collapse" class="navbar-toggler" data-target="#navcol-1"><span class="sr-only">Toggle navigation</span><span class="navbar-toggler-icon"></span></button>
         </div>
     </nav>
-    <div id="allItems" style="min-height: 100%;">
+    <div id="allItems" style="min-height: 100%; width: 95%;">
         <div class="container">
             <div class="row d-inline d-sm-inline-block d-md-inline-block d-lg-flex d-xl-flex" style="min-height: 80%;height: 80%;">
-                <div class="col" id="left" style="border-width: 1.5px;border-style: solid;border-radius: 5px;padding-top: 10px;">
+                <!-- Create user  -->
+                <div class="col" id="right" style="border-width: 1.5px;border-style: solid;border-radius: 5px;padding-top: 10px;">
+                    <h3>Create user</h3>
+                    <div class="form-group"><input class="form-control" type="text" id="usernameEntry" placeholder="Username" name="username"></div>
+                    <div class="form-group"><input class="form-control" type="password" id="password1Entry" name="password1" placeholder="Password"></div>
+                    <div class="form-group"><input class="form-control" type="password" id="password2Entry" name="password2" placeholder="Repeat Password"></div>
+
+                    <h4>Optional Data</h4>
+                    <div class="form-group"><input class="form-control" type="text" id="firstName" name="firstName" placeholder="First Name"></div>
+                    <div class="form-group"><input class="form-control" type="text" id="lastName" name="lastName" placeholder="Last Name"></div>
+
+                    <div class="form-group"><button class="btn btn-primary btn-block" id="submit" type="submit" onclick="register()">Register</button></div>
+                </div>
+
+                <!-- delete user  -->
+                <div class="col" id="right" style="border-width: 1.5px;border-style: solid;border-radius: 5px;padding-top: 10px;">
+                    <h3>Delete user</h3>
+                    <div class="form-group"><input class="form-control" type="text" id="username_delete" placeholder="Username" name="username"></div>
+
+                    <div class="form-group"><button class="btn btn-primary btn-block" id="submit" type="submit" onclick="deleteUser()" >Delete</button></div>
+                </div>
+
+                <!-- <div class="col" id="left" style="border-width: 1.5px;border-style: solid;border-radius: 5px;padding-top: 10px;">
                     <form id="userInputForm">
                         <div class="form-row">
                             <div class="col">
@@ -60,7 +85,8 @@
                             <div class="col d-xl-flex justify-content-xl-center"><button class="btn btn-primary" id="userSubmit" type="button">Button</button></div>
                         </div>
                     </form>
-                </div>
+                </div> -->
+        
                 <div class="col" id="middle" style="border-width: 1.5px;border-style: solid;border-radius: 5px;">
                     <div id="MiddleItems">
                         <h3>Settings</h3>
@@ -121,6 +147,7 @@
                         </div>
                     </div>
                 </div>
+
                 <div class="col" id="right" style="border-width: 1.5px;border-style: solid;border-radius: 5px;padding-top: 10px;">
                     <div id="RightItems"></div>
                     <h3>Banned Words</h3>
@@ -135,8 +162,8 @@
             </div>
         </div>
     </div>
-    <script src="adminAssets/js/jquery.min.js"></script>
-    <script src="adminAssets/bootstrap/js/bootstrap.min.js"></script>
+    <script src="assets/js/jquery.min.js"></script>
+    <script src="assets/bootstrap/js/bootstrap.min.js"></script>
 </body>
 
 </html>

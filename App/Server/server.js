@@ -13,7 +13,7 @@ const profilePicturesFilePath = __dirname + "/data/accounts/profilePictures.blb"
 
 var Storage = new DataAccess(messagesFolderPath, messagesIndexPath, logsFolderPath, logsIndexPath, accountsFilePath, attachmentsPath, profilePicturesFilePath);
 
-const users = {}  // Maps socket ids to usernames
+let users = {}  // Maps socket ids to usernames
 let loggedInUsers = {}  // Contains access token for user, uses usernames as keys
 
 
@@ -39,6 +39,13 @@ const checkInWindow = 40000 //the time window the client has to check in (needs 
 // //Testing  (remember to change on client)
 // const reauthInterval = 5000 // the gap between the server checking when the client last check in
 // const checkInWindow = 10000
+
+
+var adminSecret = require('crypto').randomBytes(256).toString('hex'); 
+
+var adminPassword = "password"
+
+let admins = [] // list of admin sockets 
 
 
 
@@ -106,14 +113,55 @@ app.post('/login', async (req, res) => {  // Function must be async to allow use
     }else{
       res.status(406).send({message: 'Incorrect credentials'})
     }
-  }
-    catch (err){
+  }catch (err){
     res.status(500).send({message: 'An internal error occurred'});
     console.log("⚠ An unexpected error occurred on login attempt");
     Storage.log("An unexpected error occured on login attempt");
   }
 
 })
+
+
+
+/* Admin login */
+
+app.post('/AdminLogin', async (req, res) => {  // Function must be async to allow use of await
+  try{
+    const { hashed_password } = req.body; 
+    const { client_public_key } = req.body; 
+
+    // console.log(client_public_key)
+
+    let password = cryptico.decrypt(hashed_password, private).plaintext
+
+
+    if (password == adminPassword){
+
+      let encrypted_secret = cryptico.encrypt(adminSecret, client_public_key).cipher // encrypted cipher for sending 
+      res.status(200).send({
+        message: `Authentication success`,
+        token: `${ encrypted_secret }`    // the response
+      })
+
+      console.log("🧠 an Admin has logged in")
+      Storage.log("Admin has logged in ")
+
+    }else{
+      console.log("incorrect Admin credentials")
+      res.status(406).send({message: 'Incorrect credentials'})
+    }
+
+  }catch (err){
+    res.status(500).send({message: 'An internal error occurred'});
+    console.log("⚠ An unexpected error occurred on login attempt");
+    Storage.log("An unexpected error occured on login attempt");
+
+    console.log(err)
+  }
+
+})
+
+
 
 //Start the API listening on PORT
 app.listen( 
@@ -162,19 +210,28 @@ var availableFiles = [];
 var availableFilesNextPos = -1;  // Start from -1 so first one will be 0
 var availableFilesIndeces = {};  // Like availableFiles but does the opposite- maps file positions to indeces in availableFiles
 
-console.log("*****************************************" .blue);
-console.log("*          😉 WINKI SERVER 😉           *" .blue);      
-console.log("*****************************************" .blue);
+console.log("*****************************************" .cyan);
+console.log("*          😉 WINKI SERVER 😉           *" .cyan);      
+console.log("*****************************************" .cyan);
 console.log(); 
 
 console.log(`📧 Message socket online at port: ${socketPort}` .green.bold)
 
 io.on('connection', socket => {
+  // Admin stuff auth
+
+  socket.on(`admin-auth`, data => {
+
+    if (data == adminSecret){
+      // console.log("🎉🎉 " + socket.id)
+      admins.push(socket.id)
+    }
+  })
 
   // Every min re-authenticate the clients. 
-  const heartBeatReauth = setInterval(function() { 
+   const heartBeatReauth = setInterval(function() {
     checkAuth(socket)
-  }, reauthInterval)
+  }, reauthInterval)  - /// TEMPORARILY DISABLED AS CAUSING ISSUES WITH ADMIN INTERFACE.  MUST BE RE-ENABLED
 
 
   //checking the user is still who they are during
@@ -202,7 +259,8 @@ io.on('connection', socket => {
       }
     }catch{
       socket.disconnect()
-    }
+      console.log("👢" + socket.id + "Kicked out")
+    } 
 
   })
 
@@ -286,48 +344,6 @@ io.on('connection', socket => {
       console.log("🚨🚨 Typing user is not logged in")
     }
 
-  })
-
-  /*
-    THIS NEEDS TO BE MOVED TO THE ADMIN INTERFACE AT SOME POINT
-  */
-  // When user tries to create account
-  socket.on('create-account', async details => {
-    // Make sure given values are valid
-    if (typeof details.username != "string"){
-      socket.emit('register-fail', 'Invalid username');
-    }
-    else if (typeof details.firstName != "string"){
-      socket.emit('register-fail', 'Invalid first name');
-    }
-    else if (typeof details.lastName != "string"){
-      socket.emit('register-fail', 'Invalid last name');
-    }
-    else if (typeof details.password != "string"){
-      socket.emit('register-fail', 'Invalid password');
-    }
-    else{
-      // Details are valid
-      try{
-        let creationSuccessful = await Storage.createAccount(details.username, details.firstName, details.lastName, details.password);
-        if (creationSuccessful === true){
-          socket.emit('register-success');
-          Storage.log("New account created: " + details.username);
-          console.log("👍 New account created: " + details.username); 
-        }
-        else{
-          socket.emit('register-fail', 'Unable to create account');
-        }
-      }
-      catch (reason){
-        if (reason === "Username taken"){
-          socket.emit('register-fail', 'Username taken');
-        }
-        else{
-          socket.emit('register-fail', 'Unable to create account');
-        }
-      }
-    }
   })
 
   socket.on('send-chat-message', message => processChatMessage(socket, message));
@@ -572,6 +588,29 @@ io.on('connection', socket => {
   });
 
   socket.on('disconnect', () => {
+
+    try{
+      if (admins.includes(socket.id)){
+        console.log("🧠 Bye Bye admin ")
+        Storage.log("Admin has disconnected")
+  
+        var index = admins.indexOf(socket.id);
+        if (index > -1) {
+          admins.splice(index, 1);
+        }
+
+        if (socket.id > -1) {
+          admins.splice(socket.id, 1);
+        }
+  
+        // delete users[socket.id]
+  
+      }
+    }catch{
+      console.log("⚠ error while disconnecting an admin")
+    }
+    
+   
     try{
       let name = users[socket.id];
       // Only continue if name exists (meaning user was properly connected and logged in)
@@ -595,7 +634,7 @@ io.on('connection', socket => {
         //removes the users name from the client list when they log out
         var index = connected.indexOf(name);
         if (index > -1) {
-            connected.splice(index, 1);
+          connected.splice(index, 1);
         }
         sendUsers(socket)
       }
@@ -651,57 +690,110 @@ io.on('connection', socket => {
     })
   })
 
-  //// Admin interface 
 
-  socket.on('update-Name' , (user) => {
-    try{
-      let accountFirst = Storage.changeFirstName(user.userId, user.firstName);
-      let nameUpdate = 0;
-  
-      accountFirst.then(accountFirst => {
-      if (accountFirst !== false){
-        nameUpdate = 1; 
-        let accountLast = Storage.changeLastName(user.userId, user.lastName)
-        accountLast.then(accountLast => {
-  
-        })
-  
-        socket.emit('update-Name-Status' , nameUpdate)
-      }})
-    }catch{
-      console.log("Error")
+  // Admin =====================================================================================================
+
+  // Registering
+
+  // When user tries to create account
+  socket.on('create-account', async details => {
+    // Make sure given values are valid
+    if (typeof details.username != "string"){
+      socket.emit('register-fail', 'Invalid username');
     }
-
-   
-
-
+    else if (typeof details.firstName != "string"){
+      socket.emit('register-fail', 'Invalid first name');
+    }
+    else if (typeof details.lastName != "string"){
+      socket.emit('register-fail', 'Invalid last name');
+    }
+    else if (typeof details.password != "string"){
+      socket.emit('register-fail', 'Invalid password');
+    }
+    else{
+      // Details are valid
+      try{
+        let creationSuccessful = await Storage.createAccount(details.username, details.firstName, details.lastName, details.password);
+        if (creationSuccessful === true){
+          socket.emit('register-success');
+          Storage.log("New account created: " + details.username);
+          console.log("👍 New account created: " + details.username); 
+        }
+        else{
+          socket.emit('register-fail', 'Unable to create account');
+        }
+      }
+      catch (reason){
+        if (reason === "Username taken"){
+          socket.emit('register-fail', 'Username taken');
+        }
+        else{
+          socket.emit('register-fail', 'Unable to create account');
+        }
+      }
+    }
   })
 
 
-  socket.on('update-Password', (user) => {
+  // Deleting 
+
+  socket.on('delete-account', async details => {
+    
+    // Make sure given values are valid
+    if (typeof details.username != "string"){
+      socket.emit('delete-fail', 'Invalid username');
+    }else{
+      // Details are valid
+      try{
+        let deleteSuccessful = await Storage.deleteAccount(details.username);
+        if (deleteSuccessful === true){
+          socket.emit('delete-success');
+          Storage.log("Account deleted : " + details.username);
+          console.log("👍 Account deleted: " + details.username); 
+        }
+        else{
+          socket.emit('delete-fail', 'Unable to delete account');
+        }
+      }
+      catch (reason){
+        console.log("⚠ delete fail " + reason)
+        socket.emit('delete-fail', reason);
+      }
+    }
+  })
+
+
+  // Updating 
+
+  socket.on('update-Name' , async (user) => {
     try{
-      // let account = Storage.checkAccountCredentials(user.userName, user.oldPass)
-
-      let account = Storage.getAccount(user.userName)
-
-
-      let passwordUpdate = 0;
-      account.then(account => {
-          if (account !== false) {
+      let accountFirst = await Storage.changeFirstName(user.userId, user.firstName);
+      let accountLast = await Storage.changeLastName(user.userId, user.lastName);
   
-            console.log(account);
-            console.log("Updating Password!");
-            Storage.changePassword(user.userName, user.newPass);
-            passwordUpdate = 1;
-  
-          } else {
-            console.log("account doesnt exist");
-          }
-  
-          socket.emit('update-Password-Status', passwordUpdate);
-      });
+      // let account = await Storage.getAccount(user.userId)
+      // console.log(account)
+
+      console.log("📜 " + user.userId + " Name change ")
+      Storage.log("Name change: " + user.userId)
+
     }catch{
-      console.log("error")
+      console.log("⚠ Error updating name")
+    }
+  })
+
+
+  socket.on('update-Password', async (user) => {
+    try{
+      let account = await Storage.getAccount(user.userName)
+      let passChange = await Storage.changePassword(user.userName, user.newPass);
+
+      socket.emit('update-Password-Status', 1);
+      console.log("🔑 " + user.userName + " Password updated")
+      Storage.log(user.userName + " Password updated")
+
+    }catch{
+      console.log("⚠ Error changing password")
+      socket.emit("update-Password-Status", 0)
     }
     
   })
@@ -906,6 +998,7 @@ function sendOldMessages(socket, timestamp){
   }
 }
 
+
 async function verifyToken(username, token) {
   if (username == null){
     return
@@ -939,7 +1032,7 @@ function disconnectUser(socket, username){
   socket.leave('authorised')
   socket.disconnect(); 
  
-  //removes the users name from the client list when they log out
+  //removes the users name from the client list when they log outr
   var index = connected.indexOf(username);
   if (index > -1) {
     connected.splice(index, 1);
@@ -954,11 +1047,31 @@ function sendUsers(socket){
 
 function checkAuth(socket){
   try{
+
+    // admin stuff
+
+   
+    if (admins.includes(socket.id)){
+      // console.log("🎉 " + socket.id)
+      return
+    }
+
     let username = users[socket.id]
     if ( username == null ) { 
+
+      /*
+         There is a bug here. For some reason this line prints every auth cycle, after an admin logs out. 
+         The admin is not in the users list. 
+         and the function shouldn't run, because of the above return statement 
+
+      */
+      // console.log("👢 " + socket.id + " Kicked as username was null ")  
+
+
       socket.disconnect()
       return 
     }
+
 
     let currentTime = +new Date()
     
