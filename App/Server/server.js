@@ -144,7 +144,7 @@ app.post('/AdminLogin', async (req, res) => {  // Function must be async to allo
       Storage.log("Admin has logged in ")
 
     }else{
-      console.log("incorrect credentials")
+      console.log("incorrect Admin credentials")
       res.status(406).send({message: 'Incorrect credentials'})
     }
 
@@ -247,6 +247,7 @@ io.on('connection', socket => {
       }
     }catch{
       socket.disconnect()
+      console.log("👢" + socket.id + "Kicked out")
     } 
 
   })
@@ -1030,6 +1031,7 @@ function checkAuth(socket){
   try{
     let username = users[socket.id]
     if ( username == null ) { 
+      console.log("👢 " + socket.id + " Kicked as username was null ")
       socket.disconnect()
       return 
     }

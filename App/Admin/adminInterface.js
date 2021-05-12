@@ -5,6 +5,11 @@ var profanitySettings = 0;
 loadProfanity();
 
 
+//When the server connection is lost 
+socket.on('disconnect', () => {
+    document.location.href = "./index.html";
+  })
+
 // Banned words list ========================================================
 
 function bannedWordsDefault(){
