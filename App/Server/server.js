@@ -13,7 +13,7 @@ const profilePicturesFilePath = __dirname + "/data/accounts/profilePictures.blb"
 
 var Storage = new DataAccess(messagesFolderPath, messagesIndexPath, logsFolderPath, logsIndexPath, accountsFilePath, attachmentsPath, profilePicturesFilePath);
 
-const users = {}  // Maps socket ids to usernames
+let users = {}  // Maps socket ids to usernames
 let loggedInUsers = {}  // Contains access token for user, uses usernames as keys
 
 
@@ -588,6 +588,25 @@ io.on('connection', socket => {
   });
 
   socket.on('disconnect', () => {
+
+    try{
+      if (admins.includes(socket.id)){
+        console.log("🧠 Bye Bye admin ")
+        Storage.log("Admin has disconnected")
+  
+        var index = admins.indexOf(socket.id);
+        if (index > -1) {
+          admins.splice(index, 1);
+        }
+  
+        delete users[socket.id]
+  
+      }
+    }catch{
+      console.log("⚠ error while disconnecting an admin")
+    }
+    
+   
     try{
       let name = users[socket.id];
       // Only continue if name exists (meaning user was properly connected and logged in)
@@ -611,7 +630,7 @@ io.on('connection', socket => {
         //removes the users name from the client list when they log out
         var index = connected.indexOf(name);
         if (index > -1) {
-            connected.splice(index, 1);
+          connected.splice(index, 1);
         }
         sendUsers(socket)
       }
@@ -1034,7 +1053,9 @@ function checkAuth(socket){
 
     let username = users[socket.id]
     if ( username == null ) { 
-      console.log("👢 " + socket.id + " Kicked as username was null ")
+      console.log("👢 " + socket.id + " Kicked as username was null ")   /// Wait so do the users never get removed from user? 
+
+
       socket.disconnect()
       return 
     }
