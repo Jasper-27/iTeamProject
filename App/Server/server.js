@@ -598,8 +598,12 @@ io.on('connection', socket => {
         if (index > -1) {
           admins.splice(index, 1);
         }
+
+        if (socket.id > -1) {
+          admins.splice(socket.id, 1);
+        }
   
-        delete users[socket.id]
+        // delete users[socket.id]
   
       }
     }catch{
@@ -1028,7 +1032,7 @@ function disconnectUser(socket, username){
   socket.leave('authorised')
   socket.disconnect(); 
  
-  //removes the users name from the client list when they log out
+  //removes the users name from the client list when they log outr
   var index = connected.indexOf(username);
   if (index > -1) {
     connected.splice(index, 1);
@@ -1046,6 +1050,7 @@ function checkAuth(socket){
 
     // admin stuff
 
+   
     if (admins.includes(socket.id)){
       // console.log("🎉 " + socket.id)
       return
@@ -1053,12 +1058,20 @@ function checkAuth(socket){
 
     let username = users[socket.id]
     if ( username == null ) { 
-      console.log("👢 " + socket.id + " Kicked as username was null ")   /// Wait so do the users never get removed from user? 
+
+      /*
+         There is a bug here. For some reason this line prints every auth cycle, after an admin logs out. 
+         The admin is not in the users list. 
+         and the function shouldn't run, because of the above return statement 
+
+      */
+      // console.log("👢 " + socket.id + " Kicked as username was null ")  
 
 
       socket.disconnect()
       return 
     }
+
 
     let currentTime = +new Date()
     
