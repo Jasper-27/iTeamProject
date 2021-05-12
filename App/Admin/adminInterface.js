@@ -71,7 +71,6 @@ socket.on('update-Password-Status' , (passStatus) => {
     if (passStatus === 1){
         alert("Password Updated");
         document.getElementById("userNameText").value = ""
-        document.getElementById("oldPassText").value = ""
         document.getElementById("newPassText").value = ""
     }
     if (passStatus === 0){
@@ -97,7 +96,6 @@ socket.on('update-Name-Status' , (nameStatus) => {
     if (nameStatus === 1){
         alert("Name updated!");
         document.getElementById("userNameText").value = ""
-        document.getElementById("oldPassText").value = ""
         document.getElementById("newPassText").value = ""
     }
     if (nameStatus === 0){
@@ -183,6 +181,8 @@ function deleteUser(){
         return; 
 	}else{
         socket.emit('delete-account', {"username": usernameinput});
+        document.getElementById("username_delete").value = ""
+
     }
 }
 //  =================================================================================
