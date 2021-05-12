@@ -223,15 +223,15 @@ io.on('connection', socket => {
   socket.on(`admin-auth`, data => {
 
     if (data == adminSecret){
-      console.log("🎉🎉 " + socket.id)
+      // console.log("🎉🎉 " + socket.id)
       admins.push(socket.id)
     }
   })
 
   // Every min re-authenticate the clients. 
-  /* const heartBeatReauth = setInterval(function() {
+   const heartBeatReauth = setInterval(function() {
     checkAuth(socket)
-  }, reauthInterval) */  - /// TEMPORARILY DISABLED AS CAUSING ISSUES WITH ADMIN INTERFACE.  MUST BE RE-ENABLED
+  }, reauthInterval)  - /// TEMPORARILY DISABLED AS CAUSING ISSUES WITH ADMIN INTERFACE.  MUST BE RE-ENABLED
 
 
   //checking the user is still who they are during
@@ -1055,7 +1055,7 @@ function checkAuth(socket){
     // admin stuff
 
     if (admins.includes(socket.id)){
-      console.log("🎉 " + socket.id)
+      // console.log("🎉 " + socket.id)
       return
     }
 
