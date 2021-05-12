@@ -97,9 +97,6 @@
 			<div class="headLeft-section" id="headsectionleft" style= "margin-bottom: 10px;">
 			
 			<h3>Users:</h3>
-			
-			<button class="open-button" onclick="closeUsers()">Close</button>
-			<button class="open-button" onclick="openUsers()">Open</button>
 				
 
 			</div>
@@ -120,26 +117,8 @@
 		
 		
 		<div class="body-section">
-			<div class="left-section" data-mcs-theme="minimal-dark" id="channels" >
 			
-				<ul id="channels">
-					<li class="active">
-						<div class="chatList">
-							<div class="img">
-								<img src="https://contentmarketinginstitute.com/wp-content/uploads/2013/03/channels-230x230.jpg">
-							</div>
-							<div class="desc">
-								<small class="time">Channel 1</small>
-								<h5>Channel Name</h5>
-								<small >Channel Description</small>
-							</div>
-						</div>
-					</li>
-
-				</ul>
-			</div>
-			
-			<div class="left-section" id="usersList" style="display:none;">
+			<div class="left-section" id="usersList">
 			
 				<ul id="users">
 				
@@ -149,9 +128,10 @@
 								<img src="">
 							</div>
 							<div class="desc">
-								<small class="time">Current Time</small>
+								<small class="time"><span id="datetime"></span></small>
 								<h5>No Current Users</h5>
-								<small>There are no users</small>
+								<small></small>
+								<small>Get more people to join!</small>
 							</div>
 						</div>
 				</li>
@@ -206,6 +186,11 @@
     <script src="assets/js/jquery.min.js"></script>
     <script src="assets/bootstrap/js/bootstrap.min.js"></script>
 	<script src="assets/js/changeCss.js"></script>
+
+	<script>
+		var dt = new Date();
+		document.getElementById("datetime").innerHTML = dt.toLocaleString();
+	</script>
 
 
 	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
