@@ -1,3 +1,5 @@
+// const { userInfo } = require("node:os");
+
 const socket = io('http://' + self.location.host.split(':')[0] + ':4500'); // sets the ip and port to use with socket.io
 
 var profanitySettings = 0;
@@ -187,3 +189,32 @@ function deleteUser(){
 }
 //  =================================================================================
 
+//  Read users ======================================================================
+
+function readUser(){
+    var username_input = document.getElementById("read").value
+
+    //check 
+	if (username_input === ""){
+		alert("UserName Empty");
+        return; 
+	}else{
+        socket.emit('read-account', {"user": username_input});
+        document.getElementById("read").value = ""
+        console.log(username_input);
+    }
+}
+
+socket.on('read-success', (userData) => {
+    alert("username: " + userData.userName + ", first name: " + userData.firstName)
+
+    var div = document.getElementById('readAccounts');
+    div.style.visibility = 'visible';
+
+    var div2 = document.getElementById('readAccountstxt').innerHTML(<p>hello</p>)
+    div2.style.visibility = 'visible';
+})
+
+socket.on('read-fail', () => {
+    alert("fail");
+})
