@@ -1,9 +1,11 @@
 <!DOCTYPE html>
-<html>
+<html lang="en-GB">
 
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+	<meta name="description" content="The main page of a source created by undergraduates who have developed a 
+	self-hosting messaging service, called WinkieMessenger.">
     
     <title>Winkie - App</title>
     <link rel="shortcut icon" type="image/png" href="./logo.png"/>
@@ -168,13 +170,13 @@
 					<form id="send-container">
 					
 						<div class="upload-btn">
-						  	<button class="btn" id="choose-file-button" type="button" onclick="showFileSelector()"><i class="fa fa-photo"></i></button>
+						  	<button class="btn" aria-label="Choose File" id="choose-file-button" type="button" onclick="showFileSelector()"><i class="fa fa-photo"></i></button>
 						  	<!-- Invisible file input to be triggered by choose-file-button -->
 							<input type="file" id="choose-file-dialog" style="display: none;"/>
 						</div>
 						
 						<input type="text" name="" placeholder="type here..." autocomplete="off" id="message-input" class="msger-input">
-						<button class="btn-send" ><i class="fa fa-send"></i></button>
+						<button class="btn-send" aria-label="Send"><i class="fa fa-send"></i></button>
 						
 					</form>
 					
