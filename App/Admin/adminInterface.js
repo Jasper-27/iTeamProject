@@ -11,10 +11,12 @@ socket.on('disconnect', () => {
     document.location.href = "./index.html";
 })
 
-
+/*
+// this bit isn't used.... but it could be 
 function adminAuth(){
-    socket.emit(`admin-auth`, sessionStorage.getItem('admin_secret'))
+    socket.emit(`admin-auth`, rsaEncrypt(sessionStorage.getItem('admin_secret')))
 }
+*/
 
 // Banned words list ========================================================
 
@@ -204,6 +206,7 @@ function deleteUser(){
 
 function rsaEncrypt(data){
     data = btoa(unescape(encodeURIComponent(data + " , " + sessionStorage.getItem('admin_secret'))))
+
     let encrypted = cryptico.encrypt(data, sessionStorage.getItem('serverPublic'))
 
     if (encrypted.cipher != null){

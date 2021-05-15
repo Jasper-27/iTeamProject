@@ -1199,9 +1199,14 @@ function decrypt_admin(data){
 
   let out = data.split(" , ")
 
-  if (out[1] = adminSecret){
+  if (out[1] == adminSecret){
     return out[0]
-  }else{
-    return null
+  }else{      // This else is triggered when a non-admin tries to use admin commands
+
+   
+    console.log("⚠⚠ Admin failed security check. ⚠⚠")
+    Storage.log("Admin failed security check")
+
+    return
   }
 }
