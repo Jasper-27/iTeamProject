@@ -9,6 +9,7 @@ App/Server/data/messages.json
 App/Server/data/Log.json
 App/Server/data/accounts.json
 App/Server/data/**
+App/Client/.idea/**
 *.wdx
 *.wki
 App/Server/package-lock.json
