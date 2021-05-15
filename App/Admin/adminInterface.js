@@ -13,7 +13,7 @@ socket.on('disconnect', () => {
 
 
 function adminAuth(){
-    socket.emit(`admin-auth`, sessionStorage.getItem('Admin_token'))
+    socket.emit(`admin-auth`, sessionStorage.getItem('admin_secret'))
 }
 
 // Banned words list ========================================================
@@ -187,3 +187,40 @@ function deleteUser(){
 }
 //  =================================================================================
 
+
+// Encryption ==========================================================================
+
+function rsaEncrypt(data){
+    data = btoa(unescape(encodeURIComponent(data + " , " + sessionStorage.getItem('admin_secret'))))
+    let encrypted = cryptico.encrypt(data, sessionStorage.getItem('serverPublic'))
+
+    if (encrypted.cipher != null){
+        return encrypted.cipher
+    }else{
+        return 0
+    }
+}
+
+
+
+function test(string){
+    socket.emit('test', rsaEncrypt(string))
+}
+
+
+
+
+socket.on('send-aes', data =>{
+  
+    //Decrypt the data 
+    let rsaPass = sessionStorage.getItem('rsaPass')
+    let private = cryptico.generateRSAKey(rsaPass, 1024); 
+    let dec = cryptico.decrypt(data, private)
+  
+    AESKey = stringToBuffer(dec.plaintext) // Set the AESKe
+    
+})
+
+
+
+// ============================================================================

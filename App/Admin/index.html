@@ -115,7 +115,7 @@
                     let decrypted_token = cryptico.decrypt(data.token, private)
 
                     if (decrypted_token.status == "success"){
-                        sessionStorage.setItem('Admin_token', decrypted_token.plaintext) // set's the token in session storage 
+                        sessionStorage.setItem('admin_secret', decrypted_token.plaintext) // set's the token in session storage 
                         console.log("Login success")
                         window.location.replace("./admin.html"); //changes to the main app window 
                     }else{

@@ -42,6 +42,7 @@ const checkInWindow = 40000 //the time window the client has to check in (needs 
 
 
 var adminSecret = require('crypto').randomBytes(256).toString('hex'); 
+var AdminAESKey = cryptico.generateAESKey(PassPhrase, 1024)
 
 var adminPassword = "password"
 
@@ -138,6 +139,7 @@ app.post('/AdminLogin', async (req, res) => {  // Function must be async to allo
     if (password == adminPassword){
 
       let encrypted_secret = cryptico.encrypt(adminSecret, client_public_key).cipher // encrypted cipher for sending 
+
       res.status(200).send({
         message: `Authentication success`,
         token: `${ encrypted_secret }`    // the response
@@ -182,6 +184,7 @@ const io = require('socket.io')(socketPort, {
 
 const ss = require('socket.io-stream');
 const { Transform } = require("stream");
+const e = require("cors");
 
 Storage.log("Server started")
 
@@ -695,6 +698,14 @@ io.on('connection', socket => {
 
   // Registering
 
+
+  socket.on('test', data => {
+    console.log("🔬 start test")
+    console.log(data)
+    console.log("")
+    console.log(decrypt_admin(data))
+  })
+
   // When user tries to create account
   socket.on('create-account', async details => {
     // Make sure given values are valid
@@ -733,6 +744,8 @@ io.on('connection', socket => {
       }
     }
   })
+
+
 
 
   // Deleting 
@@ -782,6 +795,7 @@ io.on('connection', socket => {
   })
 
 
+  // Updating password 
   socket.on('update-Password', async (user) => {
     try{
       let account = await Storage.getAccount(user.userName)
@@ -1139,3 +1153,20 @@ function addToAvailableFiles(position){
   else return availableFilesIndeces[position];
 }
 
+function decrypt_admin(data){
+  data = cryptico.decrypt(data, private)
+  // let out = null 
+
+  // console.log(data)
+
+  // console.log(data.plaintext)
+  data = Buffer.from(data.plaintext, 'base64').toString()
+
+  let out = data.split(" , ")
+
+  if (out[1] = adminSecret){
+    return out[0]
+  }else{
+    return null
+  }
+}
