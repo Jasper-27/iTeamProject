@@ -89,7 +89,11 @@ function updateName(){
         return
     }
 
-    socket.emit('update-Name', {"userId":userId, "firstName":firstName, "lastName":lastName});
+    let user = {"userId":userId, "firstName":firstName, "lastName":lastName}
+    let userString = JSON.stringify(user)
+    userString = rsaEncrypt(userString)
+
+    socket.emit('update-name', userString);
 }
 
 socket.on('update-Name-Status' , (nameStatus) => {
@@ -147,7 +151,11 @@ function register(){
         alert("You have missing values");
         return;
     }else{
-        socket.emit('create-account', {"username": usernameinput, "firstName": firstName.value, "lastName": lastName.value, "password": passwordValue});
+
+        let user = {"username": usernameinput, "firstName": firstName.value, "lastName": lastName.value, "password": passwordValue}
+        let userString = JSON.stringify(user)
+        userString = rsaEncrypt(userString)
+        socket.emit('create-account', userString)
     }
 
 
@@ -173,14 +181,18 @@ socket.on('delete-success', () => {
 // Checks to see if details are valid, then sends them on to the server. 
 function deleteUser(){
 	var usernameinput = document.getElementById("username_delete").value 
-
 	
 	//check 
 	if (usernameinput == null){
 		alert("UserName Empty");
         return; 
 	}else{
-        socket.emit('delete-account', {"username": usernameinput});
+
+        let the_json = {"username" : usernameinput}
+        let data = JSON.stringify(the_json)
+        data = rsaEncrypt(data)
+
+        socket.emit('delete-account', data);
         document.getElementById("username_delete").value = ""
 
     }
@@ -206,7 +218,6 @@ function rsaEncrypt(data){
 function test(string){
     socket.emit('test', rsaEncrypt(string))
 }
-
 
 
 

@@ -657,28 +657,40 @@ io.on('connection', socket => {
 
   var toggle;
 
-  socket.on('profanityToggle', (profanitySettings) => {
+  socket.on('profanityToggle', (data) => {
 
-    if (profanitySettings.profanitySettings == 1) {
+    try{
+      // data = decrypt_admin(data)
+      // profanitySettings = JSON.parse(data)
 
-      profanityFilter.toggleCustom()
-      profanityFilter.load();
-      socket.emit('toggle-update');
-      toggle == 1;
-      profanityFilter.savePreset(toggle);
-      var emitWords = profanityFilter.readBanlistFromFile();
-      socket.emit('get-Profanity', {"words": emitWords});
-    }else if (profanitySettings.profanitySettings == 0) {
+      profanitySettings = data
+      
+      if (profanitySettings.profanitySettings == 1) {
 
-      profanityFilter.toggleDefault()
-      profanityFilter.load();
-      socket.emit('toggle-update');
-      toggle == 0;
-      profanityFilter.savePreset(toggle)
-      var emitWords = profanityFilter.readBanlistFromFile();
-      socket.emit('get-Profanity' , {"words": emitWords});
+        profanityFilter.toggleCustom()
+        profanityFilter.load();
+        socket.emit('toggle-update');
+        toggle == 1;
+        profanityFilter.savePreset(toggle);
+        var emitWords = profanityFilter.readBanlistFromFile();
+        socket.emit('get-Profanity', {"words": emitWords});
+      }else if (profanitySettings.profanitySettings == 0) {
+  
+        profanityFilter.toggleDefault()
+        profanityFilter.load();
+        socket.emit('toggle-update');
+        toggle == 0;
+        profanityFilter.savePreset(toggle)
+        var emitWords = profanityFilter.readBanlistFromFile();
+        socket.emit('get-Profanity' , {"words": emitWords});
+      }
+  
+
+    }catch{
+      console.log("⚠ proffanity error")
     }
-
+    
+    
   })
 
   socket.on('profanityCustomWords', (wordsCustom) => {
@@ -707,7 +719,11 @@ io.on('connection', socket => {
   })
 
   // When user tries to create account
-  socket.on('create-account', async details => {
+  socket.on('create-account', async data => {
+
+    data = decrypt_admin(data)    
+    let details = JSON.parse(data)
+
     // Make sure given values are valid
     if (typeof details.username != "string"){
       socket.emit('register-fail', 'Invalid username');
@@ -750,36 +766,51 @@ io.on('connection', socket => {
 
   // Deleting 
 
-  socket.on('delete-account', async details => {
-    
-    // Make sure given values are valid
-    if (typeof details.username != "string"){
-      socket.emit('delete-fail', 'Invalid username');
-    }else{
-      // Details are valid
-      try{
-        let deleteSuccessful = await Storage.deleteAccount(details.username);
-        if (deleteSuccessful === true){
-          socket.emit('delete-success');
-          Storage.log("Account deleted : " + details.username);
-          console.log("👍 Account deleted: " + details.username); 
+  socket.on('delete-account', async data => {
+    try{
+      data = decrypt_admin(data)    
+      let details = JSON.parse(data)
+
+      // Make sure given values are valid
+      if (typeof details.username != "string"){
+        socket.emit('delete-fail', 'Invalid username');
+      }else{
+        // Details are valid
+        try{
+          let deleteSuccessful = await Storage.deleteAccount(details.username);
+          if (deleteSuccessful === true){
+            socket.emit('delete-success');
+            Storage.log("Account deleted : " + details.username);
+            console.log("👍 Account deleted: " + details.username); 
+          }
+          else{
+            socket.emit('delete-fail', 'Unable to delete account');
+          }
         }
-        else{
-          socket.emit('delete-fail', 'Unable to delete account');
+        catch (reason){
+          console.log("⚠ delete fail " + reason)
+          socket.emit('delete-fail', reason);
         }
       }
-      catch (reason){
-        console.log("⚠ delete fail " + reason)
-        socket.emit('delete-fail', reason);
-      }
+
+    }catch{
+      console.log("⚠ error decrypting data")
     }
+   
+
+    
+    
   })
 
 
   // Updating 
 
-  socket.on('update-Name' , async (user) => {
+  socket.on('update-name' , async (data) => {
     try{
+
+      data = decrypt_admin(data)    
+      let user = JSON.parse(data)
+
       let accountFirst = await Storage.changeFirstName(user.userId, user.firstName);
       let accountLast = await Storage.changeLastName(user.userId, user.lastName);
   
@@ -796,8 +827,12 @@ io.on('connection', socket => {
 
 
   // Updating password 
-  socket.on('update-Password', async (user) => {
+  socket.on('update-Password', async (data) => {
     try{
+
+      data = decrypt_admin(data)
+      user = JSON.parse(data)
+
       let account = await Storage.getAccount(user.userName)
       let passChange = await Storage.changePassword(user.userName, user.newPass);
 
