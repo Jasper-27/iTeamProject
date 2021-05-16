@@ -202,17 +202,22 @@ function readUser(){
         socket.emit('read-account', {"user": username_input});
         document.getElementById("read").value = ""
         console.log(username_input);
+
     }
+
+
 }
 
+function msgAlert2(TITLE,FIRST,LAST) {
+    "use strict";   
+    document.getElementById("readAccounts").innerHTML = `<span class='closebtn' onclick="this.parentElement.style.visibility='hidden';"'>&times;</span><strong>   ${TITLE}  </strong>  ${FIRST} ${LAST}`;
+    readAccounts.style.visibility = 'visible';
+    return;
+  }
+
 socket.on('read-success', (userData) => {
-    alert("username: " + userData.userName + ", first name: " + userData.firstName)
-
-    var div = document.getElementById('readAccounts');
-    div.style.visibility = 'visible';
-
-    var div2 = document.getElementById('readAccountstxt').innerHTML(<p>hello</p>)
-    div2.style.visibility = 'visible';
+    // alert("username: " + userData.userName + ", first name: " + userData.firstName)
+    msgAlert2(userData.userName, userData.firstName, userData.lastName)
 })
 
 socket.on('read-fail', () => {
