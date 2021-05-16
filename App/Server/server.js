@@ -683,7 +683,8 @@ io.on('connection', socket => {
     var res = wordsCustom.wordsCustom.split(" ").join("\n")
     const fs = require("fs") // !This shouldn't be here - Jasper 
 
-    s.writeFile("bannedWordsCustom.txt", res, function (err) {
+    // Writes to the bannedWordsCustom file that is used
+    fs.writeFile("bannedWordsCustom.txt", res, function (err) {
       if(err){
           return console.log(err);
       }

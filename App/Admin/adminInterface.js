@@ -25,11 +25,13 @@ function bannedWordsDefault(){
     document.getElementById('profanityListCustom').readOnly = true;
 }
 
+// This is what happens when u click submit
 function submitWordsCustom(){
     let wordsCustom = document.getElementById('profanityListCustom').value;
     console.log(wordsCustom);
     socket.emit('profanityCustomWords',{'wordsCustom': wordsCustom});
 
+    // Toggles profanity list to custon
     let profanitySettings = 1;
     socket.emit('profanityToggle', {"profanitySettings": profanitySettings});
 }
