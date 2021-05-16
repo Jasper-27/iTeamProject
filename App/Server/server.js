@@ -698,7 +698,8 @@ io.on('connection', socket => {
     var res = wordsCustom.wordsCustom.split(" ").join("\n")
     const fs = require("fs") // !This shouldn't be here - Jasper 
 
-    s.writeFile("bannedWordsCustom.txt", res, function (err) {
+    // Writes to the bannedWordsCustom file that is used
+    fs.writeFile("bannedWordsCustom.txt", res, function (err) {
       if(err){
           return console.log(err);
       }
@@ -802,6 +803,15 @@ io.on('connection', socket => {
     
   })
 
+  // Reading
+  socket.on('read-account', async details => {
+    
+    let readSuccess = await Storage.getAccount(details.user);
+
+    console.log("👍 Account Read: " + readSuccess.userName); 
+    socket.emit('read-success', {"userName": readSuccess.userName, "firstName": readSuccess.firstName, "lastName": readSuccess.lastName});
+
+  })
 
   // Updating 
 

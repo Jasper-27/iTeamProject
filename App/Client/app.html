@@ -1,11 +1,13 @@
 <!DOCTYPE html>
-<html>
+<html lang="en-GB">
 
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+	<meta name="description" content="The main page of a source created by undergraduates who have developed a 
+	self-hosting messaging service, called WinkieMessenger.">
     
-    <title>Winki - App</title>
+    <title>Winkie - App</title>
     <link rel="shortcut icon" type="image/png" href="./logo.png"/>
 	
 	    	<!-- Links for the style sheets Colour -->
@@ -71,7 +73,7 @@
 <div class="allItems">
 
 	<nav class="navbar navbar-light navbar-expand-md">
-        <div class="container-fluid"><a class="navbar-brand" href="index.html">WinkiMessenger</a><button data-toggle="collapse" class="navbar-toggler" data-target="#navcol-1"><span class="sr-only">Toggle navigation</span><span class="navbar-toggler-icon"></span></button>
+        <div class="container-fluid"><a class="navbar-brand" href="index.html">WinkieMessenger</a><button data-toggle="collapse" class="navbar-toggler" data-target="#navcol-1"><span class="sr-only">Toggle navigation</span><span class="navbar-toggler-icon"></span></button>
             <div class="collapse navbar-collapse" id="navcol-1">
                 <ul class="nav navbar-nav">
                     <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
@@ -82,7 +84,7 @@
 				
             </div>
 			
-			<img src="logo.png" alt="The winkiMessenger logo" id="lilwinki" style="width:40px;height:40px;float:right;visibility:visible">
+			<img src="logo.png" alt="The winkieMessenger logo" id="lilwinkie" style="width:40px;height:40px;float:right;visibility:visible">
 
         </div>
     </nav>
@@ -168,13 +170,13 @@
 					<form id="send-container">
 					
 						<div class="upload-btn">
-						  	<button class="btn" id="choose-file-button" type="button" onclick="showFileSelector()"><i class="fa fa-photo"></i></button>
+						  	<button class="btn" aria-label="Choose File" id="choose-file-button" type="button" onclick="showFileSelector()"><i class="fa fa-photo"></i></button>
 						  	<!-- Invisible file input to be triggered by choose-file-button -->
 							<input type="file" id="choose-file-dialog" style="display: none;"/>
 						</div>
 						
 						<input type="text" name="" placeholder="type here..." autocomplete="off" id="message-input" class="msger-input">
-						<button class="btn-send" ><i class="fa fa-send"></i></button>
+						<button class="btn-send" aria-label="Send"><i class="fa fa-send"></i></button>
 						
 					</form>
 					

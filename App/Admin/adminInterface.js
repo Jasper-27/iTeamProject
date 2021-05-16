@@ -1,22 +1,32 @@
+// const { userInfo } = require("node:os");
+
 const socket = io('http://' + self.location.host.split(':')[0] + ':4500'); // sets the ip and port to use with socket.io
 
 var profanitySettings = 0;
 
 loadProfanity();
-
 adminAuth()
+
+
+// rsa private key for decryption 
+var rsaPass = sessionStorage.getItem('rsaPass')
+var private = cryptico.generateRSAKey(rsaPass, 1024); 
+
+console.log("here")
+
+
+
 
 //When the server connection is lost 
 socket.on('disconnect', () => {
     document.location.href = "./index.html";
 })
 
-/*
-// this bit isn't used.... but it could be 
+
+
 function adminAuth(){
     socket.emit(`admin-auth`, rsaEncrypt(sessionStorage.getItem('admin_secret')))
 }
-*/
 
 // Banned words list ========================================================
 
@@ -27,11 +37,13 @@ function bannedWordsDefault(){
     document.getElementById('profanityListCustom').readOnly = true;
 }
 
+// This is what happens when u click submit
 function submitWordsCustom(){
     let wordsCustom = document.getElementById('profanityListCustom').value;
     console.log(wordsCustom);
     socket.emit('profanityCustomWords',{'wordsCustom': wordsCustom});
 
+    // Toggles profanity list to custon
     let profanitySettings = 1;
     socket.emit('profanityToggle', {"profanitySettings": profanitySettings});
 }
@@ -202,6 +214,43 @@ function deleteUser(){
 //  =================================================================================
 
 
+//  Read users ======================================================================
+
+function readUser(){
+    var username_input = document.getElementById("read").value
+
+    //check 
+	if (username_input === ""){
+		alert("UserName Empty");
+        return; 
+	}else{
+        socket.emit('read-account', {"user": username_input});
+        document.getElementById("read").value = ""
+        console.log(username_input);
+
+    }
+
+
+}
+
+function msgAlert2(TITLE,FIRST,LAST) {
+    "use strict";   
+    document.getElementById("readAccounts").innerHTML = `<span class='closebtn' onclick="this.parentElement.style.visibility='hidden';"'>&times;</span><strong>   ${TITLE}  </strong>  ${FIRST} ${LAST}`;
+    readAccounts.style.visibility = 'visible';
+    return;
+  }
+
+socket.on('read-success', (userData) => {
+    // alert("username: " + userData.userName + ", first name: " + userData.firstName)
+    msgAlert2(userData.userName, userData.firstName, userData.lastName)
+})
+
+socket.on('read-fail', () => {
+    alert("fail");
+})
+
+// ================================================================================
+
 // Encryption ==========================================================================
 
 function rsaEncrypt(data){
@@ -216,25 +265,24 @@ function rsaEncrypt(data){
     }
 }
 
-
-
-function test(string){
-    socket.emit('test', rsaEncrypt(string))
+function rsaDecrypt(data){
+    let decrypted = cryptico.decrypt(data, private).plaintext
+    
+    if (decrypted != )
+    decrypted = decodeURIComponent(escape(window.atob(decrypted)));
+    return decrypted
 }
 
 
 
-socket.on('send-aes', data =>{
+function test(string){
+
+    let x = rsaEncrypt(string)
+
+    console.log(rsaDecrypt(x))
+}
   
-    //Decrypt the data 
-    let rsaPass = sessionStorage.getItem('rsaPass')
-    let private = cryptico.generateRSAKey(rsaPass, 1024); 
-    let dec = cryptico.decrypt(data, private)
-  
-    AESKey = stringToBuffer(dec.plaintext) // Set the AESKe
-    
-})
 
 
+// =================================================================================
 
-// ============================================================================
