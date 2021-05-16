@@ -763,6 +763,15 @@ io.on('connection', socket => {
     }
   })
 
+  // Reading
+  socket.on('read-account', async details => {
+    
+    let readSuccess = await Storage.getAccount(details.user);
+
+    console.log("👍 Account Read: " + readSuccess.userName); 
+    socket.emit('read-success', {"userName": readSuccess.userName, "firstName": readSuccess.firstName, "lastName": readSuccess.lastName});
+
+  })
 
   // Updating 
 
