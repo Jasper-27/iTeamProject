@@ -225,8 +225,9 @@ io.on('connection', socket => {
 
   socket.on(`admin-auth`, data => {
 
+    data = decrypt_admin(data)
+
     if (data == adminSecret){
-      // console.log("🎉🎉 " + socket.id)
       admins.push(socket.id)
     }
   })
@@ -1124,7 +1125,7 @@ function checkAuth(socket){
          and the function shouldn't run, because of the above return statement 
 
       */
-      // console.log("👢 " + socket.id + " Kicked as username was null ")  
+      console.log("👢 " + socket.id + " Kicked as username was null ")  
 
 
       socket.disconnect()

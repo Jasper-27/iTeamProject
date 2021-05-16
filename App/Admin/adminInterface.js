@@ -1,5 +1,3 @@
-// const { userInfo } = require("node:os");
-
 const socket = io('http://' + self.location.host.split(':')[0] + ':4500'); // sets the ip and port to use with socket.io
 
 var profanitySettings = 0;
@@ -21,7 +19,6 @@ console.log("here")
 socket.on('disconnect', () => {
     document.location.href = "./index.html";
 })
-
 
 
 function adminAuth(){
@@ -266,11 +263,19 @@ function rsaEncrypt(data){
 }
 
 function rsaDecrypt(data){
-    let decrypted = cryptico.decrypt(data, private).plaintext
+
+    console.log(data)
+    console.log(private)
+    let decrypted = cryptico.decrypt(data, private)
+    console.log("")
+    console.log(decrypted)
     
-    if (decrypted != )
-    decrypted = decodeURIComponent(escape(window.atob(decrypted)));
-    return decrypted
+    if (typeof decrypted != 'string'){
+        decrypted = decodeURIComponent(escape(window.atob(decrypted)));
+        return decrypted
+    }
+    
+    return
 }
 
 
