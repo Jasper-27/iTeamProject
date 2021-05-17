@@ -714,14 +714,6 @@ io.on('connection', socket => {
 
   // Registering
 
-
-  socket.on('test', data => {
-    console.log("🔬 start test")
-    console.log(data)
-    console.log("")
-    console.log(decrypt_admin(data))
-  })
-
   // When user tries to create account
   socket.on('create-account', async data => {
 
