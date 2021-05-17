@@ -1,16 +1,9 @@
-// const { userInfo } = require("node:os");
-
 const socket = io('http://' + self.location.host.split(':')[0] + ':4500'); // sets the ip and port to use with socket.io
 
 var profanitySettings = 0;
 
 loadProfanity();
 adminAuth()
-
-
-// rsa private key for decryption 
-var private = sessionStorage.getItem('privateKey')
-
 
 //When the server connection is lost 
 socket.on('disconnect', () => {
@@ -168,10 +161,6 @@ function register(){
         userString = rsaEncrypt(userString)
         socket.emit('create-account', userString)
     }
-
-
-    // Checks to see if details are valid, then sends them on to the server. 
-
 }
 
 // ===============================================================================

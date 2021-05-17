@@ -1154,16 +1154,33 @@ function checkAuth(socket){
   }
 }
 
+//Aes encryption for client server messages 
 function encrypt(data){
   data = Buffer.from(data).toString('base64')
   let encrypted = cryptico.encryptAESCBC(data, AESKey)
   return encrypted
 }
 
+// Aes decryption for client server messages 
 function decrypt(data){
   let decrypted = cryptico.decryptAESCBC(data, AESKey)
   decrypted = Buffer.from(decrypted, 'base64').toString()
   return decrypted
+}
+
+
+// Decrypt messages from the admin interface
+function decrypt_admin(data){
+  data = cryptico.decrypt(data, private)
+  data = Buffer.from(data.plaintext, 'base64').toString()
+  let out = data.split(" , ")
+  if (out[1] == adminSecret){
+    return out[0]
+  }else{      // This else is triggered when a non-admin tries to use admin commands
+    console.log("⚠⚠ Admin failed security check. ⚠⚠")
+    Storage.log("Admin failed security check")
+    return
+  }
 }
 
 function bufferToString(buffer){
@@ -1204,27 +1221,4 @@ function addToAvailableFiles(position){
     return availableFilesNextPos;
   }
   else return availableFilesIndeces[position];
-}
-
-function decrypt_admin(data){
-  data = cryptico.decrypt(data, private)
-  // let out = null 
-
-  // console.log(data)
-
-  // console.log(data.plaintext)
-  data = Buffer.from(data.plaintext, 'base64').toString()
-
-  let out = data.split(" , ")
-
-  if (out[1] == adminSecret){
-    return out[0]
-  }else{      // This else is triggered when a non-admin tries to use admin commands
-
-   
-    console.log("⚠⚠ Admin failed security check. ⚠⚠")
-    Storage.log("Admin failed security check")
-
-    return
-  }
 }
