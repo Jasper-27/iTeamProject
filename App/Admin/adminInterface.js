@@ -49,7 +49,34 @@ function bannedWordsCustom() {
     console.log("profanity settings = " + profanitySettings);
 }
 
-// ======================================================================
+var btnDefault = document.getElementById("btnDefault");
+var btnCustom = document.getElementById("btnCustom");
+var btnSubmit = document.getElementById("btnSubmitWords");
+
+// On click event when default profanity filter is selected
+btnDefault.onclick = function() {
+    bannedWordsDefault();
+    btnDefault.style.background = "#0275d8";
+    btnCustom.style.background = "#343a40";
+    document.getElementById("btnSubmitWords").innerHTML = "Submit";
+
+}
+
+// On click event when custom profanity filter is selected
+btnCustom.onclick = function() {
+    bannedWordsCustom();
+    btnDefault.style.background = "#343a40"
+    btnCustom.style.background = "#0275d8"
+    document.getElementById("btnSubmitWords").innerHTML = "Submit";
+
+}
+
+// On click event when custom profanity filter is submitted
+btnSubmitWords.onclick = function() {
+    submitWordsCustom();
+    document.getElementById("btnSubmitWords").innerHTML = "Done!";
+}
+// =====================================================================
 
 
 // Updating user details =================================================
