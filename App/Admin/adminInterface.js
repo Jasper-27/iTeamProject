@@ -71,8 +71,11 @@ function updatePassword(){
         return
     }
 
-    // socket.emit('update-Password', {"userName":userName, "oldPass":oldPass, "newPass":newPass});   
-    socket.emit('update-Password', {"userName":userName,  "newPass":newPass});   // removed the old pass requrement as this is to reset passwords 
+    let data = {"userName":userName,  "newPass":newPass}
+    let dataString = JSON.stringify(data)
+    dataString = rsaEncrypt(dataString)
+
+    socket.emit('update-Password', dataString);   // removed the old pass requrement as this is to reset passwords 
 }
 
 socket.on('update-Password-Status' , (passStatus) => {
