@@ -1,11 +1,8 @@
-// const { userInfo } = require("node:os");
-
 const socket = io('http://' + self.location.host.split(':')[0] + ':4500'); // sets the ip and port to use with socket.io
 
 var profanitySettings = 0;
 
 loadProfanity();
-
 adminAuth()
 
 //When the server connection is lost 
@@ -15,7 +12,7 @@ socket.on('disconnect', () => {
 
 
 function adminAuth(){
-    socket.emit(`admin-auth`, sessionStorage.getItem('Admin_token'))
+    socket.emit(`admin-auth`, rsaEncrypt(sessionStorage.getItem('admin_secret')))
 }
 
 // Banned words list ========================================================
@@ -67,8 +64,11 @@ function updatePassword(){
         return
     }
 
-    // socket.emit('update-Password', {"userName":userName, "oldPass":oldPass, "newPass":newPass});   
-    socket.emit('update-Password', {"userName":userName,  "newPass":newPass});   // removed the old pass requrement as this is to reset passwords 
+    let data = {"userName":userName,  "newPass":newPass}
+    let dataString = JSON.stringify(data)
+    dataString = rsaEncrypt(dataString)
+
+    socket.emit('update-Password', dataString);   // removed the old pass requrement as this is to reset passwords 
 }
 
 socket.on('update-Password-Status' , (passStatus) => {
@@ -93,7 +93,11 @@ function updateName(){
         return
     }
 
-    socket.emit('update-Name', {"userId":userId, "firstName":firstName, "lastName":lastName});
+    let user = {"userId":userId, "firstName":firstName, "lastName":lastName}
+    let userString = JSON.stringify(user)
+    userString = rsaEncrypt(userString)
+
+    socket.emit('update-name', userString);
 }
 
 socket.on('update-Name-Status' , (nameStatus) => {
@@ -151,12 +155,12 @@ function register(){
         alert("You have missing values");
         return;
     }else{
-        socket.emit('create-account', {"username": usernameinput, "firstName": firstName.value, "lastName": lastName.value, "password": passwordValue});
+
+        let user = {"username": usernameinput, "firstName": firstName.value, "lastName": lastName.value, "password": passwordValue}
+        let userString = JSON.stringify(user)
+        userString = rsaEncrypt(userString)
+        socket.emit('create-account', userString)
     }
-
-
-    // Checks to see if details are valid, then sends them on to the server. 
-
 }
 
 // ===============================================================================
@@ -177,19 +181,24 @@ socket.on('delete-success', () => {
 // Checks to see if details are valid, then sends them on to the server. 
 function deleteUser(){
 	var usernameinput = document.getElementById("username_delete").value 
-
 	
 	//check 
 	if (usernameinput == null){
 		alert("UserName Empty");
         return; 
 	}else{
-        socket.emit('delete-account', {"username": usernameinput});
+
+        let the_json = {"username" : usernameinput}
+        let data = JSON.stringify(the_json)
+        data = rsaEncrypt(data)
+
+        socket.emit('delete-account', data);
         document.getElementById("username_delete").value = ""
 
     }
 }
 //  =================================================================================
+
 
 //  Read users ======================================================================
 
@@ -225,3 +234,23 @@ socket.on('read-success', (userData) => {
 socket.on('read-fail', () => {
     alert("fail");
 })
+
+// ================================================================================
+
+// Encryption ==========================================================================
+
+function rsaEncrypt(data){
+    data = btoa(unescape(encodeURIComponent(data + " , " + sessionStorage.getItem('admin_secret'))))
+
+    let encrypted = cryptico.encrypt(data, sessionStorage.getItem('serverPublic'))
+
+    if (encrypted.cipher != null){
+        return encrypted.cipher
+    }else{
+        return 0
+    }
+}
+
+
+// =================================================================================
+

@@ -81,7 +81,7 @@
         // Posts the user details to the server so the server can check them 
         function APILogin(serverPublic){
 
-            let rsaNum = crypto.getRandomValues(new Uint32Array(1)) /2**64
+            let rsaNum = crypto.getRandomValues(new Uint32Array(1)) /2**64 // Random values to be used as a password
             let rsaPass = rsaNum.toString()
             console.log(rsaPass)
 
@@ -90,7 +90,7 @@
             var public = cryptico.publicKeyString(private);   
 
             //Adding keys to session Storage 
-            sessionStorage.setItem(`rsaPass`, rsaPass) // can't seem to put the key in session storage
+            sessionStorage.setItem(`privateKey`, private) // can't seem to put the key in session storage
             sessionStorage.setItem(`publicKey`, public)
             sessionStorage.setItem(`serverPublic`, serverPublic)
 
@@ -115,7 +115,7 @@
                     let decrypted_token = cryptico.decrypt(data.token, private)
 
                     if (decrypted_token.status == "success"){
-                        sessionStorage.setItem('Admin_token', decrypted_token.plaintext) // set's the token in session storage 
+                        sessionStorage.setItem('admin_secret', decrypted_token.plaintext) // set's the token in session storage 
                         console.log("Login success")
                         window.location.replace("./admin.html"); //changes to the main app window 
                     }else{

@@ -24,6 +24,9 @@ const cryptico = require("cryptico")
 // RSA Encrypion (for key exchange)
 const PassPhrase = "This password needs to be different for each install"; 
 var private = cryptico.generateRSAKey(PassPhrase, 1024);
+
+
+
 var public = cryptico.publicKeyString(private);       
 
 // AES Encryption (for messages)
@@ -138,6 +141,7 @@ app.post('/AdminLogin', async (req, res) => {  // Function must be async to allo
     if (password == adminPassword){
 
       let encrypted_secret = cryptico.encrypt(adminSecret, client_public_key).cipher // encrypted cipher for sending 
+
       res.status(200).send({
         message: `Authentication success`,
         token: `${ encrypted_secret }`    // the response
@@ -182,6 +186,7 @@ const io = require('socket.io')(socketPort, {
 
 const ss = require('socket.io-stream');
 const { Transform } = require("stream");
+const e = require("cors");
 
 Storage.log("Server started")
 
@@ -222,8 +227,9 @@ io.on('connection', socket => {
 
   socket.on(`admin-auth`, data => {
 
+    data = decrypt_admin(data)
+
     if (data == adminSecret){
-      // console.log("🎉🎉 " + socket.id)
       admins.push(socket.id)
     }
   })
@@ -603,7 +609,7 @@ io.on('connection', socket => {
           admins.splice(socket.id, 1);
         }
   
-        // delete users[socket.id]
+        delete users[socket.id]
   
       }
     }catch{
@@ -654,28 +660,40 @@ io.on('connection', socket => {
 
   var toggle;
 
-  socket.on('profanityToggle', (profanitySettings) => {
+  socket.on('profanityToggle', (data) => {
 
-    if (profanitySettings.profanitySettings == 1) {
+    try{
+      // data = decrypt_admin(data)
+      // profanitySettings = JSON.parse(data)
 
-      profanityFilter.toggleCustom()
-      profanityFilter.load();
-      socket.emit('toggle-update');
-      toggle == 1;
-      profanityFilter.savePreset(toggle);
-      var emitWords = profanityFilter.readBanlistFromFile();
-      socket.emit('get-Profanity', {"words": emitWords});
-    }else if (profanitySettings.profanitySettings == 0) {
+      profanitySettings = data
+      
+      if (profanitySettings.profanitySettings == 1) {
 
-      profanityFilter.toggleDefault()
-      profanityFilter.load();
-      socket.emit('toggle-update');
-      toggle == 0;
-      profanityFilter.savePreset(toggle)
-      var emitWords = profanityFilter.readBanlistFromFile();
-      socket.emit('get-Profanity' , {"words": emitWords});
+        profanityFilter.toggleCustom()
+        profanityFilter.load();
+        socket.emit('toggle-update');
+        toggle == 1;
+        profanityFilter.savePreset(toggle);
+        var emitWords = profanityFilter.readBanlistFromFile();
+        socket.emit('get-Profanity', {"words": emitWords});
+      }else if (profanitySettings.profanitySettings == 0) {
+  
+        profanityFilter.toggleDefault()
+        profanityFilter.load();
+        socket.emit('toggle-update');
+        toggle == 0;
+        profanityFilter.savePreset(toggle)
+        var emitWords = profanityFilter.readBanlistFromFile();
+        socket.emit('get-Profanity' , {"words": emitWords});
+      }
+  
+
+    }catch{
+      console.log("⚠ proffanity error")
     }
-
+    
+    
   })
 
   socket.on('profanityCustomWords', (wordsCustom) => {
@@ -697,70 +715,92 @@ io.on('connection', socket => {
   // Registering
 
   // When user tries to create account
-  socket.on('create-account', async details => {
-    // Make sure given values are valid
-    if (typeof details.username != "string"){
-      socket.emit('register-fail', 'Invalid username');
-    }
-    else if (typeof details.firstName != "string"){
-      socket.emit('register-fail', 'Invalid first name');
-    }
-    else if (typeof details.lastName != "string"){
-      socket.emit('register-fail', 'Invalid last name');
-    }
-    else if (typeof details.password != "string"){
-      socket.emit('register-fail', 'Invalid password');
-    }
-    else{
-      // Details are valid
-      try{
-        let creationSuccessful = await Storage.createAccount(details.username, details.firstName, details.lastName, details.password);
-        if (creationSuccessful === true){
-          socket.emit('register-success');
-          Storage.log("New account created: " + details.username);
-          console.log("👍 New account created: " + details.username); 
+  socket.on('create-account', async data => {
+
+    try{
+      data = decrypt_admin(data)    
+      let details = JSON.parse(data)
+  
+      // Make sure given values are valid
+      if (typeof details.username != "string"){
+        socket.emit('register-fail', 'Invalid username');
+      }
+      else if (typeof details.firstName != "string"){
+        socket.emit('register-fail', 'Invalid first name');
+      }
+      else if (typeof details.lastName != "string"){
+        socket.emit('register-fail', 'Invalid last name');
+      }
+      else if (typeof details.password != "string"){
+        socket.emit('register-fail', 'Invalid password');
+      }
+      else{
+        // Details are valid
+        try{
+          let creationSuccessful = await Storage.createAccount(details.username, details.firstName, details.lastName, details.password);
+          if (creationSuccessful === true){
+            socket.emit('register-success');
+            Storage.log("New account created: " + details.username);
+            console.log("👍 New account created: " + details.username); 
+          }
+          else{
+            socket.emit('register-fail', 'Unable to create account');
+          }
         }
-        else{
-          socket.emit('register-fail', 'Unable to create account');
+        catch (reason){
+          if (reason === "Username taken"){
+            socket.emit('register-fail', 'Username taken');
+          }
+          else{
+            socket.emit('register-fail', 'Unable to create account');
+          }
         }
       }
-      catch (reason){
-        if (reason === "Username taken"){
-          socket.emit('register-fail', 'Username taken');
-        }
-        else{
-          socket.emit('register-fail', 'Unable to create account');
-        }
-      }
+    }catch{
+      console.log("⚠ Error creating account")
     }
+   
   })
+
+
 
 
   // Deleting 
 
-  socket.on('delete-account', async details => {
-    
-    // Make sure given values are valid
-    if (typeof details.username != "string"){
-      socket.emit('delete-fail', 'Invalid username');
-    }else{
-      // Details are valid
-      try{
-        let deleteSuccessful = await Storage.deleteAccount(details.username);
-        if (deleteSuccessful === true){
-          socket.emit('delete-success');
-          Storage.log("Account deleted : " + details.username);
-          console.log("👍 Account deleted: " + details.username); 
+  socket.on('delete-account', async data => {
+    try{
+      data = decrypt_admin(data)    
+      let details = JSON.parse(data)
+
+      // Make sure given values are valid
+      if (typeof details.username != "string"){
+        socket.emit('delete-fail', 'Invalid username');
+      }else{
+        // Details are valid
+        try{
+          let deleteSuccessful = await Storage.deleteAccount(details.username);
+          if (deleteSuccessful === true){
+            socket.emit('delete-success');
+            Storage.log("Account deleted : " + details.username);
+            console.log("👍 Account deleted: " + details.username); 
+          }
+          else{
+            socket.emit('delete-fail', 'Unable to delete account');
+          }
         }
-        else{
-          socket.emit('delete-fail', 'Unable to delete account');
+        catch (reason){
+          console.log("⚠ delete fail " + reason)
+          socket.emit('delete-fail', reason);
         }
       }
-      catch (reason){
-        console.log("⚠ delete fail " + reason)
-        socket.emit('delete-fail', reason);
-      }
+
+    }catch{
+      console.log("⚠ error decrypting data")
     }
+   
+
+    
+    
   })
 
   // Reading
@@ -775,8 +815,12 @@ io.on('connection', socket => {
 
   // Updating 
 
-  socket.on('update-Name' , async (user) => {
+  socket.on('update-name' , async (data) => {
     try{
+
+      data = decrypt_admin(data)    
+      let user = JSON.parse(data)
+
       let accountFirst = await Storage.changeFirstName(user.userId, user.firstName);
       let accountLast = await Storage.changeLastName(user.userId, user.lastName);
   
@@ -792,8 +836,13 @@ io.on('connection', socket => {
   })
 
 
-  socket.on('update-Password', async (user) => {
+  // Updating password 
+  socket.on('update-Password', async (data) => {
     try{
+
+      data = decrypt_admin(data)
+      user = JSON.parse(data)
+
       let account = await Storage.getAccount(user.userName)
       let passChange = await Storage.changePassword(user.userName, user.newPass);
 
@@ -1097,16 +1146,33 @@ function checkAuth(socket){
   }
 }
 
+//Aes encryption for client server messages 
 function encrypt(data){
   data = Buffer.from(data).toString('base64')
   let encrypted = cryptico.encryptAESCBC(data, AESKey)
   return encrypted
 }
 
+// Aes decryption for client server messages 
 function decrypt(data){
   let decrypted = cryptico.decryptAESCBC(data, AESKey)
   decrypted = Buffer.from(decrypted, 'base64').toString()
   return decrypted
+}
+
+
+// Decrypt messages from the admin interface
+function decrypt_admin(data){
+  data = cryptico.decrypt(data, private)
+  data = Buffer.from(data.plaintext, 'base64').toString()
+  let out = data.split(" , ")
+  if (out[1] == adminSecret){
+    return out[0]
+  }else{      // This else is triggered when a non-admin tries to use admin commands
+    console.log("⚠⚠ Admin failed security check. ⚠⚠")
+    Storage.log("Admin failed security check")
+    return
+  }
 }
 
 function bufferToString(buffer){
@@ -1148,4 +1214,3 @@ function addToAvailableFiles(position){
   }
   else return availableFilesIndeces[position];
 }
-
