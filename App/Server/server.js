@@ -24,6 +24,9 @@ const cryptico = require("cryptico")
 // RSA Encrypion (for key exchange)
 const PassPhrase = "This password needs to be different for each install"; 
 var private = cryptico.generateRSAKey(PassPhrase, 1024);
+
+
+
 var public = cryptico.publicKeyString(private);       
 
 // AES Encryption (for messages)
@@ -42,7 +45,6 @@ const checkInWindow = 40000 //the time window the client has to check in (needs 
 
 
 var adminSecret = require('crypto').randomBytes(256).toString('hex'); 
-var AdminAESKey = cryptico.generateAESKey(PassPhrase, 1024)
 
 var adminPassword = "password"
 
@@ -607,7 +609,7 @@ io.on('connection', socket => {
           admins.splice(socket.id, 1);
         }
   
-        // delete users[socket.id]
+        delete users[socket.id]
   
       }
     }catch{
@@ -1125,7 +1127,7 @@ function checkAuth(socket){
          and the function shouldn't run, because of the above return statement 
 
       */
-      console.log("👢 " + socket.id + " Kicked as username was null ")  
+      // console.log("👢 " + socket.id + " Kicked as username was null ")  
 
 
       socket.disconnect()

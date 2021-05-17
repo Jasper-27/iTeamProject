@@ -7,12 +7,7 @@ adminAuth()
 
 
 // rsa private key for decryption 
-var rsaPass = sessionStorage.getItem('rsaPass')
-var private = cryptico.generateRSAKey(rsaPass, 1024); 
-
-console.log("here")
-
-
+var private = sessionStorage.getItem('privateKey')
 
 
 //When the server connection is lost 
@@ -264,18 +259,19 @@ function rsaEncrypt(data){
 
 function rsaDecrypt(data){
 
+    let test = cryptico.encrypt("test", sessionStorage.getItem('publicKey'))
+
     console.log(data)
-    console.log(private)
-    let decrypted = cryptico.decrypt(data, private)
-    console.log("")
-    console.log(decrypted)
+    // let out = cryptico.decrypt(data, private)  
+    let out = cryptico.decrypt(test, private) // console.log("")
+    // console.log(decrypted)
     
-    if (typeof decrypted != 'string'){
-        decrypted = decodeURIComponent(escape(window.atob(decrypted)));
-        return decrypted
-    }
+    // if (typeof decrypted != 'string'){
+    //     decrypted = decodeURIComponent(escape(window.atob(decrypted)));
+    //     return decrypted
+    // }
     
-    return
+    return out
 }
 
 
@@ -283,8 +279,8 @@ function rsaDecrypt(data){
 function test(string){
 
     let x = rsaEncrypt(string)
-
-    console.log(rsaDecrypt(x))
+    rsaDecrypt(x)
+    
 }
   
 
