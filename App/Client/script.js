@@ -27,6 +27,9 @@ var timeout = null;
 var settings 
 
 var connectedUsersList = document.getElementById('users');  // The HTML list that contains the connected users 
+var connectedUsersListPopUp = document.getElementById('usersPopup'); //
+
+
 profilePictures = {};  // Format {<username>:<profile picture (as base64 string)>}
 usersListImageElements = {};  // Holds references to the HTML image elements for each user in the connected users list.  Format: {<username>: <HTML element>}
 
@@ -514,27 +517,35 @@ function getUsers(){
 
 // Fills up the connected users list on the client interface 
 function generateUserList(list){
-	
   // get current time
   var current = new Date();
   var current = current.toLocaleTimeString();
 	
   connectedUsersList.innerHTML = " ";
+  connectedUsersListPopup = document.getElementById('usersPopup');
+  connectedUsersListPopUp.innerHTML = " ";
 
   list.forEach((item, index) => {
     // Add entry to profilePictures using default image
     if (profilePictures[item] === undefined) profilePictures[item] = defaultProfilePicture;
     var entry = document.createElement('li');
+    var entryPopup = document.createElement('li');
+    
 	
 	connectedUsersList.appendChild(entry);
+  connectedUsersListPopUp.appendChild(entryPopup)
 	
 	var chatList = document.createElement('div');
 	chatList.className = "chatList";
+  var chatListPopup = document.createElement('div');
+	chatListPopup.className = "chatList";
 	
 	entry.appendChild(chatList);
+  entryPopup.appendChild(chatListPopup);
 	
 	var img = document.createElement('div');
 	img.className = "img";
+  img.style = "max-width: 5vh; height: auto;";
 	
 	chatList.appendChild(img);
 	
@@ -551,18 +562,30 @@ function generateUserList(list){
 	
 	var desc = document.createElement('div');
 	desc.className = "feedback";
+  var descPopUp = document.createElement('div');
+	descPopUp.className = "feedback";
 	
 	var name = document.createElement('h5')
 	name.innerText = item;
+  var namePopUp = document.createElement('h5')
+	namePopUp.innerText = item;
 	
 	desc.appendChild(name);
+  descPopUp.appendChild(namePopUp);
 	
 	var small = document.createElement('small');
 	small.innerText = "Last seen: " + current;
+  var smallPopUp = document.createElement('small');
+	smallPopUp.innerText = "Last seen: " + current;
 	
 	desc.appendChild(small);
+  descPopUp.appendChild(smallPopUp);
 		
 	chatList.appendChild(desc);
+  chatListPopup.appendChild(descPopUp);
+  
+
+  
 	
     //entry.appendChild(document.createTextNode(item));
     //connectedUsersList.appendChild(entry);
