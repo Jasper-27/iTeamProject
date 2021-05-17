@@ -262,33 +262,6 @@ function rsaEncrypt(data){
     }
 }
 
-function rsaDecrypt(data){
-
-    let test = cryptico.encrypt("test", sessionStorage.getItem('publicKey'))
-
-    console.log(data)
-    // let out = cryptico.decrypt(data, private)  
-    let out = cryptico.decrypt(test, private) // console.log("")
-    // console.log(decrypted)
-    
-    // if (typeof decrypted != 'string'){
-    //     decrypted = decodeURIComponent(escape(window.atob(decrypted)));
-    //     return decrypted
-    // }
-    
-    return out
-}
-
-
-
-function test(string){
-
-    let x = rsaEncrypt(string)
-    rsaDecrypt(x)
-    
-}
-  
-
 
 // =================================================================================
 
