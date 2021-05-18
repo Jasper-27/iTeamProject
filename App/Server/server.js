@@ -137,26 +137,18 @@ app.post('/AdminLogin', async (req, res) => {  // Function must be async to allo
     const { hashed_password } = req.body; 
     const { client_public_key } = req.body; 
 
-    // console.log(client_public_key)
 
+    // decrypt password
     let password = cryptico.decrypt(hashed_password, private).plaintext
 
 
-
-    // fs.readFile('', function (err, adminHash) {
-    // if (err) {
-    //   return console.error(err);
-    // }
-
-
-
-
+    // when the password hash has been read, compare
     fs.readFile('data/adminPass.txt', function (err, adminHash) {
-      if (err) {
-        return console.error(err);
+      if (err) {  
+        return console.error(err); 
       }
-      let isValidPass = bcrypt.compareSync(password, adminHash.toString());
 
+      let isValidPass = bcrypt.compareSync(password, adminHash.toString());
 
       if (isValidPass == true){
 
@@ -174,7 +166,7 @@ app.post('/AdminLogin', async (req, res) => {  // Function must be async to allo
         console.log("incorrect Admin credentials")
         res.status(406).send({message: 'Incorrect credentials'})
       }
-   });
+   })
 
   }catch (err){
     res.status(500).send({message: 'An internal error occurred'});
