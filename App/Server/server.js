@@ -708,6 +708,23 @@ io.on('connection', socket => {
     })
   })
 
+  // Listens to when the file size is changed by admin
+  socket.on('changeFileSize', (newFileSize) => {
+
+    // Updates file size limit
+    settings.fileSizeLimit = newFileSize;
+
+    console.log(settings);
+  })
+
+  // Listens to when message length limit is changed by admin
+  socket.on('changeMsgLimit', (newMsgLimit) => {
+
+    // Updates message length limit
+    settings.messageLimit = newMsgLimit;
+
+    console.log(settings);
+  })
 
   // Admin =====================================================================================================
 

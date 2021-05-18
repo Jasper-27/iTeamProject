@@ -49,9 +49,24 @@ function bannedWordsCustom() {
     console.log("profanity settings = " + profanitySettings);
 }
 
+// Function when file size limit is changed
+function changeFileSize() {
+
+    var newFileSize = document.getElementById("txtFileSize").value;
+    socket.emit('changeFileSize', newFileSize);
+}
+
+// Function when message limit is changed
+function changeMsgLimit() {
+
+    var newMsgLimit = document.getElementById("txtMessageLength").value;
+    socket.emit('changeMsgLimit', newMsgLimit);
+}
+
 var btnDefault = document.getElementById("btnDefault");
 var btnCustom = document.getElementById("btnCustom");
 var btnSubmit = document.getElementById("btnSubmitWords");
+var btnChangeFileSize = document.getElementById("btnSubmitFileSize");
 
 // On click event when default profanity filter is selected
 btnDefault.onclick = function() {
@@ -76,6 +91,8 @@ btnSubmitWords.onclick = function() {
     submitWordsCustom();
     document.getElementById("btnSubmitWords").innerHTML = "Done!";
 }
+
+
 // =====================================================================
 
 
