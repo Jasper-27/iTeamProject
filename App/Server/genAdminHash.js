@@ -13,5 +13,5 @@ const hash = bcrypt.hashSync(args[0], salt);
 // Write the hash to the file
 fs.writeFile('data/adminPass.txt', hash, function (err) {
   if (err) return console.log(err);
-  console.log('saved password');
+  console.log('😊 Password updated');
 });
