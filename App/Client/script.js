@@ -5,6 +5,9 @@ const messageInput = document.getElementById('message-input');
 const fileSelectButton = document.getElementById("choose-file-button");
 const messageFileSelector = document.getElementById("choose-file-dialog");  // The <input type="file"/> element for selecting a file to send
 const feedback = document.getElementById("feedback");
+const changePfpButton = document.getElementById('PfpButton');
+const pfpModal = document.getElementById('changePfpModal');
+const pfpImageSelector = document.getElementById('pfpInput');
 
 
 var AESKey = ""
@@ -32,6 +35,7 @@ var connectedUsersListPopUp = document.getElementById('usersPopup'); //
 
 profilePictures = {};  // Format {<username>:<profile picture (as base64 string)>}
 usersListImageElements = {};  // Holds references to the HTML image elements for each user in the connected users list.  Format: {<username>: <HTML element>}
+changePfpButton.src = defaultProfilePicture;
 
 // Used for detecting spam
 var spamCounter = 0;
@@ -553,6 +557,7 @@ function generateUserList(list){
 	icon.className ="fa fa-circle";
 	var image1 = document.createElement('img');
 	image1.src = profilePictures[item];
+  image1.alt = `${item}'s profile picture`;
 	
 	img.appendChild(icon);
 	img.appendChild(image1);
@@ -782,11 +787,23 @@ function sendFileStream(){  // Takes a JS file object and opens a stream to the 
   socket.emit('request-send-stream', {"type": "file_message", "size": base64Length, "messageDetails": messageDetails});  // Type specifies whether this is part of a message or a profile picture
 }
 
+function selectPfp(){
+  // Open pfp selector
+  pfpImageSelector.click();
+}
+
 var newProfilePicture;
 function changeProfilePicture(){
-  if (0 < messageFileSelector.files.length){
-    newProfilePicture = messageFileSelector.files[0];
+  let feedbackMessageDiv = document.getElementById("changePfpFeedback");
+  if (0 < pfpImageSelector.files.length){
+    feedbackMessageDiv.display = "none";
+    newProfilePicture = pfpImageSelector.files[0];
     socket.emit('request-change-pfp-stream', {"fileSize": (4 * Math.ceil(newProfilePicture.size / 3)) + newProfilePicture.type.length + 13});
+    pfpModal.style.display = "none";
+  }
+  else{
+    feedbackMessageDiv.innerText = "No image selected";
+    feedbackMessageDiv.style.display = "block";
   }
 }
 
@@ -932,6 +949,7 @@ ss(socket).on('accept-pfp-stream', stream => {
       profilePictures[currentUser] = data;
       // Update profile picture in connected users list
       if (usersListImageElements[currentUser] != undefined) usersListImageElements[currentUser].src = data;
+      if (currentUser === myUsername) changePfpButton.src = data;
       socket.once('next-pfp', startNewPic);
       // Acknowledge that we are ready for the next picture
       socket.emit('ack-end-pfp');
@@ -945,6 +963,7 @@ ss(socket).on('accept-pfp-stream', stream => {
         profilePictures[currentUser] = data;
         // Update profile picture in connected users list
         if (usersListImageElements[currentUser] != undefined) usersListImageElements[currentUser].src = data;
+        if (currentUser === myUsername) changePfpButton.src = data;
         socket.once('next-pfp', startNewPic);
         // Acknowledge that we are ready for the next picture
         socket.emit('ack-end-pfp');
