@@ -227,11 +227,16 @@ io.on('connection', socket => {
 
   socket.on(`admin-auth`, data => {
 
-    data = decrypt_admin(data)
+    try{
+      data = decrypt_admin(data)
 
-    if (data == adminSecret){
-      admins.push(socket.id)
+      if (data == adminSecret){
+        admins.push(socket.id)
+      }
+    }catch{
+      socket.disconnect()
     }
+    
   })
 
   // Every min re-authenticate the clients. 
