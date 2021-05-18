@@ -52,15 +52,27 @@ function bannedWordsCustom() {
 // Function when file size limit is changed
 function changeFileSize() {
 
-    var newFileSize = document.getElementById("txtFileSize").value;
+    var newFileSize = Number(document.getElementById("txtFileSize").value);
     socket.emit('changeFileSize', newFileSize);
 }
 
 // Function when message limit is changed
 function changeMsgLimit() {
 
-    var newMsgLimit = document.getElementById("txtMessageLength").value;
+    var newMsgLimit = Number(document.getElementById("txtMessageLength").value);
     socket.emit('changeMsgLimit', newMsgLimit);
+}
+
+// Function when banned file extensions is changed
+function changeBannedFiles() {
+
+    var newBannedFiles = document.getElementById("bannedFileExtensions").value.split("\n");
+    socket.emit('changeBannedFiles', newBannedFiles);
+
+    for (var i in newBannedFiles) {
+
+        document.getElementById("changeBannedFiles").innerHTML = document.getElementById('changeBannedFiles') + i;
+    }
 }
 
 var btnDefault = document.getElementById("btnDefault");

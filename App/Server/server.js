@@ -726,6 +726,15 @@ io.on('connection', socket => {
     console.log(settings);
   })
 
+  // Listens to when banned files is changed by admin
+  socket.on('changeBannedFiles', (newBannedFiles) => {
+
+    // Updates banned files list
+    settings.restrictedFiles = newBannedFiles;
+
+    console.log(settings);
+  })
+
   // Admin =====================================================================================================
 
   // Registering
@@ -1024,6 +1033,7 @@ function messageChecks(message){
 
   if (message.type === "text" && message.content.length > settings.messageLimit || message.content.length > 40000 || (message.fileName != undefined && 255 < message.fileName.length)){ // again, just for redundancy.  Absolute limit is 40000 
     console.log("🚨 A message that was too long got though");
+
     return false
   }
 
