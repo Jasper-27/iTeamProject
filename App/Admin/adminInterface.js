@@ -22,6 +22,10 @@ function bannedWordsDefault(){
     socket.emit('profanityToggle', {"profanitySettings": profanitySettings});
     console.log(profanitySettings);
     document.getElementById('profanityListCustom').readOnly = true;
+
+    document.getElementById("btnDefault").style.background = "#0275d8";
+    document.getElementById("btnCustom").style.background = "#343a40";
+    document.getElementById("btnSubmitWords").innerHTML = "Submit";
 }
 
 // This is what happens when u click submit
@@ -33,6 +37,9 @@ function submitWordsCustom(){
     // Toggles profanity list to custon
     let profanitySettings = 1;
     socket.emit('profanityToggle', {"profanitySettings": profanitySettings});
+
+    document.getElementById("btnSubmitWords").innerHTML = "Done!";
+
 }
 
 function loadProfanity(){
@@ -47,6 +54,10 @@ function bannedWordsCustom() {
     profanitySettings = 1;
     socket.emit('profanityToggle', {"profanitySettings": profanitySettings});
     console.log("profanity settings = " + profanitySettings);
+
+    document.getElementById("btnCustom").style.background = "#343a40"
+    document.getElementById("btnDefault").style.background = "#0275d8"
+    document.getElementById("btnSubmitWords").innerHTML = "Submit";
 }
 
 // Function when file size limit is changed
@@ -73,35 +84,6 @@ function changeBannedFiles() {
 
         document.getElementById("changeBannedFiles").innerHTML = document.getElementById('changeBannedFiles') + i;
     }
-}
-
-var btnDefault = document.getElementById("btnDefault");
-var btnCustom = document.getElementById("btnCustom");
-var btnSubmit = document.getElementById("btnSubmitWords");
-var btnChangeFileSize = document.getElementById("btnSubmitFileSize");
-
-// On click event when default profanity filter is selected
-btnDefault.onclick = function() {
-    bannedWordsDefault();
-    btnDefault.style.background = "#0275d8";
-    btnCustom.style.background = "#343a40";
-    document.getElementById("btnSubmitWords").innerHTML = "Submit";
-
-}
-
-// On click event when custom profanity filter is selected
-btnCustom.onclick = function() {
-    bannedWordsCustom();
-    btnDefault.style.background = "#343a40"
-    btnCustom.style.background = "#0275d8"
-    document.getElementById("btnSubmitWords").innerHTML = "Submit";
-
-}
-
-// On click event when custom profanity filter is submitted
-btnSubmitWords.onclick = function() {
-    submitWordsCustom();
-    document.getElementById("btnSubmitWords").innerHTML = "Done!";
 }
 
 
@@ -276,13 +258,16 @@ function readUser(){
 }
 
 function msgAlert2(TITLE,FIRST,LAST) {
-    "use strict";   
-    document.getElementById("readAccounts").innerHTML = `<span class='closebtn' onclick="this.parentElement.style.visibility='hidden';"'>&times;</span><strong>   ${TITLE}  </strong>  ${FIRST} ${LAST}`;
+    // "use strict";   
+    console.log("nun");
+    document.getElementById("readAccounts").innerHTML = `<span class='closebtn' onclick="this.parentElement.style.visibility='hidden';"'>&times;</span><strong>Username: ${TITLE}  </strong>\nFirst Name: ${FIRST}\nLast Name: ${LAST}`;
     readAccounts.style.visibility = 'visible';
-    return;
-  }
+    // return;
+}
 
 socket.on('read-success', (userData) => {
+
+    console.log("nun")
     // alert("username: " + userData.userName + ", first name: " + userData.firstName)
     msgAlert2(userData.userName, userData.firstName, userData.lastName)
 })

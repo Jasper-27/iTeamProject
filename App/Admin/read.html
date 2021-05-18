@@ -67,24 +67,17 @@
 
         <div class="col" id="right" style="border-width: 1.5px;border-style: solid;border-radius: 5px;padding-top: 10px;">
            
-            <form>
+            <div class="form-group">
+                
+                <input class="form-control" type="text" id="read" placeholder="Username" name="username">
+            </div>
 
-                <div class="form-group">
-                    <label for="username">Username</label>
-                    <input type="username" class="form-control" placeholder="Username" id="read">
-                </div>
+            <div class="form-group">
 
-                <button class="btn btn-primary btn-block" id="submit" onclick="readUser()" style="margin-bottom: 20px;">View</button>
+                <button class="btn btn-primary btn-block" id="submit" type="submit" onclick="readUser()" >Read</button>
+            </div>
 
-                <div class="form-group">
-
-                </div>
-
-                <div class="form-group">
-
-                </div>
-
-            </form>
+            <div class="alert2" id="readAccounts" style="visibility: hidden; margin-bottom: 20px; white-space: pre-wrap;"></div>
         </div>
     </div>
  
