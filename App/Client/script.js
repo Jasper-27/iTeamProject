@@ -707,6 +707,12 @@ socket.on('user_typing', myUsername => {
   timeout = setTimeout(invisible, 4000)
 })
 
+socket.on('pfp-changed', data => {
+  // Server sent a notification that the given user's profile picture has been updated
+  let user = decrypt(data);
+  socket.emit('request-pfp-stream', user);
+});
+
 // Function which makes the feedback div invisible.
 function invisible(){
   feedback.style.visibility = 'hidden';

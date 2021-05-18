@@ -501,6 +501,9 @@ io.on('connection', socket => {
         let accountData = await Storage.getAccount(users[socket.id]);
         if (accountData instanceof Account) {
           loggedInUsers[users[socket.id]].profilePicturePos = accountData.profilePictureLocation;
+          // Notify all clients that the profile picture was updated
+          socket.to('authorised').emit('pfp-changed', encrypt(users[socket.id]));
+          socket.emit('pfp-changed', users[socket.id]);
         }
         if (loggedInUsers[users[socket.id]] != undefined) loggedInUsers[users[socket.id]].sendStream = null;
       });
