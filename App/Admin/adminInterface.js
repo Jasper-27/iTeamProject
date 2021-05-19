@@ -22,6 +22,10 @@ function bannedWordsDefault(){
     socket.emit('profanityToggle', {"profanitySettings": profanitySettings});
     console.log(profanitySettings);
     document.getElementById('profanityListCustom').readOnly = true;
+
+    document.getElementById("btnDefault").style.background = "#0275d8";
+    document.getElementById("btnCustom").style.background = "#343a40";
+    document.getElementById("btnSubmitWords").innerHTML = "Submit";
 }
 
 // This is what happens when u click submit
@@ -33,6 +37,9 @@ function submitWordsCustom(){
     // Toggles profanity list to custon
     let profanitySettings = 1;
     socket.emit('profanityToggle', {"profanitySettings": profanitySettings});
+
+    document.getElementById("btnSubmitWords").innerHTML = "Done!";
+
 }
 
 function loadProfanity(){
@@ -47,9 +54,60 @@ function bannedWordsCustom() {
     profanitySettings = 1;
     socket.emit('profanityToggle', {"profanitySettings": profanitySettings});
     console.log("profanity settings = " + profanitySettings);
+
+    document.getElementById("btnCustom").style.background = "#343a40"
+    document.getElementById("btnDefault").style.background = "#0275d8"
+    document.getElementById("btnSubmitWords").innerHTML = "Submit";
 }
 
-// ======================================================================
+
+// =====================================================================
+
+// Changing settings  ===========================================
+
+
+// Function when file size limit is changed
+function changeFileSize() {
+
+    var newFileSize = Number(document.getElementById("txtFileSize").value);
+
+    newFileSize = rsaEncrypt(newFileSize)
+
+    socket.emit('changeFileSize', newFileSize);
+}
+
+
+// Function when message limit is changed
+function changeMsgLimit() {
+
+    var newMsgLimit = Number(document.getElementById("txtMessageLength").value);
+
+    if (newMsgLimit > 40000) {
+        newMsgLimit = 40000;
+    }
+    if (newMsgLimit < 50) {
+        newMsgLimit = 50;
+    }
+
+    newMsgLimit = rsaEncrypt(newMsgLimit)
+
+    socket.emit('changeMsgLimit', newMsgLimit);
+}
+
+// Function when banned file extensions is changed
+function changeBannedFiles() {
+
+    var newBannedFiles = document.getElementById("bannedFileExtensions").value.split("\n");
+
+    newBannedFiles = rsaEncrypt(newBannedFiles)
+
+    socket.emit('changeBannedFiles', newBannedFiles);
+
+
+}
+
+
+// =====================================================================
 
 
 // Updating user details =================================================
@@ -220,13 +278,16 @@ function readUser(){
 }
 
 function msgAlert2(TITLE,FIRST,LAST) {
-    "use strict";   
-    document.getElementById("readAccounts").innerHTML = `<span class='closebtn' onclick="this.parentElement.style.visibility='hidden';"'>&times;</span><strong>   ${TITLE}  </strong>  ${FIRST} ${LAST}`;
+    // "use strict";   
+    console.log("nun");
+    document.getElementById("readAccounts").innerHTML = `<span class='closebtn' onclick="this.parentElement.style.visibility='hidden';"'>&times;</span><strong>Username: ${TITLE}  </strong>\nFirst Name: ${FIRST}\nLast Name: ${LAST}`;
     readAccounts.style.visibility = 'visible';
-    return;
-  }
+    // return;
+}
 
 socket.on('read-success', (userData) => {
+
+    console.log("nun")
     // alert("username: " + userData.userName + ", first name: " + userData.firstName)
     msgAlert2(userData.userName, userData.firstName, userData.lastName)
 })
