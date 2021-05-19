@@ -11,18 +11,20 @@
     <link rel="stylesheet" href="assets/fonts/ionicons.min.css">
     
 	    	<!-- Links for the style sheets Colour -->
-	<link rel="stylesheet" href="assets/css/colour/light/styles-Colour.css">
+	<!-- <link rel="stylesheet" href="assets/css/colour/light/styles-Colour.css"> -->
 	
 	    	<!-- Links for the style sheets Layout -->
-	<link rel="stylesheet" href="assets/css/layout/normal/styles.css">
+	<!-- <link rel="stylesheet" href="assets/css/layout/normal/styles.css"> -->
+    
 
+    <link rel="stylesheet" href="assets/css/landingPage.css">
      
     <!-- For the PWA -->
     <link rel="manifest" href="manifest.json"> 
 
 </head>
 
-<body>
+<body class = "landing-page">
     <nav class="navbar navbar-light navbar-expand-md">
         <div class="container-fluid"><a class="navbar-brand" href="#">WinkieMessenger</a><button data-toggle="collapse" class="navbar-toggler" data-target="#navcol-1"><span class="sr-only">Toggle navigation</span><span class="navbar-toggler-icon"></span></button>
             <div class="collapse navbar-collapse" id="navcol-1">
@@ -36,19 +38,46 @@
     <div></div>
 
 
-    <div height="100%">
-        <div class="container" align="center">
+    <div height="100%" >
+
+        <div class="container content-box" align="center">
             <h1>WinkieMessenger</h1>
 
-            <img src="logo.png" alt="The winkieMessenger logo" style="width:300px;height:300;">
+            <img src="logo.png" class ="logo" alt="The winkieMessenger logo" >
 
-            <br/>
-
-            <a href="loginPage.html"  class="btn btn-primary button">Go to app</a>
+            <a href="loginPage.html"  class="start-button btn btn-primary ">Enter</a>
             
-            <br/>
-            <a href="https://en.wikipedia.org/wiki/Winkie_(pigeon)" class="btn button">About the name</a>
+            <p></p>
+            <p></p>
 
+        
+            <div class="credits">
+                <h4 >Credits:</h4>
+                
+                <a class="name" href="https://github.com/AlexFF000 " target="_blank">Alex Redmond</a>
+                <a class="name" href="https://github.com/CallumGWilliams" target="_blank">Callum G Williams</a>
+                <a class="name" href="https://github.com/etiennebrandd" target="_blank">Etienne Brand</a>
+                <a class="name" href="https://github.com/hannahmaebrown " target="_blank">Hannah-Mae Brown</a>
+                <a class="name" href="https://github.com/Jasper-27 "  target="_blank">Jasper Cox</a>
+                <a class="name" href="https://github.com/Tom451 "  target="_blank">Tom Nash</a>
+            </div>
+
+            <p></p>
+
+
+            <div class="about-name"> 
+                <a  href="https://en.wikipedia.org/wiki/Winkie_(pigeon)" class="name"  target="_blank">About the name</a>
+            </div>
+
+            <div class="github"> 
+                <a href="https://github.com/Jasper-27/iTeamProject"  target="_blank">GitHub</a>            
+            </div>
+
+            
+        </div>
+
+
+        
     </div>
     <!-- Servce worker -->
     <script>
