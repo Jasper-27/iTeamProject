@@ -722,7 +722,6 @@ io.on('connection', socket => {
     var res = wordsCustom.wordsCustom.split(" ").join("\n")
     const fs = require("fs") // !This shouldn't be here - Jasper 
 
-    // Writes to the bannedWordsCustom file that is used
     fs.writeFile("bannedWordsCustom.txt", res, function (err) {
       if(err){
           return console.log(err);
@@ -730,6 +729,53 @@ io.on('connection', socket => {
     })
   })
 
+  // Listens to when the file size is changed by admin
+  socket.on('changeFileSize', (newFileSize) => {
+    try{
+      newFileSize = decrypt_admin(newFileSize)
+
+      // Updates file size limit
+      settings.fileSizeLimit = newFileSize;
+
+      console.log("🗃 Admin changed file size limit");
+    }catch{
+      console.log("⚠ Error cahnging maximum file size")
+    }
+      
+  })
+
+  // Listens to when message length limit is changed by admin
+  socket.on('changeMsgLimit', (newMsgLimit) => {
+
+    try{
+      newMsgLimit = decrypt_admin(newMsgLimit)
+
+      // Updates message length limit
+      settings.messageLimit = newMsgLimit;
+
+      console.log("📰 Admin changed message size limit")
+  
+    }catch{
+      console.log("⚠ Error changing message length limit")
+    }
+   
+  })
+
+  // Listens to when banned files is changed by admin
+  socket.on('changeBannedFiles', (newBannedFiles) => {
+    try{
+
+      newBannedFiles = decrypt_admin(newBannedFiles)
+
+      // Updates banned files list
+      settings.restrictedFiles = newBannedFiles;
+
+      console.log("📂 changed Admin banned files settings")
+    }catch{
+      console.log("⚠ Error changing banned files")
+    }
+
+  })
 
   // Admin =====================================================================================================
 
@@ -1029,6 +1075,7 @@ function messageChecks(message){
 
   if (message.type === "text" && message.content.length > settings.messageLimit || message.content.length > 40000 || (message.fileName != undefined && 255 < message.fileName.length)){ // again, just for redundancy.  Absolute limit is 40000 
     console.log("🚨 A message that was too long got though");
+
     return false
   }
 

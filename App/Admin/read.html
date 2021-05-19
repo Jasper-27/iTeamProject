@@ -1,10 +1,10 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
-    <title>Winki - Admin</title>
+    <title>Read Account</title>
 
     <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css">
 	
@@ -63,55 +63,21 @@
             </ul>
         </nav>
 
-        <h1>General Settings</h1>
+        <h1>View Account</h1>
 
         <div class="col" id="right" style="border-width: 1.5px;border-style: solid;border-radius: 5px;padding-top: 10px;">
-            <div id="RightItems"></div>
-                <!-- <h3 class="text-primary">Banned Words</h3> -->
+           
+            <div class="form-group">
                 
-                <form class="form-inline" style="padding-bottom: 30px;">
-
-                    <div class="col">
-                        <h3 class="text-primary" style="margin-top: 5px;">Profanity Filter</h3>
-
-                        <button id="btnDefault" class="btn btn-primary" type="button" onclick="bannedWordsDefault()">Default</button>
-                        <button id="btnCustom" class="btn btn-dark" type="button" onclick="bannedWordsCustom()">Custom</button><br>
-
-                        <textarea rows="16" name="profanityListCustom" id="profanityListCustom" style="max-width: 100%;"></textarea>
-
-                        <button id="btnSubmitWords" class="btn btn-primary" type="button" style="margin-top: 70px; margin-left: -210px;" onclick="submitWordsCustom()">Submit</button>
-
-                    </div>
-
-                    <div class="col">
-
-                        <h3 class="text-primary" style="margin-top: 5px;">Banned Files</h3>
-
-                        <textarea rows="16" id="bannedFileExtensions" style="max-width: 100%; margin-top: 35px;"></textarea>
-
-                        <button id="btnSubmitFiles" class="btn btn-primary" type="button" style="margin-top: 70px; margin-left: -210px;" onclick="changeBannedFiles()">Submit</button>
-
-                    </div>
-
-                    <div class="col">
-
-                        <h3 class="text-primary" style="margin-top: 5px;">File Size Limit</h3>
-
-                        <input type="text" id="txtFileSize" placeholder="Default: 10000000">
-
-                        <button id="btnSubmitFileSize" class="btn btn-primary" type="button" style="margin-top: 70px; margin-left: -210px;" onclick="changeFileSize()">Submit</button>
-
-                        <h3 class="text-primary" style="margin-top: 215px;">Message Length</h3>
-                    
-                        <input type="text" id="txtMessageLength" placeholder="Default: 250">
-
-                        <button id="btnSubmitMsgLen" class="btn btn-primary" type="button" style="margin-top: 70px; margin-left: -210px;" onclick="changeMsgLimit()">Submit</button>
-                    </div>
-
-                </form>
-
-
+                <input class="form-control" type="text" id="read" placeholder="Username" name="username">
             </div>
+
+            <div class="form-group">
+
+                <button class="btn btn-primary btn-block" id="submit" type="submit" onclick="readUser()" >Read</button>
+            </div>
+
+            <div class="alert2" id="readAccounts" style="visibility: hidden; margin-bottom: 20px; white-space: pre-wrap;"></div>
         </div>
     </div>
  
