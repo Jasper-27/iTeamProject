@@ -943,6 +943,10 @@ ss(socket).on('accept-read-stream', stream => {
   });
 });
 
+socket.on('reject-pfp-stream', reason => {
+  msgAlert("Unable to fetch profile pictures", reason);
+});
+
 ss(socket).on('accept-pfp-stream', stream => {
   let currentUser;  // The username of the user whose profile picture is currently being sent
   let data = "";
