@@ -486,7 +486,7 @@ io.on('connection', socket => {
   socket.on('request-change-pfp-stream', async imageDetails => {
     try{    // Client is requesting a stream with which they can change the user's profile picture
       if (100000 < imageDetails.fileSize){
-        socket.emit('reject-change-pfp-stream', "Must be less than 100Kb");
+        socket.emit('reject-change-pfp-stream', "File size to big. Try compressing it");
         return;
       }
       let userStream = ss.createStream();

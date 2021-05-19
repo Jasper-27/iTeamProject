@@ -126,10 +126,11 @@
 	</div>
 
 	<div id="changePfpModal" class="modal">
-		<div class="modal-content">
+		<div class="modal-content" style="width: 80%;">
 			<span class="close" onclick="document.getElementById('changePfpModal').style.display = 'none'">&times;</span>
 			<h4>Change Profile Picture</h4>
 			<input type="file" id="pfpInput" style="display: none;"/>
+			<p>This requres a logging out and back in again</p>
 			<a href="#" onclick="selectPfp();">Select Image</a>
 			<a href="#" onclick="changeProfilePicture();">Set Picture</a>
 			<p id="changePfpFeedback" style="display:none;"></p>
