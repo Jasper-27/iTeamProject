@@ -71,6 +71,14 @@ function changeFileSize() {
 function changeMsgLimit() {
 
     var newMsgLimit = Number(document.getElementById("txtMessageLength").value);
+
+    if (newMsgLimit > 40000) {
+        newMsgLimit = 40000;
+    }
+    if (newMsgLimit < 50) {
+        newMsgLimit = 50;
+    }
+
     socket.emit('changeMsgLimit', newMsgLimit);
 }
 
