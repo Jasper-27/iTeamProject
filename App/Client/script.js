@@ -801,11 +801,18 @@ function selectPfp(){
 var newProfilePicture;
 function changeProfilePicture(){
   let feedbackMessageDiv = document.getElementById("changePfpFeedback");
+  feedbackMessageDiv.display = "none";
   if (0 < pfpImageSelector.files.length){
-    feedbackMessageDiv.display = "none";
-    newProfilePicture = pfpImageSelector.files[0];
-    socket.emit('request-change-pfp-stream', {"fileSize": (4 * Math.ceil(newProfilePicture.size / 3)) + newProfilePicture.type.length + 13});
-    pfpModal.style.display = "none";
+    if (pfpImageSelector.files[0].type.split("/")[0] === "image"){
+      newProfilePicture = pfpImageSelector.files[0];
+      socket.emit('request-change-pfp-stream', {"fileSize": (4 * Math.ceil(newProfilePicture.size / 3)) + newProfilePicture.type.length + 13});
+      pfpModal.style.display = "none";
+    }
+    else{
+      feedbackMessageDiv.innerText = "File must be an image";
+      feedbackMessageDiv.style.display = "block";
+    }
+    
   }
   else{
     feedbackMessageDiv.innerText = "No image selected";
