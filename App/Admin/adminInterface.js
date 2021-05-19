@@ -60,12 +60,22 @@ function bannedWordsCustom() {
     document.getElementById("btnSubmitWords").innerHTML = "Submit";
 }
 
+
+// =====================================================================
+
+// Changing settings  ===========================================
+
+
 // Function when file size limit is changed
 function changeFileSize() {
 
     var newFileSize = Number(document.getElementById("txtFileSize").value);
+
+    newFileSize = rsaEncrypt(newFileSize)
+
     socket.emit('changeFileSize', newFileSize);
 }
+
 
 // Function when message limit is changed
 function changeMsgLimit() {
@@ -79,6 +89,8 @@ function changeMsgLimit() {
         newMsgLimit = 50;
     }
 
+    newMsgLimit = rsaEncrypt(newMsgLimit)
+
     socket.emit('changeMsgLimit', newMsgLimit);
 }
 
@@ -86,12 +98,12 @@ function changeMsgLimit() {
 function changeBannedFiles() {
 
     var newBannedFiles = document.getElementById("bannedFileExtensions").value.split("\n");
+
+    newBannedFiles = rsaEncrypt(newBannedFiles)
+
     socket.emit('changeBannedFiles', newBannedFiles);
 
-    for (var i in newBannedFiles) {
 
-        document.getElementById("changeBannedFiles").innerHTML = document.getElementById('changeBannedFiles') + i;
-    }
 }
 
 

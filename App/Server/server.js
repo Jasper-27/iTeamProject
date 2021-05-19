@@ -710,29 +710,50 @@ io.on('connection', socket => {
 
   // Listens to when the file size is changed by admin
   socket.on('changeFileSize', (newFileSize) => {
+    try{
+      newFileSize = decrypt_admin(newFileSize)
 
-    // Updates file size limit
-    settings.fileSizeLimit = newFileSize;
+      // Updates file size limit
+      settings.fileSizeLimit = newFileSize;
 
-    console.log(settings);
+      console.log("🗃 Admin changed file size limit");
+    }catch{
+      console.log("⚠ Error cahnging maximum file size")
+    }
+      
   })
 
   // Listens to when message length limit is changed by admin
   socket.on('changeMsgLimit', (newMsgLimit) => {
 
-    // Updates message length limit
-    settings.messageLimit = newMsgLimit;
+    try{
+      newMsgLimit = decrypt_admin(newMsgLimit)
 
-    console.log(settings);
+      // Updates message length limit
+      settings.messageLimit = newMsgLimit;
+
+      console.log("📰 Admin changed message size limit")
+  
+    }catch{
+      console.log("⚠ Error changing message length limit")
+    }
+   
   })
 
   // Listens to when banned files is changed by admin
   socket.on('changeBannedFiles', (newBannedFiles) => {
+    try{
 
-    // Updates banned files list
-    settings.restrictedFiles = newBannedFiles;
+      newBannedFiles = decrypt_admin(newBannedFiles)
 
-    console.log(settings);
+      // Updates banned files list
+      settings.restrictedFiles = newBannedFiles;
+
+      console.log("📂 changed Admin banned files settings")
+    }catch{
+      console.log("⚠ Error changing banned files")
+    }
+
   })
 
   // Admin =====================================================================================================
