@@ -12,7 +12,7 @@ There are three main parts of the application. The server, the admin site, and t
 # Starting the server 
 cd App/Server
 npm update
-node server.ks
+node server.js
 
 # Starting the app web server 
 cd App/Client
