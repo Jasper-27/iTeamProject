@@ -499,7 +499,7 @@ io.on('connection', socket => {
   socket.on('request-change-pfp-stream', async imageDetails => {
     try{    // Client is requesting a stream with which they can change the user's profile picture
       if (100000 < imageDetails.fileSize){
-        socket.emit('reject-change-pfp-stream', "Must be less than 100Kb");
+        socket.emit('reject-change-pfp-stream', "File size to big. Try compressing it");
         return;
       }
       let userStream = ss.createStream();
@@ -514,6 +514,9 @@ io.on('connection', socket => {
         let accountData = await Storage.getAccount(users[socket.id]);
         if (accountData instanceof Account) {
           loggedInUsers[users[socket.id]].profilePicturePos = accountData.profilePictureLocation;
+          // Notify all clients that the profile picture was updated
+          socket.to('authorised').emit('pfp-changed', encrypt(users[socket.id]));
+          socket.emit('pfp-changed', encrypt(users[socket.id]));
         }
         if (loggedInUsers[users[socket.id]] != undefined) loggedInUsers[users[socket.id]].sendStream = null;
       });
