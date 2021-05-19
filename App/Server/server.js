@@ -2,6 +2,13 @@ const Message = require("./Message");
 const DataAccess = require("./DataAccess/dataAccess");
 const profanity = require("./ProfanityFilter");
 const Settings = require("./Settings.js");
+const bcrypt = require('bcrypt');
+const colour = require("colors")
+const cryptico = require("cryptico")
+const fs = require('fs');
+
+
+
 
 const messagesFolderPath = __dirname + "/data/messages";
 const messagesIndexPath = __dirname + "/data/messages/messages_index.wdx";
@@ -16,9 +23,6 @@ var Storage = new DataAccess(messagesFolderPath, messagesIndexPath, logsFolderPa
 let users = {}  // Maps socket ids to usernames
 let loggedInUsers = {}  // Contains access token for user, uses usernames as keys
 
-
-const colour = require("colors")
-const cryptico = require("cryptico")
 
 
 // RSA Encrypion (for key exchange)
@@ -133,27 +137,36 @@ app.post('/AdminLogin', async (req, res) => {  // Function must be async to allo
     const { hashed_password } = req.body; 
     const { client_public_key } = req.body; 
 
-    // console.log(client_public_key)
 
+    // decrypt password
     let password = cryptico.decrypt(hashed_password, private).plaintext
 
 
-    if (password == adminPassword){
+    // when the password hash has been read, compare
+    fs.readFile(__dirname + '/data/adminPass.txt', function (err, adminHash) {
+      if (err) {  
+        return console.error(err); 
+      }
 
-      let encrypted_secret = cryptico.encrypt(adminSecret, client_public_key).cipher // encrypted cipher for sending 
+      let isValidPass = bcrypt.compareSync(password, adminHash.toString());
 
-      res.status(200).send({
-        message: `Authentication success`,
-        token: `${ encrypted_secret }`    // the response
-      })
+      if (isValidPass == true){
 
-      console.log("🧠 an Admin has logged in")
-      Storage.log("Admin has logged in ")
+        let encrypted_secret = cryptico.encrypt(adminSecret, client_public_key).cipher // encrypted cipher for sending 
 
-    }else{
-      console.log("incorrect Admin credentials")
-      res.status(406).send({message: 'Incorrect credentials'})
-    }
+        res.status(200).send({
+          message: `Authentication success`,
+          token: `${ encrypted_secret }`    // the response
+        })
+
+        console.log("🧠 an Admin has logged in")
+        Storage.log("Admin has logged in ")
+
+      }else{
+        console.log("incorrect Admin credentials")
+        res.status(406).send({message: 'Incorrect credentials'})
+      }
+   })
 
   }catch (err){
     res.status(500).send({message: 'An internal error occurred'});
