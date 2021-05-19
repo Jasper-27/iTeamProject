@@ -143,7 +143,7 @@ app.post('/AdminLogin', async (req, res) => {  // Function must be async to allo
 
 
     // when the password hash has been read, compare
-    fs.readFile('data/adminPass.txt', function (err, adminHash) {
+    fs.readFile(__dirname + '/data/adminPass.txt', function (err, adminHash) {
       if (err) {  
         return console.error(err); 
       }
