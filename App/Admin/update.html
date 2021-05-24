@@ -67,41 +67,40 @@
 
         <div class="col" id="right" style="border-width: 1.5px;border-style: solid;border-radius: 5px;padding-top: 10px;">
             
-            <form>
+          
 
-                <h4>Change Name</h4>
+        <h4>Change Name</h4>
 
-                <div class="form-group">
-                  <label for="username">Username</label>
-                  <input type="username" class="form-control" id="userIDText">
-                </div>
+        <div>
+            <label>Username</label>
+            <input type="username" class="form-control" id="userIdText">
+        </div>
 
-                <div class="form-group">
-                  <label for="pwd">First Name</label>
-                  <input type="text" class="form-control" placeholder="Joe" id="userFirstText">
-                </div>
+        <div>
+            <label>First Name</label>
+            <input type="text" class="form-control" placeholder="Joe" id="userFirstText">
+        </div>
 
-                <div class="form-group">
-                    <label for="pwd">Last Name</label>
-                    <input type="text" class="form-control" placeholder="Bloggs" id="userLastText">
-                </div>
+        <div>
+            <label>Last Name</label>
+            <input type="text" class="form-control" placeholder="Bloggs" id="userLastText">
+        </div>
 
-                <button type="submit" class="btn btn-primary" style="margin-bottom: 20px;" onclick="updateName()" id="UpdateName">Update Details</button>
+        <button type="submit" class="btn btn-primary" style="margin-bottom: 20px;" onclick="updateName()" id="UpdateName">Update Details</button>
 
-                <h4>Change Password</h4>
+        <h4>Change Password</h4>
 
-                <div class="form-group">
-                    <label for="firstName">Username</label>
-                    <input class="form-control" type="username" id="userNameText" name="firstName">
-                </div>
+        <div>
+            <label>Username</label>
+            <input class="form-control" type="username" id="userNameText" name="firstName">
+        </div>
 
-                <div class="form-group">
-                    <label for="lastName">New Password</label>
-                    <input class="form-control" type="Password" id="newPassText" name="lastName" placeholder="********">
-                </div>
+        <div>
+            <label>New Password</label>
+            <input class="form-control" type="Password" id="newPassText" name="lastName" placeholder="********">
+        </div>
 
-                <button type="submit" class="btn btn-primary" style="margin-bottom: 20px;" onclick="updatePassword()" id="UpdatePassword">Update Password</button>
-            </form> 
+        <button  class="btn btn-primary" style="margin-bottom: 20px;" onclick="updatePassword()" id="UpdatePassword">Update Password</button>
 
         </div>
     </div>

@@ -618,7 +618,7 @@ io.on('connection', socket => {
 
     try{
       if (admins.includes(socket.id)){
-        console.log("🧠 Bye Bye admin ")
+        // console.log("🧠 Bye Bye admin ")
         Storage.log("Admin has disconnected")
   
         var index = admins.indexOf(socket.id);
@@ -846,14 +846,9 @@ io.on('connection', socket => {
         // Details are valid
         try{
           let deleteSuccessful = await Storage.deleteAccount(details.username);
-          if (deleteSuccessful === true){
             socket.emit('delete-success');
             Storage.log("Account deleted : " + details.username);
-            console.log("👍 Account deleted: " + details.username); 
-          }
-          else{
-            socket.emit('delete-fail', 'Unable to delete account');
-          }
+            console.log("👍 Account deleted: " + details.username);           
         }
         catch (reason){
           console.log("⚠ delete fail " + reason)
@@ -872,16 +867,18 @@ io.on('connection', socket => {
 
   // Reading
   socket.on('read-account', async details => {
-    
-    let readSuccess = await Storage.getAccount(details.user);
+    try{
+      let readSuccess = await Storage.getAccount(details.user);
 
-    console.log("👍 Account Read: " + readSuccess.userName); 
-    socket.emit('read-success', {"userName": readSuccess.userName, "firstName": readSuccess.firstName, "lastName": readSuccess.lastName});
+      console.log("👍 Account Read: " + readSuccess.userName); 
+      socket.emit('read-success', {"userName": readSuccess.userName, "firstName": readSuccess.firstName, "lastName": readSuccess.lastName});
+    }catch{
+      socket.emit('read-fail')
+    }
 
   })
 
   // Updating 
-
   socket.on('update-name' , async (data) => {
     try{
 

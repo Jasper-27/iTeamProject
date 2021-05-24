@@ -146,6 +146,11 @@ function updateName(){
     let firstName = document.getElementById("userFirstText").value;
     let lastName = document.getElementById("userLastText").value;
 
+    // clear values 
+    document.getElementById("userIdText").value = ""
+    document.getElementById("userFirstText").value = ""
+    document.getElementById("userLastText").value = ""
+
     if (userId === "" || firstName === "" || lastName === ""){
         alert("Missing Inputs");
         return
@@ -170,8 +175,6 @@ socket.on('update-Name-Status' , (nameStatus) => {
 })
 
 // =====================================================================
-
-
 
 // User registration =================================================
 
@@ -293,7 +296,7 @@ socket.on('read-success', (userData) => {
 })
 
 socket.on('read-fail', () => {
-    alert("fail");
+    alert("couldn't read account details");
 })
 
 // ================================================================================
